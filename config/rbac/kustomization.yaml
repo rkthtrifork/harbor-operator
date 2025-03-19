@@ -22,6 +22,15 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the {{ .ProjectName }} itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- member_admin_role.yaml
+- member_editor_role.yaml
+- member_viewer_role.yaml
+- user_admin_role.yaml
+- user_editor_role.yaml
+- user_viewer_role.yaml
+- project_admin_role.yaml
+- project_editor_role.yaml
+- project_viewer_role.yaml
 - registry_admin_role.yaml
 - registry_editor_role.yaml
 - registry_viewer_role.yaml

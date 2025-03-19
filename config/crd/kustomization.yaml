@@ -3,6 +3,9 @@
 # It should be run by config/default
 resources:
 - bases/harbor.harbor-operator.io_registries.yaml
+- bases/harbor.harbor-operator.io_projects.yaml
+- bases/harbor.harbor-operator.io_users.yaml
+- bases/harbor.harbor-operator.io_members.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
