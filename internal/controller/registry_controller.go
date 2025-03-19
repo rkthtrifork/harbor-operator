@@ -17,9 +17,17 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,9 +55,134 @@ type RegistryReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.2/pkg/reconcile
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// 1. Fetch the Registry CR
+	var registry harborv1alpha1.Registry
+	if err := r.Get(ctx, req.NamespacedName, &registry); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Registry resource not found. Ignoring since object must be deleted.")
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to get Registry")
+		return ctrl.Result{}, err
+	}
+
+	// 2. Retrieve the HarborConnection using the HarborConnectionRef in the Registry
+	var harborConn harborv1alpha1.HarborConnection
+	connRef := registry.Spec.HarborConnectionRef
+	connKey := types.NamespacedName{
+		Namespace: connRef.Namespace,
+		Name:      connRef.Name,
+	}
+	if err := r.Get(ctx, connKey, &harborConn); err != nil {
+		logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", connRef)
+		return ctrl.Result{}, err
+	}
+
+	// 3. Determine which credentials to use:
+	//    Prefer Registry-specific credentials; otherwise, fall back to HarborConnection defaults.
+	var credType, accessKey string
+	var accessSecretRef harborv1alpha1.ObjectRef
+	if registry.Spec.Credential != nil {
+		credType = registry.Spec.Credential.Type
+		accessKey = registry.Spec.Credential.AccessKey
+		accessSecretRef = registry.Spec.Credential.AccessSecretRef
+	} else if harborConn.Spec.Credential != nil {
+		credType = harborConn.Spec.Credential.Type
+		accessKey = harborConn.Spec.Credential.AccessKey
+		accessSecretRef = harborConn.Spec.Credential.AccessSecretRef
+	} else {
+		err := fmt.Errorf("no credentials provided in either Registry or HarborConnection")
+		logger.Error(err, "Missing credentials")
+		return ctrl.Result{}, err
+	}
+
+	// 4. Retrieve the Kubernetes Secret referenced for the access secret.
+	var secret corev1.Secret
+	secretKey := types.NamespacedName{
+		Namespace: accessSecretRef.Namespace,
+		Name:      accessSecretRef.Name,
+	}
+	if err := r.Get(ctx, secretKey, &secret); err != nil {
+		logger.Error(err, "Failed to get secret", "Secret", accessSecretRef)
+		return ctrl.Result{}, err
+	}
+
+	accessSecretBytes, ok := secret.Data["access_secret"]
+	if !ok {
+		err := fmt.Errorf("access_secret not found in secret %s/%s", accessSecretRef.Namespace, accessSecretRef.Name)
+		logger.Error(err, "Secret data missing access_secret")
+		return ctrl.Result{}, err
+	}
+	accessSecret := string(accessSecretBytes)
+
+	// 5. Build the create registry request payload.
+	// Define inline types for the payload.
+	type registryCredential struct {
+		Type         string `json:"type"`
+		AccessKey    string `json:"access_key"`
+		AccessSecret string `json:"access_secret"`
+	}
+
+	type createRegistryRequest struct {
+		Type             string             `json:"type"`
+		Name             string             `json:"name"`
+		Description      string             `json:"description,omitempty"`
+		URL              string             `json:"url"`
+		VerifyRemoteCert bool               `json:"verify_remote_cert"`
+		Credential       registryCredential `json:"credential"`
+	}
+
+	reqPayload := createRegistryRequest{
+		Type:             registry.Spec.Type,
+		Name:             registry.Spec.Name,
+		Description:      registry.Spec.Description,
+		URL:              registry.Spec.URL,
+		VerifyRemoteCert: registry.Spec.VerifyRemoteCert,
+		Credential: registryCredential{
+			Type:         credType,
+			AccessKey:    accessKey,
+			AccessSecret: accessSecret,
+		},
+	}
+
+	// Marshal the payload to JSON.
+	payloadBytes, err := json.Marshal(reqPayload)
+	if err != nil {
+		logger.Error(err, "Failed to marshal create registry payload")
+		return ctrl.Result{}, err
+	}
+
+	// 6. Create the Harbor API request URL using the base URL from HarborConnection.
+	requestURL := fmt.Sprintf("%s/api/registries", harborConn.Spec.BaseURL)
+
+	// Create a new HTTP POST request.
+	httpReq, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		logger.Error(err, "Failed to create HTTP request")
+		return ctrl.Result{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// 7. Send the HTTP request using a client with a timeout.
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Do(httpReq)
+	if err != nil {
+		logger.Error(err, "Failed to send HTTP request")
+		return ctrl.Result{}, err
+	}
+	defer resp.Body.Close()
+
+	// Check for success status code (200 OK or 201 Created).
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		errMsg := fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		logger.Error(errMsg, "Harbor API returned an error", "status", resp.StatusCode)
+		return ctrl.Result{}, errMsg
+	}
+
+	logger.Info("Successfully created registry in Harbor", "Registry", registry.Name)
+	// Optionally, update the status of the Registry CR here.
 
 	return ctrl.Result{}, nil
 }

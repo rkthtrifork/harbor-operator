@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: registries.harbor.harbor-operator.io
+  name: harborconnections.harbor.harbor-operator.io
 spec:
   group: harbor.harbor-operator.io
   names:
-    kind: Registry
-    listKind: RegistryList
-    plural: registries
-    singular: registry
+    kind: HarborConnection
+    listKind: HarborConnectionList
+    plural: harborconnections
+    singular: harborconnection
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Registry is the Schema for the registries API.
+        description: HarborConnection is the Schema for the harborconnections API.
         properties:
           apiVersion:
             description: |-
@@ -37,13 +37,19 @@ spec:
           metadata:
             type: object
           spec:
-            description: RegistrySpec defines the desired state of Registry.
+            description: HarborConnectionSpec defines the desired state of HarborConnection.
             properties:
+              baseURL:
+                description: BaseURL is the Harbor API endpoint.
+                format: url
+                type: string
               credential:
-                description: Credential holds the authentication details.
+                description: |-
+                  Credential holds the default credentials for Harbor API calls.
+                  This field is optional. If provided, it is used for all child resources unless they override it.
                 properties:
-                  access_key:
-                    description: AccessKey is the username or access key.
+                  accessKey:
+                    description: AccessKey for authentication.
                     minLength: 1
                     type: string
                   accessSecretRef:
@@ -61,60 +67,21 @@ spec:
                     - namespace
                     type: object
                   type:
-                    description: Type of credential, e.g., "basic"
+                    description: Type of the credential, e.g., "basic".
                     enum:
                     - basic
-                    - other-credential-types-if-needed
+                    - other-types-if-needed
                     type: string
                 required:
+                - accessKey
                 - accessSecretRef
-                - access_key
                 - type
                 type: object
-              description:
-                description: Description is an optional description.
-                type: string
-              harborConnectionRef:
-                description: HarborConnectionRef references the HarborConnection resource
-                  to use.
-                properties:
-                  name:
-                    description: Name of the object.
-                    type: string
-                  namespace:
-                    description: Namespace where the object is located.
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-              name:
-                description: Name is the registry name.
-                minLength: 1
-                type: string
-              type:
-                description: Type of the registry, e.g., "github-ghcr"
-                enum:
-                - github-ghcr
-                - other-types-if-needed
-                type: string
-              url:
-                description: URL is the registry URL.
-                format: url
-                type: string
-              verify_remote_cert:
-                description: VerifyRemoteCert indicates if remote certificates should
-                  be verified.
-                type: boolean
             required:
-            - harborConnectionRef
-            - name
-            - type
-            - url
-            - verify_remote_cert
+            - baseURL
             type: object
           status:
-            description: RegistryStatus defines the observed state of Registry.
+            description: HarborConnectionStatus defines the observed state of HarborConnection.
             type: object
         type: object
     served: true

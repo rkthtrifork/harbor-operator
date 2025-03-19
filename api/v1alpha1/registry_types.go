@@ -25,11 +25,46 @@ import (
 
 // RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborConnectionRef references the HarborConnection resource to use.
+	// +kubebuilder:validation:Required
+	HarborConnectionRef ObjectRef `json:"harborConnectionRef"`
 
-	// Foo is an example field of Registry. Edit registry_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Type of the registry, e.g., "github-ghcr"
+	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
+	Type string `json:"type"`
+
+	// Name is the registry name.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Description is an optional description.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// URL is the registry URL.
+	// +kubebuilder:validation:Format=url
+	URL string `json:"url"`
+
+	// VerifyRemoteCert indicates if remote certificates should be verified.
+	VerifyRemoteCert bool `json:"verify_remote_cert"`
+
+	// Credential holds the authentication details.
+	// +optional
+	Credential *RegistryCredential `json:"credential"`
+}
+
+// RegistryCredential holds the credential information.
+type RegistryCredential struct {
+	// Type of credential, e.g., "basic"
+	// +kubebuilder:validation:Enum=basic;other-credential-types-if-needed
+	Type string `json:"type"`
+
+	// AccessKey is the username or access key.
+	// +kubebuilder:validation:MinLength=1
+	AccessKey string `json:"access_key"`
+
+	// AccessSecretRef is a reference to a Kubernetes Secret containing the access secret.
+	AccessSecretRef ObjectRef `json:"accessSecretRef"`
 }
 
 // RegistryStatus defines the observed state of Registry.

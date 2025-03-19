@@ -7,7 +7,11 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - harborconnections
+  - members
+  - projects
   - registries
+  - users
   verbs:
   - create
   - delete
@@ -19,13 +23,21 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - harborconnections/finalizers
+  - members/finalizers
+  - projects/finalizers
   - registries/finalizers
+  - users/finalizers
   verbs:
   - update
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - harborconnections/status
+  - members/status
+  - projects/status
   - registries/status
+  - users/status
   verbs:
   - get
   - patch
