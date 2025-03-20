@@ -45,7 +45,8 @@ type HarborConnectionReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
-// Reconcile compares the desired state (HarborConnection object) with the actual cluster state.
+// Reconcile fetches the HarborConnection resource, validates the BaseURL, and either performs a non-authenticated
+// connectivity check or an authenticated check based on whether credentials are provided.
 func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName(fmt.Sprintf("[HarborConnection:%s]", req.NamespacedName))
 
@@ -60,72 +61,88 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// Validate BaseURL.
+	// Validate the BaseURL.
+	if err := r.validateBaseURL(ctx, &conn); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// If no credentials are provided, perform a non-authenticated connectivity check.
+	if conn.Spec.Credentials == nil {
+		return r.checkNonAuthConnectivity(ctx, &conn)
+	}
+
+	// Otherwise, perform an authenticated check.
+	return r.checkAuthenticatedConnection(ctx, &conn)
+}
+
+// validateBaseURL verifies that the BaseURL is a valid URL and includes a protocol scheme.
+func (r *HarborConnectionReconciler) validateBaseURL(ctx context.Context, conn *harborv1alpha1.HarborConnection) error {
+	logger := log.FromContext(ctx).WithName("validateBaseURL")
 	parsedURL, err := url.Parse(conn.Spec.BaseURL)
 	if err != nil {
 		logger.Error(err, "Invalid baseURL format")
-		return ctrl.Result{}, err
+		return err
 	}
 	if parsedURL.Scheme == "" {
 		err := fmt.Errorf("baseURL %s is missing a protocol scheme", conn.Spec.BaseURL)
 		logger.Error(err, "Invalid baseURL")
+		return err
+	}
+	return nil
+}
+
+// checkNonAuthConnectivity performs a connectivity check using a non-authorized endpoint.
+func (r *HarborConnectionReconciler) checkNonAuthConnectivity(ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithName("checkNonAuthConnectivity")
+	pingURL := fmt.Sprintf("%s/api/v2.0/ping", conn.Spec.BaseURL)
+	logger.Info("No credentials provided; checking connectivity using non-authorized endpoint", "url", pingURL)
+
+	req, err := http.NewRequest("GET", pingURL, nil)
+	if err != nil {
+		logger.Error(err, "Failed to create HTTP request for connectivity check")
 		return ctrl.Result{}, err
 	}
 
-	// Check connectivity.
-	if conn.Spec.Credentials == nil {
-		// Non-authenticated connectivity check using the Docker Registry API ping endpoint.
-		pingURL := fmt.Sprintf("%s/api/v2.0/ping", conn.Spec.BaseURL)
-		logger.Info("No credentials provided; checking connectivity using non-authorized endpoint", "url", pingURL)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logger.Error(err, "Failed to perform connectivity check on Harbor API")
+		return ctrl.Result{}, err
+	}
+	defer resp.Body.Close()
 
-		pingReq, err := http.NewRequest("GET", pingURL, nil)
-		if err != nil {
-			logger.Error(err, "Failed to create HTTP request for connectivity check")
-			return ctrl.Result{}, err
-		}
-
-		resp, err := http.DefaultClient.Do(pingReq)
-		if err != nil {
-			logger.Error(err, "Failed to perform connectivity check on Harbor API")
-			return ctrl.Result{}, err
-		}
-		defer resp.Body.Close()
-
-		// Both 200 (OK) and 401 (Unauthorized) indicate connectivity.
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
-			body, _ := io.ReadAll(resp.Body)
-			err := fmt.Errorf("connectivity check failed: unexpected status code %d, body: %s", resp.StatusCode, string(body))
-			logger.Error(err, "Harbor connectivity check failed")
-			return ctrl.Result{}, err
-		}
-
-		logger.Info("Successfully checked connectivity on Harbor API using non-authorized endpoint")
-		return ctrl.Result{}, nil
+	// Both 200 (OK) and 401 (Unauthorized) indicate connectivity.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+		body, _ := io.ReadAll(resp.Body)
+		err = fmt.Errorf("connectivity check failed: unexpected status code %d, body: %s", resp.StatusCode, string(body))
+		logger.Error(err, "Harbor connectivity check failed")
+		return ctrl.Result{}, err
 	}
 
-	// Authenticated connectivity check.
+	logger.Info("Successfully checked connectivity on Harbor API using non-authorized endpoint")
+	return ctrl.Result{}, nil
+}
+
+// checkAuthenticatedConnection verifies Harbor API credentials by fetching the secret and authenticating via the /users/current endpoint.
+func (r *HarborConnectionReconciler) checkAuthenticatedConnection(ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithName("checkAuthenticatedConnection")
 	username := conn.Spec.Credentials.AccessKey
-	secretKey := types.NamespacedName{
-		Namespace: conn.Namespace,
-		Name:      conn.Spec.Credentials.AccessSecretRef,
-	}
 
 	// Retrieve the secret containing the access secret.
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		logger.Error(err, "Failed to get secret", "Secret", secretKey)
+	secret, err := r.getSecret(ctx, conn)
+	if err != nil {
+		logger.Error(err, "Failed to get secret")
 		return ctrl.Result{}, err
 	}
 
 	accessSecretBytes, ok := secret.Data["access_secret"]
 	if !ok {
-		err := fmt.Errorf("access_secret not found in secret %s/%s", secretKey.Namespace, secretKey.Name)
+		err = fmt.Errorf("access_secret not found in secret %s/%s", conn.Namespace, conn.Spec.Credentials.AccessSecretRef)
 		logger.Error(err, "Secret data missing access_secret")
 		return ctrl.Result{}, err
 	}
 	password := string(accessSecretBytes)
 
-	// Verify credentials via /users/current endpoint.
+	// Build the Harbor API URL for verifying credentials via /users/current.
 	authURL := fmt.Sprintf("%s/api/v2.0/users/current", conn.Spec.BaseURL)
 	logger.Info("Verifying Harbor API credentials", "url", authURL)
 
@@ -134,8 +151,8 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		logger.Error(err, "Failed to create HTTP request for credential check")
 		return ctrl.Result{}, err
 	}
-
 	authReq.SetBasicAuth(username, password)
+
 	resp, err := http.DefaultClient.Do(authReq)
 	if err != nil {
 		logger.Error(err, "Failed to perform HTTP request for credential check")
@@ -152,6 +169,19 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	logger.Info("Successfully authenticated with Harbor API")
 	return ctrl.Result{}, nil
+}
+
+// getSecret fetches the secret specified in the HarborConnection credentials.
+func (r *HarborConnectionReconciler) getSecret(ctx context.Context, conn *harborv1alpha1.HarborConnection) (*corev1.Secret, error) {
+	secretKey := types.NamespacedName{
+		Namespace: conn.Namespace,
+		Name:      conn.Spec.Credentials.AccessSecretRef,
+	}
+	var secret corev1.Secret
+	if err := r.Get(ctx, secretKey, &secret); err != nil {
+		return nil, err
+	}
+	return &secret, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
