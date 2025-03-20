@@ -48,13 +48,13 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Validate the BaseURL.
-	if err := r.validateBaseURL(ctx, &conn); err != nil {
+	if err := r.validateBaseURL(&conn); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// If no credentials are provided, perform a non-authenticated connectivity check.
 	if conn.Spec.Credentials == nil {
-		return r.checkNonAuthConnectivity(ctx, &conn)
+		return r.checkNonAuthConnectivity(&conn)
 	}
 
 	// Otherwise, perform an authenticated check.
@@ -62,7 +62,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 // validateBaseURL verifies that the BaseURL is a valid URL and includes a protocol scheme.
-func (r *HarborConnectionReconciler) validateBaseURL(ctx context.Context, conn *harborv1alpha1.HarborConnection) error {
+func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.HarborConnection) error {
 	parsedURL, err := url.Parse(conn.Spec.BaseURL)
 	if err != nil {
 		r.logger.Error(err, "Invalid baseURL format")
@@ -77,7 +77,7 @@ func (r *HarborConnectionReconciler) validateBaseURL(ctx context.Context, conn *
 }
 
 // checkNonAuthConnectivity performs a connectivity check using a non-authorized endpoint.
-func (r *HarborConnectionReconciler) checkNonAuthConnectivity(ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
+func (r *HarborConnectionReconciler) checkNonAuthConnectivity(conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
 	pingURL := fmt.Sprintf("%s/api/v2.0/ping", conn.Spec.BaseURL)
 	r.logger.Info("No credentials provided; checking connectivity using non-authorized endpoint", "url", pingURL)
 
@@ -92,7 +92,11 @@ func (r *HarborConnectionReconciler) checkNonAuthConnectivity(ctx context.Contex
 		r.logger.Error(err, "Failed to perform connectivity check on Harbor API")
 		return ctrl.Result{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			r.logger.Error(err, "failed to close response body")
+		}
+	}()
 
 	// Both 200 (OK) and 401 (Unauthorized) indicate connectivity.
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
@@ -141,7 +145,11 @@ func (r *HarborConnectionReconciler) checkAuthenticatedConnection(ctx context.Co
 		r.logger.Error(err, "Failed to perform HTTP request for credential check")
 		return ctrl.Result{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			r.logger.Error(err, "failed to close response body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

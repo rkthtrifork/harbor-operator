@@ -78,10 +78,6 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 	}
 	go test ./test/e2e/ -v -ginkgo.v
 
-.PHONY: test-samples
-test-samples: ## Apply the sample custom resources.
-	kubectl apply -k config/samples
-
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT) run
@@ -184,11 +180,6 @@ kind-deploy: manifests generate install ## Build the image, load it into Kind, a
 
 .PHONY: kind-undeploy
 kind-undeploy: undeploy uninstall ## Undeploy the operator from the Kind cluster.
-
-.PHONY: kind-redeploy
-kind-redeploy: ## Redeploy the operator to the Kind cluster.
-	-$(MAKE) kind-undeploy
-	$(MAKE) kind-deploy
 
 ##@ Dependencies
 

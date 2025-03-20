@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +67,12 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Lookup the registry's numeric ID from Harbor using the provided registry name.
 	registryID, err := r.lookupRegistryID(ctx, harborConn, project.Spec.RegistryName)
 	if err != nil {
+		// If the registry is not found, log a warning and requeue.
+		if strings.Contains(err.Error(), "not found") {
+			r.logger.Info("Registry not (yet) available in Harbor; requeuing", "RegistryName", project.Spec.RegistryName)
+			// Requeue after a delay to give time for the registry resource to be applied.
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 		r.logger.Error(err, "Failed to lookup registry by name", "RegistryName", project.Spec.RegistryName)
 		return ctrl.Result{}, err
 	}
@@ -105,7 +113,11 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		r.logger.Error(err, "Failed to perform HTTP request for project creation")
 		return ctrl.Result{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			r.logger.Error(err, "failed to close response body")
+		}
+	}()
 
 	// Check for a successful status code (e.g., 201 Created).
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
