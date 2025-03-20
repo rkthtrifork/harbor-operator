@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: registries.harbor.harbor-operator.io
+  name: projects.harbor.harbor-operator.io
 spec:
   group: harbor.harbor-operator.io
   names:
-    kind: Registry
-    listKind: RegistryList
-    plural: registries
-    singular: registry
+    kind: Project
+    listKind: ProjectList
+    plural: projects
+    singular: project
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Registry is the Schema for the registries API.
+        description: Project is the Schema for the projects API.
         properties:
           apiVersion:
             description: |-
@@ -37,41 +37,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: RegistrySpec defines the desired state of Registry.
+            description: ProjectSpec defines the desired state of Project.
             properties:
-              description:
-                description: Description is an optional description.
+              foo:
+                description: Foo is an example field of Project. Edit project_types.go
+                  to remove/update
                 type: string
-              harborConnectionRef:
-                description: HarborConnectionRef references the HarborConnection resource
-                  to use.
-                type: string
-              insecure:
-                description: Insecure indicates if remote certificates should be verified.
-                type: boolean
-              name:
-                description: Name is the registry name.
-                minLength: 1
-                type: string
-              type:
-                description: Type of the registry, e.g., "github-ghcr"
-                enum:
-                - github-ghcr
-                - other-types-if-needed
-                type: string
-              url:
-                description: URL is the registry URL.
-                format: url
-                type: string
-            required:
-            - harborConnectionRef
-            - insecure
-            - name
-            - type
-            - url
             type: object
           status:
-            description: RegistryStatus defines the observed state of Registry.
+            description: ProjectStatus defines the observed state of Project.
             type: object
         type: object
     served: true

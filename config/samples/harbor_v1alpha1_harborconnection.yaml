@@ -1,0 +1,13 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: harborconnection-sample
+spec:
+  baseURL: http://my-harbor-core.default.svc.cluster.local
+  credentials:
+    type: basic
+    accessKey: admin
+    accessSecretRef: harbor-password

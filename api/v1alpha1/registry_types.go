@@ -25,11 +25,28 @@ import (
 
 // RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborConnectionRef references the HarborConnection resource to use.
+	// +kubebuilder:validation:Required
+	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// Foo is an example field of Registry. Edit registry_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Type of the registry, e.g., "github-ghcr"
+	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
+	Type string `json:"type"`
+
+	// Name is the registry name.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Description is an optional description.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// URL is the registry URL.
+	// +kubebuilder:validation:Format=url
+	URL string `json:"url"`
+
+	// Insecure indicates if remote certificates should be verified.
+	Insecure bool `json:"insecure"`
 }
 
 // RegistryStatus defines the observed state of Registry.

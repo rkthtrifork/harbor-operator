@@ -4,20 +4,22 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: registries.harbor.harbor-operator.io
+  name: harborconnections.harbor.harbor-operator.io
 spec:
   group: harbor.harbor-operator.io
   names:
-    kind: Registry
-    listKind: RegistryList
-    plural: registries
-    singular: registry
+    kind: HarborConnection
+    listKind: HarborConnectionList
+    plural: harborconnections
+    shortNames:
+    - hc
+    singular: harborconnection
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Registry is the Schema for the registries API.
+        description: HarborConnection is the Schema for the harborconnections API.
         properties:
           apiVersion:
             description: |-
@@ -37,41 +39,39 @@ spec:
           metadata:
             type: object
           spec:
-            description: RegistrySpec defines the desired state of Registry.
+            description: HarborConnectionSpec defines the desired state of HarborConnection.
             properties:
-              description:
-                description: Description is an optional description.
-                type: string
-              harborConnectionRef:
-                description: HarborConnectionRef references the HarborConnection resource
-                  to use.
-                type: string
-              insecure:
-                description: Insecure indicates if remote certificates should be verified.
-                type: boolean
-              name:
-                description: Name is the registry name.
-                minLength: 1
-                type: string
-              type:
-                description: Type of the registry, e.g., "github-ghcr"
-                enum:
-                - github-ghcr
-                - other-types-if-needed
-                type: string
-              url:
-                description: URL is the registry URL.
+              baseURL:
+                description: BaseURL is the Harbor API endpoint.
                 format: url
                 type: string
+              credentials:
+                description: Credentials holds the default credentials for Harbor
+                  API calls.
+                properties:
+                  accessKey:
+                    description: AccessKey for authentication.
+                    minLength: 1
+                    type: string
+                  accessSecretRef:
+                    description: AccessSecretRef is a reference to a Kubernetes Secret
+                      containing the access secret.
+                    type: string
+                  type:
+                    description: Type of the credential, e.g., "basic".
+                    enum:
+                    - basic
+                    type: string
+                required:
+                - accessKey
+                - accessSecretRef
+                - type
+                type: object
             required:
-            - harborConnectionRef
-            - insecure
-            - name
-            - type
-            - url
+            - baseURL
             type: object
           status:
-            description: RegistryStatus defines the observed state of Registry.
+            description: HarborConnectionStatus defines the observed state of HarborConnection.
             type: object
         type: object
     served: true

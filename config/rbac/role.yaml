@@ -5,9 +5,21 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - harborconnections
+  - members
+  - projects
   - registries
+  - users
   verbs:
   - create
   - delete
@@ -19,13 +31,20 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
-  - registries/finalizers
+  - harborconnections/finalizers
+  - members/finalizers
+  - projects/finalizers
+  - users/finalizers
   verbs:
   - update
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - harborconnections/status
+  - members/status
+  - projects/status
   - registries/status
+  - users/status
   verbs:
   - get
   - patch
