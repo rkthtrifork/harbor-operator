@@ -34,7 +34,6 @@ rules:
   - harborconnections/finalizers
   - members/finalizers
   - projects/finalizers
-  - registries/finalizers
   - users/finalizers
   verbs:
   - update

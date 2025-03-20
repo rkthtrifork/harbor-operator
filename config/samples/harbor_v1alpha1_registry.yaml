@@ -6,4 +6,8 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: registry-sample
 spec:
-  # TODO(user): Add fields here
+  harborConnectionRef: harborconnection-sample
+  insecure: false
+  name: registry-sample # I recommend not specifying this field in which case the metadata.name will be used
+  type: github-ghcr
+  url: https://ghcr.io

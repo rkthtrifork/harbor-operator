@@ -27,7 +27,7 @@ import (
 type RegistrySpec struct {
 	// HarborConnectionRef references the HarborConnection resource to use.
 	// +kubebuilder:validation:Required
-	HarborConnectionRef ObjectRef `json:"harborConnectionRef"`
+	HarborConnectionRef string `json:"harborConnectionRef"`
 
 	// Type of the registry, e.g., "github-ghcr"
 	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
@@ -45,16 +45,8 @@ type RegistrySpec struct {
 	// +kubebuilder:validation:Format=url
 	URL string `json:"url"`
 
-	// VerifyRemoteCert indicates if remote certificates should be verified.
-	VerifyRemoteCert bool `json:"verify_remote_cert"`
-}
-
-// ObjectRef is a generic reference to a Kubernetes object in a specific namespace.
-type ObjectRef struct {
-	// Name of the object.
-	Name string `json:"name"`
-	// Namespace where the object is located.
-	Namespace string `json:"namespace"`
+	// Insecure indicates if remote certificates should be verified.
+	Insecure bool `json:"insecure"`
 }
 
 // RegistryStatus defines the observed state of Registry.

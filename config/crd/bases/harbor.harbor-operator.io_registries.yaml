@@ -45,17 +45,10 @@ spec:
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
-                properties:
-                  name:
-                    description: Name of the object.
-                    type: string
-                  namespace:
-                    description: Namespace where the object is located.
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
+                type: string
+              insecure:
+                description: Insecure indicates if remote certificates should be verified.
+                type: boolean
               name:
                 description: Name is the registry name.
                 minLength: 1
@@ -70,16 +63,12 @@ spec:
                 description: URL is the registry URL.
                 format: url
                 type: string
-              verify_remote_cert:
-                description: VerifyRemoteCert indicates if remote certificates should
-                  be verified.
-                type: boolean
             required:
             - harborConnectionRef
+            - insecure
             - name
             - type
             - url
-            - verify_remote_cert
             type: object
           status:
             description: RegistryStatus defines the observed state of Registry.
