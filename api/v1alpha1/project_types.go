@@ -1,19 +1,3 @@
-/*
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package v1alpha1
 
 import (
@@ -25,11 +9,50 @@ import (
 
 // ProjectSpec defines the desired state of Project.
 type ProjectSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborConnectionRef references the HarborConnection resource to use.
+	// +kubebuilder:validation:Required
+	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// Foo is an example field of Project. Edit project_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Name is the name of the project.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// RegistryName is the name of the registry that this project should use as a proxy cache.
+	// It is recommended that this matches the metadata.name of the Registry custom resource.
+	// +kubebuilder:validation:Required
+	RegistryName string `json:"registryName"`
+
+	// Public indicates if the project should be public.
+	Public bool `json:"public"`
+
+	// Metadata holds additional project settings.
+	// +optional
+	Metadata map[string]string `json:"metadata,omitempty"`
+
+	// CveAllowlist holds CVE allowlist settings.
+	// +optional
+	CveAllowlist *CveAllowlist `json:"cveAllowlist,omitempty"`
+
+	// StorageLimit defines the storage limit in bytes.
+	// +optional
+	StorageLimit int64 `json:"storageLimit,omitempty"`
+}
+
+// CveAllowlist defines the CVE allowlist configuration.
+type CveAllowlist struct {
+	// ID of the CVE allowlist.
+	ID int `json:"id,omitempty"`
+	// ProjectID associated with the allowlist.
+	ProjectID int `json:"project_id,omitempty"`
+	// ExpiresAt is the expiration timestamp.
+	ExpiresAt int64 `json:"expires_at,omitempty"`
+	// Items is the list of allowed CVEs.
+	Items []CveItem `json:"items,omitempty"`
+}
+
+// CveItem represents a single allowed CVE.
+type CveItem struct {
+	CveID string `json:"cve_id"`
 }
 
 // ProjectStatus defines the observed state of Project.

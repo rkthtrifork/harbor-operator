@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
@@ -24,6 +25,7 @@ import (
 type RegistryReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	logger logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -33,29 +35,29 @@ type RegistryReconciler struct {
 
 // Reconcile is the reconciliation loop for the Registry resource.
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx).WithName(fmt.Sprintf("[Registry:%s]", req.NamespacedName))
+	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[Registry:%s]", req.NamespacedName))
 
 	// Fetch the Registry instance.
 	var registry harborv1alpha1.Registry
 	if err := r.Get(ctx, req.NamespacedName, &registry); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Registry resource not found; it may have been deleted")
+			r.logger.Info("Registry resource not found; it may have been deleted")
 			return ctrl.Result{}, nil
 		}
-		logger.Error(err, "Failed to get Registry")
+		r.logger.Error(err, "Failed to get Registry")
 		return ctrl.Result{}, err
 	}
 
 	// Retrieve the HarborConnection referenced by the Registry.
 	harborConn, err := r.getHarborConnection(ctx, registry.Namespace, registry.Spec.HarborConnectionRef)
 	if err != nil {
-		logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
+		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
 		return ctrl.Result{}, err
 	}
 
 	// Validate the Harbor BaseURL.
 	if err := r.validateBaseURL(harborConn.Spec.BaseURL); err != nil {
-		logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
+		r.logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
 		return ctrl.Result{}, err
 	}
 
@@ -64,19 +66,19 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Build the Harbor API URL for creating a registry.
 	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
-	logger.Info("Sending registry creation request", "url", registriesURL)
+	r.logger.Info("Sending registry creation request", "url", registriesURL)
 
 	// Marshal the payload to JSON.
 	payloadBytes, err := json.Marshal(registryRequest)
 	if err != nil {
-		logger.Error(err, "Failed to marshal registry payload")
+		r.logger.Error(err, "Failed to marshal registry payload")
 		return ctrl.Result{}, err
 	}
 
 	// Create the HTTP POST request.
 	reqHTTP, err := http.NewRequest("POST", registriesURL, bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		logger.Error(err, "Failed to create HTTP request for registry creation")
+		r.logger.Error(err, "Failed to create HTTP request for registry creation")
 		return ctrl.Result{}, err
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
@@ -84,7 +86,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Set authentication using HarborConnection credentials.
 	username, password, err := r.getHarborAuth(ctx, harborConn)
 	if err != nil {
-		logger.Error(err, "Failed to get Harbor authentication credentials")
+		r.logger.Error(err, "Failed to get Harbor authentication credentials")
 		return ctrl.Result{}, err
 	}
 	reqHTTP.SetBasicAuth(username, password)
@@ -92,7 +94,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Perform the HTTP request.
 	resp, err := http.DefaultClient.Do(reqHTTP)
 	if err != nil {
-		logger.Error(err, "Failed to perform HTTP request for registry creation")
+		r.logger.Error(err, "Failed to perform HTTP request for registry creation")
 		return ctrl.Result{}, err
 	}
 	defer resp.Body.Close()
@@ -101,11 +103,11 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		err := fmt.Errorf("failed to create registry: status %d, body: %s", resp.StatusCode, string(body))
-		logger.Error(err, "Harbor registry creation failed")
+		r.logger.Error(err, "Harbor registry creation failed")
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name)
+	r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name)
 	// Optionally update Registry status here if needed.
 	return ctrl.Result{}, nil
 }
