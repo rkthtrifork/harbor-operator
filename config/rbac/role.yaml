@@ -33,7 +33,6 @@ rules:
   resources:
   - harborconnections/finalizers
   - members/finalizers
-  - projects/finalizers
   - users/finalizers
   verbs:
   - update
