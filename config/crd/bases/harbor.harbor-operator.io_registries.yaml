@@ -39,38 +39,6 @@ spec:
           spec:
             description: RegistrySpec defines the desired state of Registry.
             properties:
-              credential:
-                description: Credential holds the authentication details.
-                properties:
-                  access_key:
-                    description: AccessKey is the username or access key.
-                    minLength: 1
-                    type: string
-                  accessSecretRef:
-                    description: AccessSecretRef is a reference to a Kubernetes Secret
-                      containing the access secret.
-                    properties:
-                      name:
-                        description: Name of the object.
-                        type: string
-                      namespace:
-                        description: Namespace where the object is located.
-                        type: string
-                    required:
-                    - name
-                    - namespace
-                    type: object
-                  type:
-                    description: Type of credential, e.g., "basic"
-                    enum:
-                    - basic
-                    - other-credential-types-if-needed
-                    type: string
-                required:
-                - accessSecretRef
-                - access_key
-                - type
-                type: object
               description:
                 description: Description is an optional description.
                 type: string

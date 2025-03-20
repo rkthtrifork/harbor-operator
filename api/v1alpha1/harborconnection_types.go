@@ -29,16 +29,14 @@ type HarborConnectionSpec struct {
 	// +kubebuilder:validation:Format=url
 	BaseURL string `json:"baseURL"`
 
-	// Credential holds the default credentials for Harbor API calls.
-	// This field is optional. If provided, it is used for all child resources unless they override it.
-	// +optional
-	Credential *DefaultCredential `json:"credential,omitempty"`
+	// Credentials holds the default credentials for Harbor API calls.
+	Credentials *Credentials `json:"credentials,omitempty"`
 }
 
-// DefaultCredential holds default authentication details.
-type DefaultCredential struct {
+// Credentials holds default authentication details.
+type Credentials struct {
 	// Type of the credential, e.g., "basic".
-	// +kubebuilder:validation:Enum=basic;other-types-if-needed
+	// +kubebuilder:validation:Enum=basic
 	Type string `json:"type"`
 
 	// AccessKey for authentication.
@@ -46,7 +44,7 @@ type DefaultCredential struct {
 	AccessKey string `json:"accessKey"`
 
 	// AccessSecretRef is a reference to a Kubernetes Secret containing the access secret.
-	AccessSecretRef ObjectRef `json:"accessSecretRef"`
+	AccessSecretRef string `json:"accessSecretRef"`
 }
 
 // HarborConnectionStatus defines the observed state of HarborConnection.
@@ -57,6 +55,7 @@ type HarborConnectionStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hc
 
 // HarborConnection is the Schema for the harborconnections API.
 type HarborConnection struct {

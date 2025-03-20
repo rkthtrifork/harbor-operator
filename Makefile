@@ -1,5 +1,6 @@
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= harbor-operator:latest
+IMG_LOCAL ?= harbor-operator:local
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -76,6 +77,10 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 		exit 1; \
 	}
 	go test ./test/e2e/ -v -ginkgo.v
+
+.PHONY: test-samples
+test-samples: ## Apply the sample custom resources.
+	kubectl apply -k config/samples
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
@@ -155,6 +160,35 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+##@ Kind
+
+.PHONY: kind-up
+kind-up: ## Start a Kind cluster named "kind"
+	kind create cluster --config kind-configuration.yaml
+	helm install --set controller.hostPort.enabled=true my-ingress-nginx ingress-nginx/ingress-nginx --wait
+	helm install --set expose.ingress.className=nginx my-harbor harbor/harbor
+
+.PHONY: kind-down
+kind-down: ## Stop (delete) the Kind cluster named "kind"
+	kind delete cluster
+
+.PHONY: kind-deploy
+kind-deploy: manifests generate install ## Build the image, load it into Kind, and deploy the operator.
+	@echo "Building local image..."
+	$(MAKE) docker-build IMG=$(IMG_LOCAL)
+	@echo "Loading image into Kind cluster..."
+	kind load docker-image $(IMG_LOCAL) --name kind
+	@echo "Deploying harbor-operator to the cluster..."
+	$(MAKE) deploy IMG=$(IMG_LOCAL)
+
+.PHONY: kind-undeploy
+kind-undeploy: undeploy uninstall ## Undeploy the operator from the Kind cluster.
+
+.PHONY: kind-redeploy
+kind-redeploy: ## Redeploy the operator to the Kind cluster.
+	-$(MAKE) kind-undeploy
+	$(MAKE) kind-deploy
 
 ##@ Dependencies
 

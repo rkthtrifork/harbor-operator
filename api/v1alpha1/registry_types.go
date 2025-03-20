@@ -47,24 +47,14 @@ type RegistrySpec struct {
 
 	// VerifyRemoteCert indicates if remote certificates should be verified.
 	VerifyRemoteCert bool `json:"verify_remote_cert"`
-
-	// Credential holds the authentication details.
-	// +optional
-	Credential *RegistryCredential `json:"credential"`
 }
 
-// RegistryCredential holds the credential information.
-type RegistryCredential struct {
-	// Type of credential, e.g., "basic"
-	// +kubebuilder:validation:Enum=basic;other-credential-types-if-needed
-	Type string `json:"type"`
-
-	// AccessKey is the username or access key.
-	// +kubebuilder:validation:MinLength=1
-	AccessKey string `json:"access_key"`
-
-	// AccessSecretRef is a reference to a Kubernetes Secret containing the access secret.
-	AccessSecretRef ObjectRef `json:"accessSecretRef"`
+// ObjectRef is a generic reference to a Kubernetes object in a specific namespace.
+type ObjectRef struct {
+	// Name of the object.
+	Name string `json:"name"`
+	// Namespace where the object is located.
+	Namespace string `json:"namespace"`
 }
 
 // RegistryStatus defines the observed state of Registry.

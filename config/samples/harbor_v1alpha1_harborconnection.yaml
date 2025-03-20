@@ -6,4 +6,8 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: harborconnection-sample
 spec:
-  # TODO(user): Add fields here
+  baseURL: http://my-harbor-core.default.svc.cluster.local
+  credentials:
+    type: basic
+    accessKey: admin
+    accessSecretRef: harbor-password

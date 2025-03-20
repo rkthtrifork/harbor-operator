@@ -35,6 +35,21 @@ import (
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
+type registryCredential struct {
+	Type         string `json:"type"`
+	AccessKey    string `json:"access_key"`
+	AccessSecret string `json:"access_secret"`
+}
+
+type createRegistryRequest struct {
+	Type             string             `json:"type"`
+	Name             string             `json:"name"`
+	Description      string             `json:"description,omitempty"`
+	URL              string             `json:"url"`
+	VerifyRemoteCert bool               `json:"verify_remote_cert"`
+	Credential       registryCredential `json:"credential"`
+}
+
 // RegistryReconciler reconciles a Registry object
 type RegistryReconciler struct {
 	client.Client
@@ -80,71 +95,38 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	// 3. Determine which credentials to use:
-	//    Prefer Registry-specific credentials; otherwise, fall back to HarborConnection defaults.
-	var credType, accessKey string
-	var accessSecretRef harborv1alpha1.ObjectRef
-	if registry.Spec.Credential != nil {
-		credType = registry.Spec.Credential.Type
-		accessKey = registry.Spec.Credential.AccessKey
-		accessSecretRef = registry.Spec.Credential.AccessSecretRef
-	} else if harborConn.Spec.Credential != nil {
-		credType = harborConn.Spec.Credential.Type
-		accessKey = harborConn.Spec.Credential.AccessKey
-		accessSecretRef = harborConn.Spec.Credential.AccessSecretRef
-	} else {
-		err := fmt.Errorf("no credentials provided in either Registry or HarborConnection")
-		logger.Error(err, "Missing credentials")
-		return ctrl.Result{}, err
-	}
-
-	// 4. Retrieve the Kubernetes Secret referenced for the access secret.
-	var secret corev1.Secret
-	secretKey := types.NamespacedName{
-		Namespace: accessSecretRef.Namespace,
-		Name:      accessSecretRef.Name,
-	}
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		logger.Error(err, "Failed to get secret", "Secret", accessSecretRef)
-		return ctrl.Result{}, err
-	}
-
-	accessSecretBytes, ok := secret.Data["access_secret"]
-	if !ok {
-		err := fmt.Errorf("access_secret not found in secret %s/%s", accessSecretRef.Namespace, accessSecretRef.Name)
-		logger.Error(err, "Secret data missing access_secret")
-		return ctrl.Result{}, err
-	}
-	accessSecret := string(accessSecretBytes)
-
-	// 5. Build the create registry request payload.
-	// Define inline types for the payload.
-	type registryCredential struct {
-		Type         string `json:"type"`
-		AccessKey    string `json:"access_key"`
-		AccessSecret string `json:"access_secret"`
-	}
-
-	type createRegistryRequest struct {
-		Type             string             `json:"type"`
-		Name             string             `json:"name"`
-		Description      string             `json:"description,omitempty"`
-		URL              string             `json:"url"`
-		VerifyRemoteCert bool               `json:"verify_remote_cert"`
-		Credential       registryCredential `json:"credential"`
-	}
-
 	reqPayload := createRegistryRequest{
 		Type:             registry.Spec.Type,
 		Name:             registry.Spec.Name,
 		Description:      registry.Spec.Description,
 		URL:              registry.Spec.URL,
 		VerifyRemoteCert: registry.Spec.VerifyRemoteCert,
-		Credential: registryCredential{
-			Type:         credType,
-			AccessKey:    accessKey,
-			AccessSecret: accessSecret,
-		},
+	}
+
+	if harborConn.Spec.Credentials != nil && harborConn.Spec.Credentials.Type == "basic" {
+		secretKey := types.NamespacedName{
+			Namespace: harborConn.Namespace,
+			Name:      harborConn.Spec.Credentials.AccessSecretRef,
+		}
+		var secret corev1.Secret
+		if err := r.Get(ctx, secretKey, &secret); err != nil {
+			logger.Error(err, "Failed to get secret", "Secret", secretKey)
+			return ctrl.Result{}, err
+		}
+
+		accessSecretBytes, ok := secret.Data["access_secret"]
+		if !ok {
+			err := fmt.Errorf("access_secret not found in secret %s/%s", secretKey.Namespace, secretKey.Name)
+			logger.Error(err, "Secret data missing access_secret")
+			return ctrl.Result{}, err
+		}
+		password := string(accessSecretBytes)
+
+		reqPayload.Credential = registryCredential{
+			Type:         "basic",
+			AccessKey:    harborConn.Spec.Credentials.AccessKey,
+			AccessSecret: password,
+		}
 	}
 
 	// Marshal the payload to JSON.

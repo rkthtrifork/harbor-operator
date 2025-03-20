@@ -11,6 +11,8 @@ spec:
     kind: HarborConnection
     listKind: HarborConnectionList
     plural: harborconnections
+    shortNames:
+    - hc
     singular: harborconnection
   scope: Namespaced
   versions:
@@ -43,10 +45,9 @@ spec:
                 description: BaseURL is the Harbor API endpoint.
                 format: url
                 type: string
-              credential:
-                description: |-
-                  Credential holds the default credentials for Harbor API calls.
-                  This field is optional. If provided, it is used for all child resources unless they override it.
+              credentials:
+                description: Credentials holds the default credentials for Harbor
+                  API calls.
                 properties:
                   accessKey:
                     description: AccessKey for authentication.
@@ -55,22 +56,11 @@ spec:
                   accessSecretRef:
                     description: AccessSecretRef is a reference to a Kubernetes Secret
                       containing the access secret.
-                    properties:
-                      name:
-                        description: Name of the object.
-                        type: string
-                      namespace:
-                        description: Namespace where the object is located.
-                        type: string
-                    required:
-                    - name
-                    - namespace
-                    type: object
+                    type: string
                   type:
                     description: Type of the credential, e.g., "basic".
                     enum:
                     - basic
-                    - other-types-if-needed
                     type: string
                 required:
                 - accessKey
