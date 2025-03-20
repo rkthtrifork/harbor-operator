@@ -54,24 +54,20 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Validate the Harbor BaseURL.
-	if err := r.validateBaseURL(ctx, harborConn.Spec.BaseURL); err != nil {
+	if err := r.validateBaseURL(harborConn.Spec.BaseURL); err != nil {
 		logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
 		return ctrl.Result{}, err
 	}
 
 	// Build the registry creation payload.
-	payload, err := r.buildRegistryPayload(ctx, &registry)
-	if err != nil {
-		logger.Error(err, "Failed to build registry payload")
-		return ctrl.Result{}, err
-	}
+	registryRequest := r.buildRegistryRequest(&registry)
 
 	// Build the Harbor API URL for creating a registry.
 	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
 	logger.Info("Sending registry creation request", "url", registriesURL)
 
 	// Marshal the payload to JSON.
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(registryRequest)
 	if err != nil {
 		logger.Error(err, "Failed to marshal registry payload")
 		return ctrl.Result{}, err
@@ -124,7 +120,7 @@ func (r *RegistryReconciler) getHarborConnection(ctx context.Context, namespace,
 }
 
 // validateBaseURL verifies that the provided URL is valid and contains a scheme.
-func (r *RegistryReconciler) validateBaseURL(ctx context.Context, baseURL string) error {
+func (r *RegistryReconciler) validateBaseURL(baseURL string) error {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return err
@@ -135,16 +131,23 @@ func (r *RegistryReconciler) validateBaseURL(ctx context.Context, baseURL string
 	return nil
 }
 
-// buildRegistryPayload constructs the JSON payload for the registry creation request.
-func (r *RegistryReconciler) buildRegistryPayload(ctx context.Context, registry *harborv1alpha1.Registry) (map[string]interface{}, error) {
-	payload := map[string]interface{}{
-		"url":         registry.Spec.URL,
-		"name":        registry.Spec.Name,
-		"description": registry.Spec.Description,
-		"type":        registry.Spec.Type,
-		"insecure":    registry.Spec.Insecure,
+type createRegistryRequest struct {
+	URL         string `json:"url"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Insecure    bool   `json:"insecure"`
+}
+
+// buildRegistryRequest constructs the JSON request for the registry creation request.
+func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Registry) createRegistryRequest {
+	return createRegistryRequest{
+		URL:         registry.Spec.URL,
+		Name:        registry.Spec.Name,
+		Description: registry.Spec.Description,
+		Type:        registry.Spec.Type,
+		Insecure:    registry.Spec.Insecure,
 	}
-	return payload, nil
 }
 
 // getHarborAuth returns the username and password for authenticating to Harbor.
