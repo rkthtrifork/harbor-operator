@@ -97,7 +97,11 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.logger.Error(err, "Failed to perform HTTP request for registry creation")
 		return ctrl.Result{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			r.logger.Error(err, "failed to close response body")
+		}
+	}()
 
 	// Check for a successful status code (e.g., 201 Created).
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
