@@ -162,8 +162,8 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 .PHONY: kind-up
 kind-up: ## Start a Kind cluster named "kind"
 	kind create cluster --config kind-configuration.yaml
-	helm install --set controller.hostPort.enabled=true my-ingress-nginx ingress-nginx/ingress-nginx --wait
-	helm install --set expose.ingress.className=nginx my-harbor harbor/harbor
+	helm install --set controller.hostPort.enabled=true,controller.service.type=NodePort nginx ingress-nginx/ingress-nginx --wait
+	helm install --set expose.ingress.className=nginx harbor harbor/harbor --wait
 
 .PHONY: kind-down
 kind-down: ## Stop (delete) the Kind cluster named "kind"
