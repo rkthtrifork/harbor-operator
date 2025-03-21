@@ -1,125 +1,172 @@
 # harbor-operator
-// TODO(user): Add simple overview of use/purpose
+
+harbor-operator is a Kubernetes operator that manages Harbor registries, projects, users, and members by synchronizing Custom Resources (CRs) with your Harbor instance via its API.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+harbor-operator enables declarative management of Harbor resources in your Kubernetes cluster. You can define your Harbor registries, projects, users, and members using CRDs, and the operator will reconcile these definitions by creating or updating the corresponding entities in Harbor. A HarborConnection resource provides the base URL and optional default credentials for the Harbor API, while individual CRs (such as Registry) reference a HarborConnection for the operator to pull the connection details from.
 
 ## Getting Started
 
 ### Prerequisites
-- go version v1.23.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+- **Go:** v1.23.0+
+- **Docker:** v17.03+
+- **kubectl:** v1.11.3+
+- **Access to a Kubernetes v1.11.3+ cluster**
+- **Kind (optional):** For local development and testing
 
-```sh
-make docker-build docker-push IMG=<some-registry>/harbor-operator:tag
-```
+### Local Development
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+For local development with Kind, follow these steps:
 
-**Install the CRDs into the cluster:**
+1. **Edit Your Hosts File**
 
-```sh
-make install
-```
+   Add the following line to your hosts file (e.g., `/etc/hosts` on Linux or macOS):
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+   ```sh
+   127.0.0.1 core.harbor.domain
+   ```
 
-```sh
-make deploy IMG=<some-registry>/harbor-operator:tag
-```
+   This entry allows you to resolve Harbor’s API endpoint locally.
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+2. **Start a Kind Cluster**
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+   Run the following command to create a Kind cluster:
 
-```sh
-kubectl apply -k config/samples/
-```
+   ```sh
+   make kind-up
+   ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+   This command creates a Kind cluster and deploys necessary dependencies (e.g., an ingress controller and Harbor if applicable).
+
+3. **Deploy harbor-operator in Kind**
+
+   Build a local image and deploy the operator with:
+
+   ```sh
+   make kind-deploy
+   ```
+
+   This target builds the image (using the tag defined by `IMG_LOCAL`), loads it into the Kind cluster, and deploys the operator.
+
+4. **Apply Sample Custom Resources**
+
+   To test the operator, apply the sample CRs from the `config/samples/` directory:
+
+   ```sh
+   kubectl apply -k config/samples/
+   ```
+
+   This creates sample instances of your HarborConnection, Registry, and other resources.
+
+### To Deploy on a Cluster
+
+1. **Build and Push the Image**
+
+   Build and push the operator image to your registry:
+
+   ```sh
+   make docker-build docker-push IMG=<your-registry>/harbor-operator:tag
+   ```
+
+2. **Install the CRDs**
+
+   Install the Custom Resource Definitions into your cluster:
+
+   ```sh
+   make install
+   ```
+
+3. **Deploy the Operator**
+
+   Deploy harbor-operator to your cluster using the image built above:
+
+   ```sh
+   make deploy IMG=<your-registry>/harbor-operator:tag
+   ```
+
+4. **Create Instances of Your CRs**
+
+   Apply the sample CRs (or your custom YAMLs) to create Harbor resources:
+
+   ```sh
+   kubectl apply -k config/samples/
+   ```
+
+   > **NOTE:** Make sure the sample YAMLs have default values suitable for your environment.
 
 ### To Uninstall
-**Delete the instances (CRs) from the cluster:**
 
-```sh
-kubectl delete -k config/samples/
-```
+1. **Delete Sample Custom Resources**
 
-**Delete the APIs(CRDs) from the cluster:**
+   ```sh
+   kubectl delete -k config/samples/
+   ```
 
-```sh
-make uninstall
-```
+2. **Uninstall the CRDs**
 
-**UnDeploy the controller from the cluster:**
+   ```sh
+   make uninstall
+   ```
 
-```sh
-make undeploy
-```
+3. **Undeploy the Operator**
+
+   ```sh
+   make undeploy
+   ```
 
 ## Project Distribution
 
-Following the options to release and provide this solution to the users.
+### By Providing a Bundle with All YAML Files
 
-### By providing a bundle with all YAML files
+1. **Build the Installer**
 
-1. Build the installer for the image built and published in the registry:
+   Build an installer that includes all CRDs and deployment manifests:
 
-```sh
-make build-installer IMG=<some-registry>/harbor-operator:tag
-```
+   ```sh
+   make build-installer IMG=<your-registry>/harbor-operator:tag
+   ```
 
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
+   This command generates an `install.yaml` file in the `dist/` directory.
 
-2. Using the installer
+2. **Deploy Using the Installer**
 
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
+   Users can install harbor-operator by running:
 
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/harbor-operator/<tag or branch>/dist/install.yaml
-```
+   ```sh
+   kubectl apply -f https://raw.githubusercontent.com/<org>/harbor-operator/<tag-or-branch>/dist/install.yaml
+   ```
 
-### By providing a Helm Chart
+### By Providing a Helm Chart
 
-1. Build the chart using the optional helm plugin
+1. **Generate the Helm Chart**
 
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
+   Generate a Helm Chart using the Helm plugin:
 
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
+   ```sh
+   kubebuilder edit --plugins=helm/v1-alpha
+   ```
 
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
+   This creates a chart under the `dist/chart` directory.
+
+2. **Distribute the Chart**
+
+   Users can then install harbor-operator using Helm from the generated chart.
+
+   > **NOTE:** After making changes to the project, update the Helm Chart by re-running the above command (with the `--force` flag if necessary) to synchronize your changes.
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+Contributions are welcome! To contribute:
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+- Fork the repository and create a feature branch.
+- Ensure your changes pass all tests and linters (`make fmt`, `make vet`, `make lint`).
+- Submit a pull request with detailed descriptions of your changes.
+
+For more detailed guidelines, please refer to the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html).
 
 ## License
-
-Copyright 2025.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -132,4 +179,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
