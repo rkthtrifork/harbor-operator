@@ -28,7 +28,7 @@ For local development with Kind, follow these steps:
    127.0.0.1 core.harbor.domain
    ```
 
-   This entry allows you to resolve Harbor’s API endpoint locally.
+   This entry allows you to resolve Harbor’s ingress locally.
 
 2. **Start a Kind Cluster**
 
@@ -38,7 +38,7 @@ For local development with Kind, follow these steps:
    make kind-up
    ```
 
-   This command creates a Kind cluster and deploys necessary dependencies (e.g., an ingress controller and Harbor if applicable).
+   This command creates a Kind cluster and deploys Nginx and Harbor.
 
 3. **Deploy harbor-operator in Kind**
 
@@ -48,11 +48,11 @@ For local development with Kind, follow these steps:
    make kind-deploy
    ```
 
-   This target builds the image (using the tag defined by `IMG_LOCAL`), loads it into the Kind cluster, and deploys the operator.
+   This target builds the image for the operator, loads it into the Kind cluster, and deploys it.
 
 4. **Apply Sample Custom Resources**
 
-   To test the operator, apply the sample CRs from the `config/samples/` directory:
+   To get started with testing the operator, you can apply the sample CRs from the `config/samples/` directory:
 
    ```sh
    kubectl apply -k config/samples/
