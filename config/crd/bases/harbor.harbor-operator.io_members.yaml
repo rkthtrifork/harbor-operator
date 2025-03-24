@@ -39,10 +39,50 @@ spec:
           spec:
             description: MemberSpec defines the desired state of Member.
             properties:
-              foo:
-                description: Foo is an example field of Member. Edit member_types.go
-                  to remove/update
+              harborConnectionRef:
+                description: HarborConnectionRef references the HarborConnection resource
+                  to use.
                 type: string
+              member_group:
+                description: MemberGroup defines the member if it is a group.
+                properties:
+                  group_name:
+                    description: GroupName is the name of the group.
+                    type: string
+                  group_type:
+                    description: GroupType is the type of the group.
+                    type: integer
+                  id:
+                    description: If the group already exists in Harbor, set its ID.
+                    type: integer
+                  ldap_group_dn:
+                    description: LDAPGroupDN is used for LDAP groups.
+                    type: string
+                type: object
+              member_user:
+                description: MemberUser defines the member if it is a user.
+                properties:
+                  user_id:
+                    description: If the user already exists in Harbor, set UserID.
+                    type: integer
+                  username:
+                    description: Username is used to onboard a user if not already
+                      present.
+                    type: string
+                type: object
+              projectRef:
+                description: ProjectRef is the name (or ID) of the project in Harbor
+                  where the member should be added.
+                type: string
+              role:
+                description: |-
+                  Role is the human‑readable name of the role.
+                  Allowed values: "admin", "maintainer", "developer", "guest"
+                type: string
+            required:
+            - harborConnectionRef
+            - projectRef
+            - role
             type: object
           status:
             description: MemberStatus defines the observed state of Member.

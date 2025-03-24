@@ -39,10 +39,32 @@ spec:
           spec:
             description: UserSpec defines the desired state of User.
             properties:
-              foo:
-                description: Foo is an example field of User. Edit user_types.go to
-                  remove/update
+              comment:
+                description: Comment holds additional information or a comment about
+                  the user.
                 type: string
+              email:
+                description: Email is the email address of the user.
+                type: string
+              harborConnectionRef:
+                description: HarborConnectionRef references the HarborConnection resource
+                  to use.
+                type: string
+              password:
+                description: Password is the password for the new user.
+                type: string
+              realname:
+                description: RealName is the real name of the user.
+                type: string
+              username:
+                description: Username is the unique username for the user.
+                type: string
+            required:
+            - email
+            - harborConnectionRef
+            - password
+            - realname
+            - username
             type: object
           status:
             description: UserStatus defines the observed state of User.

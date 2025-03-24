@@ -32,8 +32,6 @@ rules:
   - harbor.harbor-operator.io
   resources:
   - harborconnections/finalizers
-  - members/finalizers
-  - users/finalizers
   verbs:
   - update
 - apiGroups:

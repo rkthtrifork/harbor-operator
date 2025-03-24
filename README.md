@@ -4,7 +4,9 @@ harbor-operator is a Kubernetes operator that manages Harbor registries, project
 
 ## Description
 
-harbor-operator enables declarative management of Harbor resources in your Kubernetes cluster. You can define your Harbor registries, projects, users, and members using CRDs, and the operator will reconcile these definitions by creating or updating the corresponding entities in Harbor. A HarborConnection resource provides the base URL and optional default credentials for the Harbor API, while individual CRs (such as Registry) reference a HarborConnection for the operator to pull the connection details from.
+harbor-operator enables declarative management of Harbor resources in your Kubernetes cluster. You can define your Harbor registries, projects, users, and members using CRDs, and the operator will reconcile these definitions by creating or updating the corresponding entities in Harbor.
+
+**Important:** harbor-operator does **not** deploy Harbor itself. Harbor is a complex application, and attempting to deploy it via a single operator can quickly become a rabbit hole. Instead, this operator introduces a CRD called **HarborConnection** that lets you define the connection details (such as the Harbor API base URL and optional default credentials) for an existing Harbor instance. All other Harbor CRDs (e.g., Registry, Project, User, Member) reference a HarborConnection to obtain these details, ensuring that the operator works with your already-deployed Harbor instance.
 
 ## Getting Started
 
@@ -38,7 +40,7 @@ For local development with Kind, follow these steps:
    make kind-up
    ```
 
-   This command creates a Kind cluster and deploys Nginx and Harbor.
+   This command creates a Kind cluster and deploys Nginx and Harbor (if needed) for local testing.
 
 3. **Deploy harbor-operator in Kind**
 

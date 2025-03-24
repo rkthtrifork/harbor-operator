@@ -1,41 +1,40 @@
-/*
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // UserSpec defines the desired state of User.
 type UserSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborConnectionRef references the HarborConnection resource to use.
+	// +kubebuilder:validation:Required
+	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// Foo is an example field of User. Edit user_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Email is the email address of the user.
+	// +kubebuilder:validation:Required
+	Email string `json:"email"`
+
+	// RealName is the real name of the user.
+	// +kubebuilder:validation:Required
+	RealName string `json:"realname"`
+
+	// Comment holds additional information or a comment about the user.
+	// +optional
+	Comment string `json:"comment,omitempty"`
+
+	// Password is the password for the new user.
+	// +kubebuilder:validation:Required
+	Password string `json:"password"`
+
+	// Username is the unique username for the user.
+	// +kubebuilder:validation:Required
+	Username string `json:"username"`
 }
 
 // UserStatus defines the observed state of User.
 type UserStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Add any additional status fields if needed.
+	// For example, you might add a "Created" flag or record the Harbor user ID.
 }
 
 // +kubebuilder:object:root=true
