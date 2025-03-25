@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
@@ -48,16 +48,37 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// Check if the resource is being deleted.
+	if !registry.GetDeletionTimestamp().IsZero() {
+		// Only perform deletion handling if the finalizer is still present.
+		if controllerutil.ContainsFinalizer(&registry, finalizerName) {
+			// Call your deletion cleanup function (e.g., to delete the Harbor resource).
+			if err := r.deleteHarborRegistry(&registry); err != nil {
+				return ctrl.Result{}, err
+			}
+			// Remove the finalizer.
+			controllerutil.RemoveFinalizer(&registry, finalizerName)
+			if err := r.Update(ctx, &registry); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		// Since the resource is being deleted, no further reconciliation is needed.
+		return ctrl.Result{}, nil
+	}
+
+	// If not being deleted, ensure the finalizer is present.
+	if !controllerutil.ContainsFinalizer(&registry, finalizerName) {
+		if controllerutil.AddFinalizer(&registry, finalizerName) {
+			if err := r.Update(ctx, &registry); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
 	// Retrieve the HarborConnection referenced by the Registry.
 	harborConn, err := r.getHarborConnection(ctx, registry.Namespace, registry.Spec.HarborConnectionRef)
 	if err != nil {
 		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
-	}
-
-	// Validate the Harbor BaseURL.
-	if err := r.validateBaseURL(harborConn.Spec.BaseURL); err != nil {
-		r.logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
 		return ctrl.Result{}, err
 	}
 
@@ -116,27 +137,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{}, nil
 }
 
-// getHarborConnection fetches the HarborConnection referenced in the Registry.
-func (r *RegistryReconciler) getHarborConnection(ctx context.Context, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
-	var harborConn harborv1alpha1.HarborConnection
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &harborConn); err != nil {
-		return nil, err
-	}
-	return &harborConn, nil
-}
-
-// validateBaseURL verifies that the provided URL is valid and contains a scheme.
-func (r *RegistryReconciler) validateBaseURL(baseURL string) error {
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return err
-	}
-	if parsedURL.Scheme == "" {
-		return fmt.Errorf("baseURL %s is missing a protocol scheme", baseURL)
-	}
-	return nil
-}
-
 type createRegistryRequest struct {
 	URL         string `json:"url"`
 	Name        string `json:"name"`
@@ -172,6 +172,11 @@ func (r *RegistryReconciler) getHarborAuth(ctx context.Context, harborConn *harb
 		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
 	}
 	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
+}
+
+func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Registry) error {
+	// Implement the deletion logic here.
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
