@@ -35,8 +35,8 @@ type RegistrySpec struct {
 
 // RegistryStatus defines the observed state of Registry.
 type RegistryStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborRegistryID is the ID of the registry in Harbor.
+	HarborRegistryID int `json:"harborRegistryID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

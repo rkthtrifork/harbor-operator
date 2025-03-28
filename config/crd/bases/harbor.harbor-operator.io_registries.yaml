@@ -72,6 +72,10 @@ spec:
             type: object
           status:
             description: RegistryStatus defines the observed state of Registry.
+            properties:
+              harborRegistryID:
+                description: HarborRegistryID is the ID of the registry in Harbor.
+                type: integer
             type: object
         type: object
     served: true
