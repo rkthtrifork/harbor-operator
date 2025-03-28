@@ -100,42 +100,33 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	// Retrieve the existing registry.
+	// Adoption logic: if no HarborRegistryID is set and AllowTakeover is enabled,
+	// try to adopt an existing registry by name.
+	if registry.Status.HarborRegistryID == 0 && registry.Spec.AllowTakeover {
+		adopted, adoptErr := r.adoptExistingRegistry(ctx, harborConn, &registry)
+		if adoptErr != nil {
+			r.logger.Error(adoptErr, "Failed to adopt existing registry", "RegistryName", registry.Spec.Name)
+			return ctrl.Result{}, adoptErr
+		}
+		if adopted != nil {
+			r.logger.Info("Successfully adopted existing registry", "RegistryName", registry.Spec.Name, "HarborRegistryID", adopted.ID)
+		}
+	}
+
+	// Retrieve the existing registry using HarborRegistryID if available.
 	var existing *harborRegistryResponse
 	if registry.Status.HarborRegistryID != 0 {
 		existing, err = r.getHarborRegistryByID(ctx, harborConn, registry.Status.HarborRegistryID)
 		if err != nil {
 			r.logger.Error(err, "Failed to get registry by ID from Harbor", "HarborRegistryID", registry.Status.HarborRegistryID)
-			// Fall back to name-based lookup in case the resource was removed.
-		}
-	}
-	if existing == nil {
-		existing, err = r.getHarborRegistry(ctx, harborConn, registry.Spec.Name)
-		if err != nil {
-			r.logger.Error(err, "Failed to get registry from Harbor by name", "RegistryName", registry.Spec.Name)
-			return ctrl.Result{}, err
 		}
 	}
 
 	// Build the desired registry payload from the CR.
 	desired := r.buildRegistryRequest(&registry)
 
-	// If registry doesn't exist, create it.
-	if existing == nil {
-		r.logger.Info("Registry not found in Harbor, creating new registry", "RegistryName", registry.Spec.Name)
-		newID, err := r.createHarborRegistry(ctx, harborConn, desired)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		// Update CR status with Harbor registry ID.
-		registry.Status.HarborRegistryID = newID
-		if err := r.Status().Update(ctx, &registry); err != nil {
-			r.logger.Error(err, "Failed to update Registry status with Harbor registry ID", "HarborRegistryID", newID)
-			return ctrl.Result{}, err
-		}
-		r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name, "HarborRegistryID", newID)
-	} else {
-		// Compare the existing registry with the desired state.
+	// If a registry exists and its configuration differs from the desired state, update it.
+	if existing != nil {
 		if registryNeedsUpdate(desired, *existing) {
 			r.logger.Info("Registry in Harbor differs from desired state, updating", "RegistryName", registry.Spec.Name)
 			if err := r.updateHarborRegistry(ctx, harborConn, existing.ID, desired); err != nil {
@@ -145,9 +136,51 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		} else {
 			r.logger.Info("Registry is already in sync with desired state", "RegistryName", registry.Spec.Name)
 		}
+
+		return returnWithDriftDetection(&registry)
 	}
 
+	// If the registry is not found, create a new one.
+	if registry.Status.HarborRegistryID != 0 {
+		r.logger.Info("Registry with stored ID not found. Assuming it was deleted externally. Creating new registry", "RegistryName", registry.Spec.Name)
+	} else {
+		r.logger.Info("Creating new registry", "RegistryName", registry.Spec.Name)
+	}
+	newID, err := r.createHarborRegistry(ctx, harborConn, desired)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	registry.Status.HarborRegistryID = newID
+	if err := r.Status().Update(ctx, &registry); err != nil {
+		r.logger.Error(err, "Failed to update Registry status with Harbor registry ID", "HarborRegistryID", newID)
+		return ctrl.Result{}, err
+	}
+	r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name, "HarborRegistryID", newID)
+
+	return returnWithDriftDetection(&registry)
+}
+
+func returnWithDriftDetection(registry *harborv1alpha1.Registry) (ctrl.Result, error) {
+	if registry.Spec.DriftDetectionInterval.Duration > 0 {
+		return ctrl.Result{RequeueAfter: registry.Spec.DriftDetectionInterval.Duration}, nil
+	}
 	return ctrl.Result{}, nil
+}
+
+// adoptExistingRegistry attempts to adopt an existing registry from Harbor by name.
+// If a registry is found, it updates the CR's status with the Harbor registry ID.
+func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) (*harborRegistryResponse, error) {
+	existing, err := r.getHarborRegistry(ctx, harborConn, registry.Spec.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup registry for adoption: %w", err)
+	}
+	if existing != nil {
+		registry.Status.HarborRegistryID = existing.ID
+		if err := r.Status().Update(ctx, registry); err != nil {
+			return nil, fmt.Errorf("failed to update registry status during adoption: %w", err)
+		}
+	}
+	return existing, nil
 }
 
 // buildRegistryRequest constructs the JSON request for the registry creation/update.
@@ -352,30 +385,13 @@ func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Regis
 		return err
 	}
 
-	// Try to fetch the registry by ID if available.
-	var existing *harborRegistryResponse
-	if registry.Status.HarborRegistryID != 0 {
-		existing, err = r.getHarborRegistryByID(context.Background(), harborConn, registry.Status.HarborRegistryID)
-		if err != nil {
-			// Log the error and fall back to a name-based lookup.
-			r.logger.Info("Failed to get registry by ID, falling back to name search", "error", err)
-			existing = nil
-		}
-	}
-
-	// Fall back to name search if not found by ID.
-	if existing == nil {
-		existing, err = r.getHarborRegistry(context.Background(), harborConn, registry.Spec.Name)
-		if err != nil {
-			return err
-		}
-	}
-	if existing == nil {
-		// Nothing to delete.
+	// If no HarborRegistryID is set, there's nothing to delete.
+	if registry.Status.HarborRegistryID == 0 {
+		r.logger.Info("No HarborRegistryID present, nothing to delete")
 		return nil
 	}
 
-	deleteURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, existing.ID)
+	deleteURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, registry.Status.HarborRegistryID)
 	reqHTTP, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create DELETE request: %w", err)
@@ -393,6 +409,12 @@ func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Regis
 		return fmt.Errorf("failed to perform DELETE request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	// If the registry is already deleted, Harbor might return a 404. We treat that as success.
+	if resp.StatusCode == http.StatusNotFound {
+		r.logger.Info("Registry not found during deletion; assuming it was already deleted", "HarborRegistryID", registry.Status.HarborRegistryID)
+		return nil
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)

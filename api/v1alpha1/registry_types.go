@@ -4,9 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
 	// HarborConnectionRef references the HarborConnection resource to use.
@@ -31,6 +28,20 @@ type RegistrySpec struct {
 
 	// Insecure indicates if remote certificates should be verified.
 	Insecure bool `json:"insecure"`
+
+	// AllowTakeover indicates whether the operator is allowed to adopt an existing registry
+	// in Harbor if one with the same name already exists.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
+	// DriftDetectionInterval is the interval at which the operator will check for drift.
+	// A value of 0 disables periodic drift detection.
+	// +optional
+	DriftDetectionInterval metav1.Duration `json:"driftDetectionInterval,omitempty"`
+
+	// ReconcileNonce is an optional field that, when updated, forces an immediate reconcile.
+	// +optional
+	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
 // RegistryStatus defines the observed state of Registry.
