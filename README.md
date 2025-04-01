@@ -1,22 +1,24 @@
+> [!IMPORTANT]
+> This operator does **not** deploy Harbor. Instead, it introduces a CRD called **HarborConnection** that lets you define the connection details for an existing Harbor instance. All other CRDs reference a HarborConnection to obtain these details, ensuring that the operator works with your already-deployed Harbor instance.
+
 # harbor-operator
 
-harbor-operator is a Kubernetes operator that manages Harbor registries, projects, users, and members by synchronizing Custom Resources (CRs) with your Harbor instance via its API.
+harbor-operator is a Kubernetes operator that enables you to manage Harbor resources—such as registries, projects, users, and members—using declarative Custom Resources (CRs) in your Kubernetes cluster.
 
 ## Description
 
-harbor-operator enables declarative management of Harbor resources in your Kubernetes cluster. You can define your Harbor registries, projects, users, and members using CRDs, and the operator will reconcile these definitions by creating or updating the corresponding entities in Harbor.
+With harbor-operator, you define your desired Harbor configuration as CRDs, and the operator synchronizes these definitions with your existing Harbor instance via its API. Instead of deploying Harbor (which is a complex system in itself), the operator uses a dedicated **HarborConnection** CRD. This resource holds the connection details (like the Harbor API base URL and optional credentials) for an already-deployed Harbor instance.
 
-**Important:** harbor-operator does **not** deploy Harbor itself. Harbor is a complex application, and attempting to deploy it via a single operator can quickly become a rabbit hole. Instead, this operator introduces a CRD called **HarborConnection** that lets you define the connection details (such as the Harbor API base URL and optional default credentials) for an existing Harbor instance. All other Harbor CRDs (e.g., Registry, Project, User, Member) reference a HarborConnection to obtain these details, ensuring that the operator works with your already-deployed Harbor instance.
+All other Harbor CRDs (e.g., Registry, Project, User, Member) reference a HarborConnection to access the necessary connection information. This design allows you to manage Harbor resources declaratively without the need for the operator to handle Harbor's deployment.
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Go:** v1.23.0+
-- **Docker:** v17.03+
-- **kubectl:** v1.11.3+
-- **Access to a Kubernetes v1.11.3+ cluster**
-- **Kind (optional):** For local development and testing
+- **Go**
+- **Docker**
+- **kubectl**
+- **Access to a Kubernetes cluster** (may be [Kind](https://kind.sigs.k8s.io/))
 
 ### Local Development
 

@@ -28,3 +28,10 @@ func (r *RegistryReconciler) getHarborConnection(ctx context.Context, namespace,
 
 	return &harborConn, nil
 }
+
+func notEmptyOrElse(s, fallback string) string {
+	if s != "" {
+		return s
+	}
+	return fallback
+}

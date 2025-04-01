@@ -10,11 +10,13 @@ type RegistrySpec struct {
 	// +kubebuilder:validation:Required
 	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// Type of the registry, e.g., "github-ghcr"
+	// Type of the registry, e.g., "github-ghcr".
 	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
 	Type string `json:"type"`
 
 	// Name is the registry name.
+	// It is recommended to leave this field empty so that the operator defaults it
+	// to the custom resource's metadata name.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
@@ -31,11 +33,13 @@ type RegistrySpec struct {
 
 	// AllowTakeover indicates whether the operator is allowed to adopt an existing registry
 	// in Harbor if one with the same name already exists.
+	// If true, the operator will search for an existing registry with the same name and, if found,
+	// update its configuration to match the custom resource.
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
 	// DriftDetectionInterval is the interval at which the operator will check for drift.
-	// A value of 0 disables periodic drift detection.
+	// A value of 0 (or omitted) disables periodic drift detection.
 	// +optional
 	DriftDetectionInterval metav1.Duration `json:"driftDetectionInterval,omitempty"`
 

@@ -187,7 +187,7 @@ func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborCo
 func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Registry) createRegistryRequest {
 	return createRegistryRequest{
 		URL:         registry.Spec.URL,
-		Name:        registry.Spec.Name,
+		Name:        notEmptyOrElse(registry.Spec.Name, registry.ObjectMeta.Name),
 		Description: registry.Spec.Description,
 		Type:        registry.Spec.Type,
 		Insecure:    registry.Spec.Insecure,
