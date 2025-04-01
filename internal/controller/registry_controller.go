@@ -63,14 +63,14 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	var registry harborv1alpha1.Registry
 	if err := r.Get(ctx, req.NamespacedName, &registry); err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.Info("Registry resource not found; it may have been deleted")
+			r.logger.V(1).Info("Registry resource not found; it may have been deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "Failed to get Registry")
 		return ctrl.Result{}, err
 	}
 
-	// Check if the resource is being deleted.
+	// Handle deletion.
 	if !registry.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(&registry, finalizerName) {
 			if err := r.deleteHarborRegistry(&registry); err != nil {
@@ -134,7 +134,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 			r.logger.Info("Successfully updated registry on Harbor", "RegistryName", registry.Spec.Name)
 		} else {
-			r.logger.Info("Registry is already in sync with desired state", "RegistryName", registry.Spec.Name)
+			r.logger.V(1).Info("Registry is already in sync with desired state", "RegistryName", registry.Spec.Name)
 		}
 
 		return returnWithDriftDetection(&registry)
@@ -197,7 +197,7 @@ func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Regis
 // createHarborRegistry sends a POST request to Harbor to create a new registry.
 func (r *RegistryReconciler) createHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, payload createRegistryRequest) (int, error) {
 	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
-	r.logger.Info("Sending registry creation request", "url", registriesURL)
+	r.logger.V(1).Info("Sending registry creation request", "url", registriesURL)
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -245,7 +245,7 @@ func (r *RegistryReconciler) createHarborRegistry(ctx context.Context, harborCon
 // updateHarborRegistry sends a PUT request to Harbor to update an existing registry.
 func (r *RegistryReconciler) updateHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, id int, payload createRegistryRequest) error {
 	updateURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, id)
-	r.logger.Info("Sending registry update request", "url", updateURL)
+	r.logger.V(1).Info("Sending registry update request", "url", updateURL)
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -387,7 +387,7 @@ func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Regis
 
 	// If no HarborRegistryID is set, there's nothing to delete.
 	if registry.Status.HarborRegistryID == 0 {
-		r.logger.Info("No HarborRegistryID present, nothing to delete")
+		r.logger.V(1).Info("No HarborRegistryID present, nothing to delete")
 		return nil
 	}
 
@@ -410,9 +410,9 @@ func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Regis
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// If the registry is already deleted, Harbor might return a 404. We treat that as success.
+	// If the registry is already deleted, log at debug verbosity.
 	if resp.StatusCode == http.StatusNotFound {
-		r.logger.Info("Registry not found during deletion; assuming it was already deleted", "HarborRegistryID", registry.Status.HarborRegistryID)
+		r.logger.V(1).Info("Registry not found during deletion; assuming it was already deleted", "HarborRegistryID", registry.Status.HarborRegistryID)
 		return nil
 	}
 
