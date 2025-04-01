@@ -66,7 +66,6 @@ spec:
                   Name is the registry name.
                   It is recommended to leave this field empty so that the operator defaults it
                   to the custom resource's metadata name.
-                minLength: 1
                 type: string
               reconcileNonce:
                 description: ReconcileNonce is an optional field that, when updated,
@@ -85,7 +84,6 @@ spec:
             required:
             - harborConnectionRef
             - insecure
-            - name
             - type
             - url
             type: object

@@ -180,7 +180,7 @@ kind-deploy: manifests generate install ## Build the image, load it into Kind, a
 	$(MAKE) deploy IMG=$(IMG_LOCAL)
 
 .PHONY: kind-undeploy
-kind-undeploy: undeploy uninstall ## Undeploy the operator from the Kind cluster.
+kind-undeploy: uninstall undeploy ## Undeploy the operator from the Kind cluster.
 
 ##@ Dependencies
 

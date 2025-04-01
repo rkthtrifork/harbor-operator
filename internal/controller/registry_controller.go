@@ -100,6 +100,11 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	if registry.Spec.Name == "" {
+		registry.Spec.Name = registry.ObjectMeta.Name
+		r.logger.V(1).Info("No name specified; using metadata name", "Name", registry.Spec.Name)
+	}
+
 	// Adoption logic: if no HarborRegistryID is set and AllowTakeover is enabled,
 	// try to adopt an existing registry by name.
 	if registry.Status.HarborRegistryID == 0 && registry.Spec.AllowTakeover {
@@ -187,7 +192,7 @@ func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborCo
 func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Registry) createRegistryRequest {
 	return createRegistryRequest{
 		URL:         registry.Spec.URL,
-		Name:        notEmptyOrElse(registry.Spec.Name, registry.ObjectMeta.Name),
+		Name:        registry.Spec.Name,
 		Description: registry.Spec.Description,
 		Type:        registry.Spec.Type,
 		Insecure:    registry.Spec.Insecure,

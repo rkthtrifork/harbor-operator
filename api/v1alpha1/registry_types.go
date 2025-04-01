@@ -17,8 +17,8 @@ type RegistrySpec struct {
 	// Name is the registry name.
 	// It is recommended to leave this field empty so that the operator defaults it
 	// to the custom resource's metadata name.
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	// +optional
+	Name string `json:"name,omitempty"`
 
 	// Description is an optional description.
 	// +optional
