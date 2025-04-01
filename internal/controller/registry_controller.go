@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
+	"path"
+	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
@@ -26,6 +29,25 @@ type RegistryReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	logger logr.Logger
+}
+
+// harborRegistryResponse represents a registry as returned by Harbor.
+type harborRegistryResponse struct {
+	ID          int    `json:"id"`
+	URL         string `json:"url"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Insecure    bool   `json:"insecure"`
+}
+
+// createRegistryRequest is the payload sent to Harbor when creating or updating a registry.
+type createRegistryRequest struct {
+	URL         string `json:"url"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Insecure    bool   `json:"insecure"`
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -41,11 +63,34 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	var registry harborv1alpha1.Registry
 	if err := r.Get(ctx, req.NamespacedName, &registry); err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.Info("Registry resource not found; it may have been deleted")
+			r.logger.V(1).Info("Registry resource not found; it may have been deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "Failed to get Registry")
 		return ctrl.Result{}, err
+	}
+
+	// Handle deletion.
+	if !registry.GetDeletionTimestamp().IsZero() {
+		if controllerutil.ContainsFinalizer(&registry, finalizerName) {
+			if err := r.deleteHarborRegistry(&registry); err != nil {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(&registry, finalizerName)
+			if err := r.Update(ctx, &registry); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Ensure the finalizer is present.
+	if !controllerutil.ContainsFinalizer(&registry, finalizerName) {
+		if controllerutil.AddFinalizer(&registry, finalizerName) {
+			if err := r.Update(ctx, &registry); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// Retrieve the HarborConnection referenced by the Registry.
@@ -55,97 +100,95 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	// Validate the Harbor BaseURL.
-	if err := r.validateBaseURL(harborConn.Spec.BaseURL); err != nil {
-		r.logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
-		return ctrl.Result{}, err
+	if registry.Spec.Name == "" {
+		registry.Spec.Name = registry.ObjectMeta.Name
+		r.logger.V(1).Info("No name specified; using metadata name", "Name", registry.Spec.Name)
 	}
 
-	// Build the registry creation payload.
-	registryRequest := r.buildRegistryRequest(&registry)
-
-	// Build the Harbor API URL for creating a registry.
-	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
-	r.logger.Info("Sending registry creation request", "url", registriesURL)
-
-	// Marshal the payload to JSON.
-	payloadBytes, err := json.Marshal(registryRequest)
-	if err != nil {
-		r.logger.Error(err, "Failed to marshal registry payload")
-		return ctrl.Result{}, err
-	}
-
-	// Create the HTTP POST request.
-	reqHTTP, err := http.NewRequest("POST", registriesURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		r.logger.Error(err, "Failed to create HTTP request for registry creation")
-		return ctrl.Result{}, err
-	}
-	reqHTTP.Header.Set("Content-Type", "application/json")
-
-	// Set authentication using HarborConnection credentials.
-	username, password, err := r.getHarborAuth(ctx, harborConn)
-	if err != nil {
-		r.logger.Error(err, "Failed to get Harbor authentication credentials")
-		return ctrl.Result{}, err
-	}
-	reqHTTP.SetBasicAuth(username, password)
-
-	// Perform the HTTP request.
-	resp, err := http.DefaultClient.Do(reqHTTP)
-	if err != nil {
-		r.logger.Error(err, "Failed to perform HTTP request for registry creation")
-		return ctrl.Result{}, err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			r.logger.Error(err, "failed to close response body")
+	// Adoption logic: if no HarborRegistryID is set and AllowTakeover is enabled,
+	// try to adopt an existing registry by name.
+	if registry.Status.HarborRegistryID == 0 && registry.Spec.AllowTakeover {
+		adopted, adoptErr := r.adoptExistingRegistry(ctx, harborConn, &registry)
+		if adoptErr != nil {
+			r.logger.Error(adoptErr, "Failed to adopt existing registry", "RegistryName", registry.Spec.Name)
+			return ctrl.Result{}, adoptErr
 		}
-	}()
-
-	// Check for a successful status code (e.g., 201 Created).
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		err := fmt.Errorf("failed to create registry: status %d, body: %s", resp.StatusCode, string(body))
-		r.logger.Error(err, "Harbor registry creation failed")
-		return ctrl.Result{}, err
+		if adopted != nil {
+			r.logger.Info("Successfully adopted existing registry", "RegistryName", registry.Spec.Name, "HarborRegistryID", adopted.ID)
+		}
 	}
 
-	r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name)
-	// Optionally update Registry status here if needed.
+	// Retrieve the existing registry using HarborRegistryID if available.
+	var existing *harborRegistryResponse
+	if registry.Status.HarborRegistryID != 0 {
+		existing, err = r.getHarborRegistryByID(ctx, harborConn, registry.Status.HarborRegistryID)
+		if err != nil {
+			r.logger.Error(err, "Failed to get registry by ID from Harbor", "HarborRegistryID", registry.Status.HarborRegistryID)
+		}
+	}
+
+	// Build the desired registry payload from the CR.
+	desired := r.buildRegistryRequest(&registry)
+
+	// If a registry exists and its configuration differs from the desired state, update it.
+	if existing != nil {
+		if registryNeedsUpdate(desired, *existing) {
+			r.logger.Info("Registry in Harbor differs from desired state, updating", "RegistryName", registry.Spec.Name)
+			if err := r.updateHarborRegistry(ctx, harborConn, existing.ID, desired); err != nil {
+				return ctrl.Result{}, err
+			}
+			r.logger.Info("Successfully updated registry on Harbor", "RegistryName", registry.Spec.Name)
+		} else {
+			r.logger.V(1).Info("Registry is already in sync with desired state", "RegistryName", registry.Spec.Name)
+		}
+
+		return returnWithDriftDetection(&registry)
+	}
+
+	// If the registry is not found, create a new one.
+	if registry.Status.HarborRegistryID != 0 {
+		r.logger.Info("Registry with stored ID not found. Assuming it was deleted externally. Creating new registry", "RegistryName", registry.Spec.Name)
+	} else {
+		r.logger.Info("Creating new registry", "RegistryName", registry.Spec.Name)
+	}
+	newID, err := r.createHarborRegistry(ctx, harborConn, desired)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	registry.Status.HarborRegistryID = newID
+	if err := r.Status().Update(ctx, &registry); err != nil {
+		r.logger.Error(err, "Failed to update Registry status with Harbor registry ID", "HarborRegistryID", newID)
+		return ctrl.Result{}, err
+	}
+	r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name, "HarborRegistryID", newID)
+
+	return returnWithDriftDetection(&registry)
+}
+
+func returnWithDriftDetection(registry *harborv1alpha1.Registry) (ctrl.Result, error) {
+	if registry.Spec.DriftDetectionInterval.Duration > 0 {
+		return ctrl.Result{RequeueAfter: registry.Spec.DriftDetectionInterval.Duration}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
-// getHarborConnection fetches the HarborConnection referenced in the Registry.
-func (r *RegistryReconciler) getHarborConnection(ctx context.Context, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
-	var harborConn harborv1alpha1.HarborConnection
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &harborConn); err != nil {
-		return nil, err
-	}
-	return &harborConn, nil
-}
-
-// validateBaseURL verifies that the provided URL is valid and contains a scheme.
-func (r *RegistryReconciler) validateBaseURL(baseURL string) error {
-	parsedURL, err := url.Parse(baseURL)
+// adoptExistingRegistry attempts to adopt an existing registry from Harbor by name.
+// If a registry is found, it updates the CR's status with the Harbor registry ID.
+func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) (*harborRegistryResponse, error) {
+	existing, err := r.getHarborRegistry(ctx, harborConn, registry.Spec.Name)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to lookup registry for adoption: %w", err)
 	}
-	if parsedURL.Scheme == "" {
-		return fmt.Errorf("baseURL %s is missing a protocol scheme", baseURL)
+	if existing != nil {
+		registry.Status.HarborRegistryID = existing.ID
+		if err := r.Status().Update(ctx, registry); err != nil {
+			return nil, fmt.Errorf("failed to update registry status during adoption: %w", err)
+		}
 	}
-	return nil
+	return existing, nil
 }
 
-type createRegistryRequest struct {
-	URL         string `json:"url"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-	Insecure    bool   `json:"insecure"`
-}
-
-// buildRegistryRequest constructs the JSON request for the registry creation request.
+// buildRegistryRequest constructs the JSON request for the registry creation/update.
 func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Registry) createRegistryRequest {
 	return createRegistryRequest{
 		URL:         registry.Spec.URL,
@@ -154,6 +197,172 @@ func (r *RegistryReconciler) buildRegistryRequest(registry *harborv1alpha1.Regis
 		Type:        registry.Spec.Type,
 		Insecure:    registry.Spec.Insecure,
 	}
+}
+
+// createHarborRegistry sends a POST request to Harbor to create a new registry.
+func (r *RegistryReconciler) createHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, payload createRegistryRequest) (int, error) {
+	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
+	r.logger.V(1).Info("Sending registry creation request", "url", registriesURL)
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal registry payload: %w", err)
+	}
+
+	reqHTTP, err := http.NewRequest("POST", registriesURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return 0, fmt.Errorf("failed to create HTTP request for registry creation: %w", err)
+	}
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	username, password, err := r.getHarborAuth(ctx, harborConn)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
+	}
+	reqHTTP.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(reqHTTP)
+	if err != nil {
+		return 0, fmt.Errorf("failed to perform HTTP request for registry creation: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("failed to create registry: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	// Extract the registry ID from the Location header.
+	location := resp.Header.Get("location")
+	if location == "" {
+		return 0, fmt.Errorf("no location header received")
+	}
+	// Assuming the location header is like "/api/v2.0/registries/1"
+	idStr := path.Base(location)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse registry id from location header %s: %w", location, err)
+	}
+
+	return id, nil
+}
+
+// updateHarborRegistry sends a PUT request to Harbor to update an existing registry.
+func (r *RegistryReconciler) updateHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, id int, payload createRegistryRequest) error {
+	updateURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, id)
+	r.logger.V(1).Info("Sending registry update request", "url", updateURL)
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal registry payload for update: %w", err)
+	}
+
+	reqHTTP, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request for registry update: %w", err)
+	}
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	username, password, err := r.getHarborAuth(ctx, harborConn)
+	if err != nil {
+		return fmt.Errorf("failed to get Harbor auth credentials: %w", err)
+	}
+	reqHTTP.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(reqHTTP)
+	if err != nil {
+		return fmt.Errorf("failed to perform HTTP request for registry update: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update registry: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// getHarborRegistry retrieves the registry from Harbor by listing registries and searching by name.
+func (r *RegistryReconciler) getHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registryName string) (*harborRegistryResponse, error) {
+	registriesURL := fmt.Sprintf("%s/api/v2.0/registries", harborConn.Spec.BaseURL)
+	reqHTTP, err := http.NewRequest("GET", registriesURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GET request for registries: %w", err)
+	}
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	username, password, err := r.getHarborAuth(ctx, harborConn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
+	}
+	reqHTTP.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(reqHTTP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to perform GET request for registries: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to list registries: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var registries []harborRegistryResponse
+	if err := json.NewDecoder(resp.Body).Decode(&registries); err != nil {
+		return nil, fmt.Errorf("failed to decode registries response: %w", err)
+	}
+
+	for _, reg := range registries {
+		if strings.EqualFold(reg.Name, registryName) {
+			return &reg, nil
+		}
+	}
+	return nil, nil
+}
+
+// getHarborRegistryByID retrieves the registry from Harbor using its ID.
+func (r *RegistryReconciler) getHarborRegistryByID(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, id int) (*harborRegistryResponse, error) {
+	getURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, id)
+	reqHTTP, err := http.NewRequest("GET", getURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GET request for registry by ID: %w", err)
+	}
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	username, password, err := r.getHarborAuth(ctx, harborConn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
+	}
+	reqHTTP.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(reqHTTP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to perform GET request for registry by ID: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get registry by ID: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var reg harborRegistryResponse
+	if err := json.NewDecoder(resp.Body).Decode(&reg); err != nil {
+		return nil, fmt.Errorf("failed to decode registry response by ID: %w", err)
+	}
+
+	return &reg, nil
+}
+
+// registryNeedsUpdate compares the desired registry configuration with the existing registry.
+func registryNeedsUpdate(desired createRegistryRequest, current harborRegistryResponse) bool {
+	return desired.URL != current.URL ||
+		desired.Name != current.Name ||
+		desired.Description != current.Description ||
+		!strings.EqualFold(desired.Type, current.Type) ||
+		desired.Insecure != current.Insecure
 }
 
 // getHarborAuth returns the username and password for authenticating to Harbor.
@@ -172,6 +381,53 @@ func (r *RegistryReconciler) getHarborAuth(ctx context.Context, harborConn *harb
 		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
 	}
 	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
+}
+
+// deleteHarborRegistry implements the deletion logic for a registry in Harbor.
+func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Registry) error {
+	harborConn, err := r.getHarborConnection(context.Background(), registry.Namespace, registry.Spec.HarborConnectionRef)
+	if err != nil {
+		return err
+	}
+
+	// If no HarborRegistryID is set, there's nothing to delete.
+	if registry.Status.HarborRegistryID == 0 {
+		r.logger.V(1).Info("No HarborRegistryID present, nothing to delete")
+		return nil
+	}
+
+	deleteURL := fmt.Sprintf("%s/api/v2.0/registries/%d", harborConn.Spec.BaseURL, registry.Status.HarborRegistryID)
+	reqHTTP, err := http.NewRequest("DELETE", deleteURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create DELETE request: %w", err)
+	}
+	reqHTTP.Header.Set("Content-Type", "application/json")
+
+	username, password, err := r.getHarborAuth(context.Background(), harborConn)
+	if err != nil {
+		return err
+	}
+	reqHTTP.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(reqHTTP)
+	if err != nil {
+		return fmt.Errorf("failed to perform DELETE request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// If the registry is already deleted, log at debug verbosity.
+	if resp.StatusCode == http.StatusNotFound {
+		r.logger.V(1).Info("Registry not found during deletion; assuming it was already deleted", "HarborRegistryID", registry.Status.HarborRegistryID)
+		return nil
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to delete registry: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	r.logger.Info("Successfully deleted registry from Harbor", "RegistryName", registry.Spec.Name)
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

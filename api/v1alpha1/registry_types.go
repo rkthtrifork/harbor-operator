@@ -4,22 +4,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
 	// HarborConnectionRef references the HarborConnection resource to use.
 	// +kubebuilder:validation:Required
 	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// Type of the registry, e.g., "github-ghcr"
+	// Type of the registry, e.g., "github-ghcr".
 	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
 	Type string `json:"type"`
 
 	// Name is the registry name.
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	// It is recommended to leave this field empty so that the operator defaults it
+	// to the custom resource's metadata name.
+	// +optional
+	Name string `json:"name,omitempty"`
 
 	// Description is an optional description.
 	// +optional
@@ -31,12 +30,28 @@ type RegistrySpec struct {
 
 	// Insecure indicates if remote certificates should be verified.
 	Insecure bool `json:"insecure"`
+
+	// AllowTakeover indicates whether the operator is allowed to adopt an existing registry
+	// in Harbor if one with the same name already exists.
+	// If true, the operator will search for an existing registry with the same name and, if found,
+	// update its configuration to match the custom resource.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
+	// DriftDetectionInterval is the interval at which the operator will check for drift.
+	// A value of 0 (or omitted) disables periodic drift detection.
+	// +optional
+	DriftDetectionInterval metav1.Duration `json:"driftDetectionInterval,omitempty"`
+
+	// ReconcileNonce is an optional field that, when updated, forces an immediate reconcile.
+	// +optional
+	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
 // RegistryStatus defines the observed state of Registry.
 type RegistryStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborRegistryID is the ID of the registry in Harbor.
+	HarborRegistryID int `json:"harborRegistryID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
