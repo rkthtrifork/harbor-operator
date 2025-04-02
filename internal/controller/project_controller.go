@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -72,7 +71,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Handle deletion.
 	if !project.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(&project, finalizerName) {
-			if err := r.deleteHarborProject(&project); err != nil {
+			if err := r.deleteHarborProject(ctx, &project); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&project, finalizerName)
@@ -205,7 +204,7 @@ func (r *ProjectReconciler) createHarborProject(ctx context.Context, harborConn 
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -253,7 +252,7 @@ func (r *ProjectReconciler) updateHarborProject(ctx context.Context, harborConn 
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -282,7 +281,7 @@ func (r *ProjectReconciler) getHarborProject(ctx context.Context, harborConn *ha
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -321,7 +320,7 @@ func (r *ProjectReconciler) getHarborProjectByID(ctx context.Context, harborConn
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -354,26 +353,8 @@ func projectNeedsUpdate(desired createProjectRequest, current harborProjectRespo
 		!strings.EqualFold(desired.Owner, current.Owner)
 }
 
-// getHarborAuth returns the username and password for authenticating to Harbor.
-func (r *ProjectReconciler) getHarborAuth(ctx context.Context, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
-	secretKey := types.NamespacedName{
-		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.AccessSecretRef,
-	}
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		return "", "", err
-	}
-
-	accessSecretBytes, ok := secret.Data["access_secret"]
-	if !ok {
-		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
-	}
-	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
-}
-
 // deleteHarborProject implements the deletion logic for a project in Harbor.
-func (r *ProjectReconciler) deleteHarborProject(project *harborv1alpha1.Project) error {
+func (r *ProjectReconciler) deleteHarborProject(ctx context.Context, project *harborv1alpha1.Project) error {
 	harborConn, err := r.getHarborConnection(context.Background(), project.Namespace, project.Spec.HarborConnectionRef)
 	if err != nil {
 		return err
@@ -392,7 +373,7 @@ func (r *ProjectReconciler) deleteHarborProject(project *harborv1alpha1.Project)
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(context.Background(), harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return err
 	}
