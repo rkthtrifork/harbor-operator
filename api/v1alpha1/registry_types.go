@@ -66,6 +66,10 @@ type Registry struct {
 	Status RegistryStatus `json:"status,omitempty"`
 }
 
+func (r *Registry) GetDriftDetectionInterval() metav1.Duration {
+	return r.Spec.DriftDetectionInterval
+}
+
 // +kubebuilder:object:root=true
 
 // RegistryList contains a list of Registry.

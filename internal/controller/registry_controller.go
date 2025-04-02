@@ -165,13 +165,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return returnWithDriftDetection(&registry)
 }
 
-func returnWithDriftDetection(registry *harborv1alpha1.Registry) (ctrl.Result, error) {
-	if registry.Spec.DriftDetectionInterval.Duration > 0 {
-		return ctrl.Result{RequeueAfter: registry.Spec.DriftDetectionInterval.Duration}, nil
-	}
-	return ctrl.Result{}, nil
-}
-
 // adoptExistingRegistry attempts to adopt an existing registry from Harbor by name.
 // If a registry is found, it updates the CR's status with the Harbor registry ID.
 func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) (*harborRegistryResponse, error) {

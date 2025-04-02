@@ -6,7 +6,9 @@ import (
 	"net/url"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const finalizerName = "harbor.operator/finalizer"
@@ -29,9 +31,15 @@ func (r *RegistryReconciler) getHarborConnection(ctx context.Context, namespace,
 	return &harborConn, nil
 }
 
-func notEmptyOrElse(s, fallback string) string {
-	if s != "" {
-		return s
+// DriftDetectable is an interface for objects that have a DriftDetectionInterval.
+type DriftDetectable interface {
+	GetDriftDetectionInterval() metav1.Duration
+}
+
+// returnWithDriftDetection now accepts any type that satisfies DriftDetectable.
+func returnWithDriftDetection(obj DriftDetectable) (reconcile.Result, error) {
+	if obj.GetDriftDetectionInterval().Duration > 0 {
+		return reconcile.Result{RequeueAfter: obj.GetDriftDetectionInterval().Duration}, nil
 	}
-	return fallback
+	return reconcile.Result{}, nil
 }
