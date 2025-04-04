@@ -167,7 +167,11 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Build the desired project payload from the CR.
-	desired := r.buildProjectRequest(&project)
+	desired, err := r.buildProjectRequest(ctx, harborConn, &project)
+	if err != nil {
+		r.logger.Error(err, "Failed to build project request")
+		return ctrl.Result{}, err
+	}
 
 	// If a project exists and its configuration differs from the desired state, update it.
 	if existing != nil {
@@ -203,8 +207,6 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return returnWithDriftDetection(&project)
 }
 
-// adoptExistingProject attempts to adopt an existing project from Harbor by project name.
-// If a project is found, it updates the CR's status with the Harbor project ID.
 func (r *ProjectReconciler) adoptExistingProject(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, project *harborv1alpha1.Project) (*harborProjectResponse, error) {
 	existing, err := r.getHarborProject(ctx, harborConn, project.Spec.Name)
 	if err != nil {
@@ -219,8 +221,53 @@ func (r *ProjectReconciler) adoptExistingProject(ctx context.Context, harborConn
 	return existing, nil
 }
 
+// getRegistryByName queries Harbor for a registry with the given name.
+func (r *ProjectReconciler) getRegistryByName(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registryName string) (int, error) {
+	// Construct the URL with a query parameter for an exact match.
+	url := fmt.Sprintf("%s/api/v2.0/registries?q=name=%s", harborConn.Spec.BaseURL, registryName)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
+	if err != nil {
+		return 0, err
+	}
+	req.SetBasicAuth(username, password)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("failed to get registries: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var registries []struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&registries); err != nil {
+		return 0, err
+	}
+
+	for _, reg := range registries {
+		if strings.EqualFold(reg.Name, registryName) {
+			return reg.ID, nil
+		}
+	}
+
+	return 0, fmt.Errorf("registry with name %s not found", registryName)
+}
+
 // buildProjectRequest constructs the JSON request for project creation/update.
-func (r *ProjectReconciler) buildProjectRequest(project *harborv1alpha1.Project) createProjectRequest {
+// It looks up the registry by name if provided.
+func (r *ProjectReconciler) buildProjectRequest(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, project *harborv1alpha1.Project) (createProjectRequest, error) {
 	var meta projectMetadata
 	if project.Spec.Metadata != nil {
 		meta = projectMetadata{
@@ -254,16 +301,20 @@ func (r *ProjectReconciler) buildProjectRequest(project *harborv1alpha1.Project)
 		}
 	}
 
-	// Convert StorageLimit: if your spec defines 0 (or any sentinel value) as "not set", set to nil.
+	// Convert StorageLimit: if your spec defines 0 as "not set", set to nil.
 	var storageLimit *int
 	if project.Spec.StorageLimit != 0 {
 		storageLimit = &project.Spec.StorageLimit
 	}
 
-	// For RegistryID: if the value is not greater than 0, send nil.
+	// Lookup RegistryID based on the user-supplied RegistryName.
 	var registryID *int
-	if project.Spec.RegistryID > 0 {
-		registryID = &project.Spec.RegistryID
+	if project.Spec.RegistryName != "" {
+		id, err := r.getRegistryByName(ctx, harborConn, project.Spec.RegistryName)
+		if err != nil {
+			return createProjectRequest{}, err
+		}
+		registryID = &id
 	}
 
 	return createProjectRequest{
@@ -274,7 +325,7 @@ func (r *ProjectReconciler) buildProjectRequest(project *harborv1alpha1.Project)
 		CVEAllowlist: CVEAllowlist,
 		StorageLimit: storageLimit,
 		RegistryID:   registryID,
-	}
+	}, nil
 }
 
 // createHarborProject sends a POST request to Harbor to create a new project.

@@ -50,9 +50,10 @@ type ProjectSpec struct {
 	// +optional
 	StorageLimit int `json:"storage_limit,omitempty"`
 
-	// RegistryID is the registry identifier for the project.
+	// RegistryName is the name of the registry to use for proxy cache projects.
+	// The operator will search Harbor for a registry with this name.
 	// +optional
-	RegistryID int `json:"registry_id,omitempty"`
+	RegistryName string `json:"registryName,omitempty"`
 }
 
 // ProjectMetadata defines additional metadata for the project.
