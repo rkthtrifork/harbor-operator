@@ -44,9 +44,33 @@ spec:
                   AllowTakeover indicates whether the operator is allowed to adopt an existing
                   project in Harbor with the same name.
                 type: boolean
-              description:
-                description: Description is an optional description of the project.
-                type: string
+              cve_allowlist:
+                description: CVEAllowlist holds the configuration for the CVE allowlist.
+                properties:
+                  creation_time:
+                    format: date-time
+                    type: string
+                  expires_at:
+                    type: integer
+                  id:
+                    type: integer
+                  items:
+                    items:
+                      description: CVEAllowlistItem defines a single CVE allowlist
+                        entry.
+                      properties:
+                        cve_id:
+                          type: string
+                      required:
+                      - cve_id
+                      type: object
+                    type: array
+                  project_id:
+                    type: integer
+                  update_time:
+                    format: date-time
+                    type: string
+                type: object
               driftDetectionInterval:
                 description: |-
                   DriftDetectionInterval is the interval at which the operator will check for drift.
@@ -56,23 +80,53 @@ spec:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
-              owner:
-                description: Owner is an optional field for the project owner.
-                type: string
-              projectName:
+              metadata:
+                description: Metadata holds additional configuration for the Harbor
+                  project.
+                properties:
+                  auto_sbom_generation:
+                    type: string
+                  auto_scan:
+                    type: string
+                  enable_content_trust:
+                    type: string
+                  enable_content_trust_cosign:
+                    type: string
+                  prevent_vul:
+                    type: string
+                  proxy_speed_kb:
+                    type: string
+                  public:
+                    type: string
+                  retention_id:
+                    type: string
+                  reuse_sys_cve_allowlist:
+                    type: string
+                  severity:
+                    type: string
+                type: object
+              name:
                 description: |-
-                  ProjectName is the name of the project.
+                  Name is the name of the project.
                   It is recommended to leave this field empty so that the operator defaults it
                   to the custom resource’s metadata name.
+                type: string
+              owner:
+                description: Owner is an optional field for the project owner.
                 type: string
               public:
                 default: true
                 description: Public indicates whether the project is public.
                 type: boolean
               reconcileNonce:
-                description: ReconcileNonce is an optional field that, when updated,
-                  forces an immediate reconcile.
+                description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
+              registry_id:
+                description: RegistryID is the registry identifier for the project.
+                type: integer
+              storage_limit:
+                description: StorageLimit is the storage limit for the project.
+                type: integer
             required:
             - harborConnectionRef
             - public

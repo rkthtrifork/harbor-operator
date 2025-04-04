@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,22 +31,62 @@ type ProjectReconciler struct {
 	logger logr.Logger
 }
 
-// harborProjectResponse represents a project as returned by Harbor.
+// harborProjectResponse represents the full project as returned by Harbor.
 type harborProjectResponse struct {
-	ProjectID   int    `json:"project_id"`
-	ProjectName string `json:"project_name"`
-	Public      bool   `json:"public"`
-	Description string `json:"description"`
-	Owner       string `json:"owner,omitempty"`
-	// additional fields can be added if needed
+	ProjectID          int             `json:"project_id"`
+	OwnerID            int             `json:"owner_id"`
+	Name               string          `json:"name"`
+	RegistryID         int             `json:"registry_id"`
+	CreationTime       string          `json:"creation_time"`
+	UpdateTime         string          `json:"update_time"`
+	Deleted            bool            `json:"deleted"`
+	OwnerName          string          `json:"owner_name"`
+	Togglable          bool            `json:"togglable"`
+	CurrentUserRoleID  int             `json:"current_user_role_id"`
+	CurrentUserRoleIDs []int           `json:"current_user_role_ids"`
+	RepoCount          int             `json:"repo_count"`
+	Metadata           projectMetadata `json:"metadata"`
+	CVEAllowlist       cveAllowlist    `json:"cve_allowlist"`
 }
 
 // createProjectRequest is the payload sent to Harbor when creating or updating a project.
 type createProjectRequest struct {
-	ProjectName string `json:"project_name"`
-	Public      bool   `json:"public"`
-	Description string `json:"description"`
-	Owner       string `json:"owner,omitempty"`
+	ProjectName  string          `json:"project_name"`
+	Public       bool            `json:"public"`
+	Owner        string          `json:"owner,omitempty"`
+	Metadata     projectMetadata `json:"metadata"`
+	CVEAllowlist cveAllowlist    `json:"cve_allowlist"`
+	StorageLimit *int            `json:"storage_limit,omitempty"`
+	RegistryID   *int            `json:"registry_id,omitempty"`
+}
+
+// projectMetadata mirrors the structure expected by Harbor.
+type projectMetadata struct {
+	Public                   string `json:"public"`
+	EnableContentTrust       string `json:"enable_content_trust"`
+	EnableContentTrustCosign string `json:"enable_content_trust_cosign"`
+	PreventVul               string `json:"prevent_vul"`
+	Severity                 string `json:"severity"`
+	AutoScan                 string `json:"auto_scan"`
+	AutoSBOMGeneration       string `json:"auto_sbom_generation"`
+	ReuseSysCVEAllowlist     string `json:"reuse_sys_cve_allowlist"`
+	RetentionID              string `json:"retention_id"`
+	ProxySpeedKB             string `json:"proxy_speed_kb"`
+}
+
+// cveAllowlistItem mirrors an individual CVE allowlist entry.
+type cveAllowlistItem struct {
+	CveID string `json:"cve_id"`
+}
+
+// cveAllowlist mirrors the structure of Harbor’s CVE allowlist.
+type cveAllowlist struct {
+	ID           int                `json:"id"`
+	ProjectID    int                `json:"project_id"`
+	ExpiresAt    int                `json:"expires_at"`
+	Items        []cveAllowlistItem `json:"items"`
+	CreationTime string             `json:"creation_time"`
+	UpdateTime   string             `json:"update_time"`
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects,verbs=get;list;watch;create;update;patch;delete
@@ -178,13 +219,61 @@ func (r *ProjectReconciler) adoptExistingProject(ctx context.Context, harborConn
 	return existing, nil
 }
 
-// buildProjectRequest constructs the JSON request for the project creation/update.
+// buildProjectRequest constructs the JSON request for project creation/update.
 func (r *ProjectReconciler) buildProjectRequest(project *harborv1alpha1.Project) createProjectRequest {
+	var meta projectMetadata
+	if project.Spec.Metadata != nil {
+		meta = projectMetadata{
+			Public:                   project.Spec.Metadata.Public,
+			EnableContentTrust:       project.Spec.Metadata.EnableContentTrust,
+			EnableContentTrustCosign: project.Spec.Metadata.EnableContentTrustCosign,
+			PreventVul:               project.Spec.Metadata.PreventVul,
+			Severity:                 project.Spec.Metadata.Severity,
+			AutoScan:                 project.Spec.Metadata.AutoScan,
+			AutoSBOMGeneration:       project.Spec.Metadata.AutoSBOMGeneration,
+			ReuseSysCVEAllowlist:     project.Spec.Metadata.ReuseSysCVEAllowlist,
+			RetentionID:              project.Spec.Metadata.RetentionID,
+			ProxySpeedKB:             project.Spec.Metadata.ProxySpeedKB,
+		}
+	}
+
+	var CVEAllowlist cveAllowlist
+	if project.Spec.CVEAllowlist != nil {
+		CVEAllowlist = cveAllowlist{
+			ID:           project.Spec.CVEAllowlist.ID,
+			ProjectID:    project.Spec.CVEAllowlist.ProjectID,
+			ExpiresAt:    project.Spec.CVEAllowlist.ExpiresAt,
+			Items:        make([]cveAllowlistItem, len(project.Spec.CVEAllowlist.Items)),
+			CreationTime: project.Spec.CVEAllowlist.CreationTime.Format(time.RFC3339),
+			UpdateTime:   project.Spec.CVEAllowlist.UpdateTime.Format(time.RFC3339),
+		}
+		for i, item := range project.Spec.CVEAllowlist.Items {
+			CVEAllowlist.Items[i] = cveAllowlistItem{
+				CveID: item.CveID,
+			}
+		}
+	}
+
+	// Convert StorageLimit: if your spec defines 0 (or any sentinel value) as "not set", set to nil.
+	var storageLimit *int
+	if project.Spec.StorageLimit != 0 {
+		storageLimit = &project.Spec.StorageLimit
+	}
+
+	// For RegistryID: if the value is not greater than 0, send nil.
+	var registryID *int
+	if project.Spec.RegistryID > 0 {
+		registryID = &project.Spec.RegistryID
+	}
+
 	return createProjectRequest{
-		ProjectName: project.Spec.Name,
-		Public:      project.Spec.Public,
-		Description: project.Spec.Description,
-		Owner:       project.Spec.Owner,
+		ProjectName:  project.Spec.Name,
+		Public:       project.Spec.Public,
+		Owner:        project.Spec.Owner,
+		Metadata:     meta,
+		CVEAllowlist: CVEAllowlist,
+		StorageLimit: storageLimit,
+		RegistryID:   registryID,
 	}
 }
 
@@ -304,7 +393,7 @@ func (r *ProjectReconciler) getHarborProject(ctx context.Context, harborConn *ha
 	}
 
 	for _, proj := range projects {
-		if strings.EqualFold(proj.ProjectName, projectName) {
+		if strings.EqualFold(proj.Name, projectName) {
 			return &proj, nil
 		}
 	}
@@ -347,10 +436,91 @@ func (r *ProjectReconciler) getHarborProjectByID(ctx context.Context, harborConn
 
 // projectNeedsUpdate compares the desired project configuration with the existing project.
 func projectNeedsUpdate(desired createProjectRequest, current harborProjectResponse) bool {
-	return desired.ProjectName != current.ProjectName ||
-		desired.Public != current.Public ||
-		desired.Description != current.Description ||
-		!strings.EqualFold(desired.Owner, current.Owner)
+	// Compare project name.
+	if desired.ProjectName != current.Name {
+		return true
+	}
+
+	// Compare public flag: desired is boolean, while GET response has it as a string in metadata.
+	desiredPublicStr := "false"
+	if desired.Public {
+		desiredPublicStr = "true"
+	}
+	if desiredPublicStr != current.Metadata.Public {
+		return true
+	}
+
+	// Compare owner: desired uses Owner while GET response uses OwnerName.
+	if !strings.EqualFold(desired.Owner, current.OwnerName) {
+		return true
+	}
+
+	// Compare registry ID.
+	if desired.RegistryID == nil {
+		if current.RegistryID != 0 {
+			return true
+		}
+	} else if *desired.RegistryID != current.RegistryID {
+		return true
+	}
+
+	// StorageLimit is not included in the GET response so we skip it.
+
+	// Compare metadata fields.
+	if desired.Metadata.EnableContentTrust != current.Metadata.EnableContentTrust {
+		return true
+	}
+	if desired.Metadata.EnableContentTrustCosign != current.Metadata.EnableContentTrustCosign {
+		return true
+	}
+	if desired.Metadata.PreventVul != current.Metadata.PreventVul {
+		return true
+	}
+	if desired.Metadata.Severity != current.Metadata.Severity {
+		return true
+	}
+	if desired.Metadata.AutoScan != current.Metadata.AutoScan {
+		return true
+	}
+	if desired.Metadata.AutoSBOMGeneration != current.Metadata.AutoSBOMGeneration {
+		return true
+	}
+	if desired.Metadata.ReuseSysCVEAllowlist != current.Metadata.ReuseSysCVEAllowlist {
+		return true
+	}
+	if desired.Metadata.RetentionID != current.Metadata.RetentionID {
+		return true
+	}
+	if desired.Metadata.ProxySpeedKB != current.Metadata.ProxySpeedKB {
+		return true
+	}
+
+	// Compare CVE allowlist fields.
+	if desired.CVEAllowlist.ID != current.CVEAllowlist.ID {
+		return true
+	}
+	if desired.CVEAllowlist.ProjectID != current.CVEAllowlist.ProjectID {
+		return true
+	}
+	if desired.CVEAllowlist.ExpiresAt != current.CVEAllowlist.ExpiresAt {
+		return true
+	}
+	if desired.CVEAllowlist.CreationTime != current.CVEAllowlist.CreationTime {
+		return true
+	}
+	if desired.CVEAllowlist.UpdateTime != current.CVEAllowlist.UpdateTime {
+		return true
+	}
+	if len(desired.CVEAllowlist.Items) != len(current.CVEAllowlist.Items) {
+		return true
+	}
+	for i, item := range desired.CVEAllowlist.Items {
+		if item.CveID != current.CVEAllowlist.Items[i].CveID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // deleteHarborProject implements the deletion logic for a project in Harbor.

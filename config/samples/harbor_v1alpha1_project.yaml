@@ -9,4 +9,3 @@ spec:
   harborConnectionRef: harborconnection-sample
   name: project-sample
   public: false
-  registryName: registry-sample
