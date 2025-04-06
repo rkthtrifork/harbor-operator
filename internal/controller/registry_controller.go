@@ -68,10 +68,17 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// Retrieve the HarborConnection referenced by the Registry.
+	harborConn, err := getHarborConnection(ctx, r.Client, registry.Namespace, registry.Spec.HarborConnectionRef)
+	if err != nil {
+		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
+		return ctrl.Result{}, err
+	}
+
 	// Handle deletion.
 	if !registry.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(&registry, finalizerName) {
-			if err := r.deleteHarborRegistry(ctx, &registry); err != nil {
+			if err := r.deleteHarborRegistry(ctx, harborConn, &registry); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&registry, finalizerName)
@@ -89,13 +96,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			}
 		}
-	}
-
-	// Retrieve the HarborConnection referenced by the Registry.
-	harborConn, err := r.getHarborConnection(ctx, registry.Namespace, registry.Spec.HarborConnectionRef)
-	if err != nil {
-		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
 	}
 
 	if registry.Spec.Name == "" {
@@ -357,12 +357,7 @@ func registryNeedsUpdate(desired createRegistryRequest, current harborRegistryRe
 }
 
 // deleteHarborRegistry implements the deletion logic for a registry in Harbor.
-func (r *RegistryReconciler) deleteHarborRegistry(ctx context.Context, registry *harborv1alpha1.Registry) error {
-	harborConn, err := r.getHarborConnection(context.Background(), registry.Namespace, registry.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-
+func (r *RegistryReconciler) deleteHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) error {
 	// If no HarborRegistryID is set, there's nothing to delete.
 	if registry.Status.HarborRegistryID == 0 {
 		r.logger.V(1).Info("No HarborRegistryID present, nothing to delete")

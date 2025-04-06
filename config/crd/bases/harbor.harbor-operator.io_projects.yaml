@@ -121,9 +121,11 @@ spec:
               reconcileNonce:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
-              registry_id:
-                description: RegistryID is the registry identifier for the project.
-                type: integer
+              registryName:
+                description: |-
+                  RegistryName is the name of the registry to use for proxy cache projects.
+                  The operator will search Harbor for a registry with this name.
+                type: string
               storage_limit:
                 description: StorageLimit is the storage limit for the project.
                 type: integer

@@ -14,7 +14,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -51,42 +50,42 @@ type harborProjectResponse struct {
 
 // createProjectRequest is the payload sent to Harbor when creating or updating a project.
 type createProjectRequest struct {
-	ProjectName  string          `json:"project_name"`
-	Public       bool            `json:"public"`
+	ProjectName  string          `json:"project_name,omitempty"`
+	Public       bool            `json:"public,omitempty"`
 	Owner        string          `json:"owner,omitempty"`
-	Metadata     projectMetadata `json:"metadata"`
-	CVEAllowlist cveAllowlist    `json:"cve_allowlist"`
+	Metadata     projectMetadata `json:"metadata,omitempty"`
+	CVEAllowlist cveAllowlist    `json:"cve_allowlist,omitempty"`
 	StorageLimit *int            `json:"storage_limit,omitempty"`
 	RegistryID   *int            `json:"registry_id,omitempty"`
 }
 
 // projectMetadata mirrors the structure expected by Harbor.
 type projectMetadata struct {
-	Public                   string `json:"public"`
-	EnableContentTrust       string `json:"enable_content_trust"`
-	EnableContentTrustCosign string `json:"enable_content_trust_cosign"`
-	PreventVul               string `json:"prevent_vul"`
-	Severity                 string `json:"severity"`
-	AutoScan                 string `json:"auto_scan"`
-	AutoSBOMGeneration       string `json:"auto_sbom_generation"`
-	ReuseSysCVEAllowlist     string `json:"reuse_sys_cve_allowlist"`
-	RetentionID              string `json:"retention_id"`
-	ProxySpeedKB             string `json:"proxy_speed_kb"`
+	Public                   string `json:"public,omitempty"`
+	EnableContentTrust       string `json:"enable_content_trust,omitempty"`
+	EnableContentTrustCosign string `json:"enable_content_trust_cosign,omitempty"`
+	PreventVul               string `json:"prevent_vul,omitempty"`
+	Severity                 string `json:"severity,omitempty"`
+	AutoScan                 string `json:"auto_scan,omitempty"`
+	AutoSBOMGeneration       string `json:"auto_sbom_generation,omitempty"`
+	ReuseSysCVEAllowlist     string `json:"reuse_sys_cve_allowlist,omitempty"`
+	RetentionID              string `json:"retention_id,omitempty"`
+	ProxySpeedKB             string `json:"proxy_speed_kb,omitempty"`
 }
 
 // cveAllowlistItem mirrors an individual CVE allowlist entry.
 type cveAllowlistItem struct {
-	CveID string `json:"cve_id"`
+	CveID string `json:"cve_id,omitempty"`
 }
 
 // cveAllowlist mirrors the structure of Harbor’s CVE allowlist.
 type cveAllowlist struct {
-	ID           int                `json:"id"`
-	ProjectID    int                `json:"project_id"`
-	ExpiresAt    int                `json:"expires_at"`
-	Items        []cveAllowlistItem `json:"items"`
-	CreationTime string             `json:"creation_time"`
-	UpdateTime   string             `json:"update_time"`
+	ID           int                `json:"id,omitempty"`
+	ProjectID    int                `json:"project_id,omitempty"`
+	ExpiresAt    int                `json:"expires_at,omitempty"`
+	Items        []cveAllowlistItem `json:"items,omitempty"`
+	CreationTime string             `json:"creation_time,omitempty"`
+	UpdateTime   string             `json:"update_time,omitempty"`
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects,verbs=get;list;watch;create;update;patch;delete
@@ -109,10 +108,17 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	// Retrieve the HarborConnection referenced by the Project.
+	harborConn, err := getHarborConnection(ctx, r.Client, project.Namespace, project.Spec.HarborConnectionRef)
+	if err != nil {
+		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", project.Spec.HarborConnectionRef)
+		return ctrl.Result{}, err
+	}
+
 	// Handle deletion.
 	if !project.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(&project, finalizerName) {
-			if err := r.deleteHarborProject(ctx, &project); err != nil {
+			if err := r.deleteHarborProject(ctx, harborConn, &project); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&project, finalizerName)
@@ -129,13 +135,6 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := r.Update(ctx, &project); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	// Retrieve the HarborConnection referenced by the Project.
-	harborConn, err := r.getHarborConnection(ctx, project.Namespace, project.Spec.HarborConnectionRef)
-	if err != nil {
-		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", project.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
 	}
 
 	// Default project name to metadata name if not specified.
@@ -172,6 +171,8 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		r.logger.Error(err, "Failed to build project request")
 		return ctrl.Result{}, err
 	}
+
+	r.logger.Info("Desired project configuration", "DesiredProject", desired)
 
 	// If a project exists and its configuration differs from the desired state, update it.
 	if existing != nil {
@@ -575,12 +576,7 @@ func projectNeedsUpdate(desired createProjectRequest, current harborProjectRespo
 }
 
 // deleteHarborProject implements the deletion logic for a project in Harbor.
-func (r *ProjectReconciler) deleteHarborProject(ctx context.Context, project *harborv1alpha1.Project) error {
-	harborConn, err := r.getHarborConnection(context.Background(), project.Namespace, project.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-
+func (r *ProjectReconciler) deleteHarborProject(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, project *harborv1alpha1.Project) error {
 	// If no HarborProjectID is set, there's nothing to delete.
 	if project.Status.HarborProjectID == 0 {
 		r.logger.V(1).Info("No HarborProjectID present, nothing to delete")
@@ -619,17 +615,6 @@ func (r *ProjectReconciler) deleteHarborProject(ctx context.Context, project *ha
 
 	r.logger.Info("Successfully deleted project from Harbor", "ProjectName", project.Spec.Name)
 	return nil
-}
-
-// getHarborConnection is a helper function to retrieve the HarborConnection resource.
-// This is a placeholder implementation; the actual implementation may vary.
-func (r *ProjectReconciler) getHarborConnection(ctx context.Context, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
-	var harborConn harborv1alpha1.HarborConnection
-	key := types.NamespacedName{Namespace: namespace, Name: name}
-	if err := r.Get(ctx, key, &harborConn); err != nil {
-		return nil, err
-	}
-	return &harborConn, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -32,7 +32,7 @@ type ProjectSpec struct {
 	// DriftDetectionInterval is the interval at which the operator will check for drift.
 	// A value of 0 (or omitted) disables periodic drift detection.
 	// +optional
-	DriftDetectionInterval metav1.Duration `json:"driftDetectionInterval,omitempty"`
+	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
 
 	// ReconcileNonce forces an immediate reconcile when updated.
 	// +optional
@@ -104,7 +104,7 @@ type Project struct {
 }
 
 // GetDriftDetectionInterval returns the drift detection interval.
-func (p *Project) GetDriftDetectionInterval() metav1.Duration {
+func (p *Project) GetDriftDetectionInterval() *metav1.Duration {
 	return p.Spec.DriftDetectionInterval
 }
 
