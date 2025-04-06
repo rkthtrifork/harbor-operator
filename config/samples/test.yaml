@@ -1,0 +1,13 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Registry
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: test3
+spec:
+  harborConnectionRef: harborconnection-sample
+  insecure: false
+  type: github-ghcr
+  url: https://ghcr.io
+  allowTakeover: false # what happens if name is not specified?

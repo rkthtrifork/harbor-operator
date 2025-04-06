@@ -4,9 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ProjectSpec defines the desired state of Project.
 type ProjectSpec struct {
 	// HarborConnectionRef references the HarborConnection resource to use.
@@ -14,51 +11,84 @@ type ProjectSpec struct {
 	HarborConnectionRef string `json:"harborConnectionRef"`
 
 	// Name is the name of the project.
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	// It is recommended to leave this field empty so that the operator defaults it
+	// to the custom resource’s metadata name.
+	// +optional
+	Name string `json:"name,omitempty"`
 
-	// RegistryName is the name of the registry that this project should use as a proxy cache.
-	// It is recommended that this matches the metadata.name of the Registry custom resource.
-	// +kubebuilder:validation:Required
-	RegistryName string `json:"registryName"`
-
-	// Public indicates if the project should be public.
+	// Public indicates whether the project is public.
+	// +kubebuilder:default:=true
 	Public bool `json:"public"`
 
-	// Metadata holds additional project settings.
+	// Owner is an optional field for the project owner.
 	// +optional
-	Metadata map[string]string `json:"metadata,omitempty"`
+	Owner string `json:"owner,omitempty"`
 
-	// CveAllowlist holds CVE allowlist settings.
+	// AllowTakeover indicates whether the operator is allowed to adopt an existing
+	// project in Harbor with the same name.
 	// +optional
-	CveAllowlist *CveAllowlist `json:"cveAllowlist,omitempty"`
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// StorageLimit defines the storage limit in bytes.
+	// DriftDetectionInterval is the interval at which the operator will check for drift.
+	// A value of 0 (or omitted) disables periodic drift detection.
 	// +optional
-	StorageLimit int64 `json:"storageLimit,omitempty"`
+	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
+
+	// ReconcileNonce forces an immediate reconcile when updated.
+	// +optional
+	ReconcileNonce string `json:"reconcileNonce,omitempty"`
+
+	// Metadata holds additional configuration for the Harbor project.
+	// +optional
+	Metadata *ProjectMetadata `json:"metadata,omitempty"`
+
+	// CVEAllowlist holds the configuration for the CVE allowlist.
+	// +optional
+	CVEAllowlist *CVEAllowlist `json:"cve_allowlist,omitempty"`
+
+	// StorageLimit is the storage limit for the project.
+	// +optional
+	StorageLimit int `json:"storage_limit,omitempty"`
+
+	// RegistryName is the name of the registry to use for proxy cache projects.
+	// The operator will search Harbor for a registry with this name.
+	// +optional
+	RegistryName string `json:"registryName,omitempty"`
 }
 
-// CveAllowlist defines the CVE allowlist configuration.
-type CveAllowlist struct {
-	// ID of the CVE allowlist.
-	ID int `json:"id,omitempty"`
-	// ProjectID associated with the allowlist.
-	ProjectID int `json:"project_id,omitempty"`
-	// ExpiresAt is the expiration timestamp.
-	ExpiresAt int64 `json:"expires_at,omitempty"`
-	// Items is the list of allowed CVEs.
-	Items []CveItem `json:"items,omitempty"`
+// ProjectMetadata defines additional metadata for the project.
+type ProjectMetadata struct {
+	Public                   string `json:"public,omitempty"`
+	EnableContentTrust       string `json:"enable_content_trust,omitempty"`
+	EnableContentTrustCosign string `json:"enable_content_trust_cosign,omitempty"`
+	PreventVul               string `json:"prevent_vul,omitempty"`
+	Severity                 string `json:"severity,omitempty"`
+	AutoScan                 string `json:"auto_scan,omitempty"`
+	AutoSBOMGeneration       string `json:"auto_sbom_generation,omitempty"`
+	ReuseSysCVEAllowlist     string `json:"reuse_sys_cve_allowlist,omitempty"`
+	RetentionID              string `json:"retention_id,omitempty"`
+	ProxySpeedKB             string `json:"proxy_speed_kb,omitempty"`
 }
 
-// CveItem represents a single allowed CVE.
-type CveItem struct {
+// CVEAllowlistItem defines a single CVE allowlist entry.
+type CVEAllowlistItem struct {
 	CveID string `json:"cve_id"`
+}
+
+// CVEAllowlist defines the CVE allowlist configuration.
+type CVEAllowlist struct {
+	ID           int                `json:"id,omitempty"`
+	ProjectID    int                `json:"project_id,omitempty"`
+	ExpiresAt    int                `json:"expires_at,omitempty"`
+	Items        []CVEAllowlistItem `json:"items,omitempty"`
+	CreationTime metav1.Time        `json:"creation_time,omitempty"`
+	UpdateTime   metav1.Time        `json:"update_time,omitempty"`
 }
 
 // ProjectStatus defines the observed state of Project.
 type ProjectStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HarborProjectID is the ID of the project in Harbor.
+	HarborProjectID int `json:"harborProjectID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -71,6 +101,11 @@ type Project struct {
 
 	Spec   ProjectSpec   `json:"spec,omitempty"`
 	Status ProjectStatus `json:"status,omitempty"`
+}
+
+// GetDriftDetectionInterval returns the drift detection interval.
+func (p *Project) GetDriftDetectionInterval() *metav1.Duration {
+	return p.Spec.DriftDetectionInterval
 }
 
 // +kubebuilder:object:root=true

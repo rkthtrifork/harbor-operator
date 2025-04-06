@@ -11,10 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -70,10 +68,17 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// Retrieve the HarborConnection referenced by the Registry.
+	harborConn, err := getHarborConnection(ctx, r.Client, registry.Namespace, registry.Spec.HarborConnectionRef)
+	if err != nil {
+		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
+		return ctrl.Result{}, err
+	}
+
 	// Handle deletion.
 	if !registry.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(&registry, finalizerName) {
-			if err := r.deleteHarborRegistry(&registry); err != nil {
+			if err := r.deleteHarborRegistry(ctx, harborConn, &registry); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&registry, finalizerName)
@@ -91,13 +96,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			}
 		}
-	}
-
-	// Retrieve the HarborConnection referenced by the Registry.
-	harborConn, err := r.getHarborConnection(ctx, registry.Namespace, registry.Spec.HarborConnectionRef)
-	if err != nil {
-		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", registry.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
 	}
 
 	if registry.Spec.Name == "" {
@@ -165,13 +163,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return returnWithDriftDetection(&registry)
 }
 
-func returnWithDriftDetection(registry *harborv1alpha1.Registry) (ctrl.Result, error) {
-	if registry.Spec.DriftDetectionInterval.Duration > 0 {
-		return ctrl.Result{RequeueAfter: registry.Spec.DriftDetectionInterval.Duration}, nil
-	}
-	return ctrl.Result{}, nil
-}
-
 // adoptExistingRegistry attempts to adopt an existing registry from Harbor by name.
 // If a registry is found, it updates the CR's status with the Harbor registry ID.
 func (r *RegistryReconciler) adoptExistingRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) (*harborRegistryResponse, error) {
@@ -215,7 +206,7 @@ func (r *RegistryReconciler) createHarborRegistry(ctx context.Context, harborCon
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -263,7 +254,7 @@ func (r *RegistryReconciler) updateHarborRegistry(ctx context.Context, harborCon
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -292,7 +283,7 @@ func (r *RegistryReconciler) getHarborRegistry(ctx context.Context, harborConn *
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -331,7 +322,7 @@ func (r *RegistryReconciler) getHarborRegistryByID(ctx context.Context, harborCo
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(ctx, harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Harbor auth credentials: %w", err)
 	}
@@ -365,31 +356,8 @@ func registryNeedsUpdate(desired createRegistryRequest, current harborRegistryRe
 		desired.Insecure != current.Insecure
 }
 
-// getHarborAuth returns the username and password for authenticating to Harbor.
-func (r *RegistryReconciler) getHarborAuth(ctx context.Context, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
-	secretKey := types.NamespacedName{
-		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.AccessSecretRef,
-	}
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		return "", "", err
-	}
-
-	accessSecretBytes, ok := secret.Data["access_secret"]
-	if !ok {
-		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
-	}
-	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
-}
-
 // deleteHarborRegistry implements the deletion logic for a registry in Harbor.
-func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Registry) error {
-	harborConn, err := r.getHarborConnection(context.Background(), registry.Namespace, registry.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-
+func (r *RegistryReconciler) deleteHarborRegistry(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, registry *harborv1alpha1.Registry) error {
 	// If no HarborRegistryID is set, there's nothing to delete.
 	if registry.Status.HarborRegistryID == 0 {
 		r.logger.V(1).Info("No HarborRegistryID present, nothing to delete")
@@ -403,7 +371,7 @@ func (r *RegistryReconciler) deleteHarborRegistry(registry *harborv1alpha1.Regis
 	}
 	reqHTTP.Header.Set("Content-Type", "application/json")
 
-	username, password, err := r.getHarborAuth(context.Background(), harborConn)
+	username, password, err := getHarborAuth(ctx, r.Client, harborConn)
 	if err != nil {
 		return err
 	}

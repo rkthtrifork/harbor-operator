@@ -39,20 +39,25 @@ spec:
           spec:
             description: ProjectSpec defines the desired state of Project.
             properties:
-              cveAllowlist:
-                description: CveAllowlist holds CVE allowlist settings.
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an existing
+                  project in Harbor with the same name.
+                type: boolean
+              cve_allowlist:
+                description: CVEAllowlist holds the configuration for the CVE allowlist.
                 properties:
+                  creation_time:
+                    format: date-time
+                    type: string
                   expires_at:
-                    description: ExpiresAt is the expiration timestamp.
-                    format: int64
                     type: integer
                   id:
-                    description: ID of the CVE allowlist.
                     type: integer
                   items:
-                    description: Items is the list of allowed CVEs.
                     items:
-                      description: CveItem represents a single allowed CVE.
+                      description: CVEAllowlistItem defines a single CVE allowlist
+                        entry.
                       properties:
                         cve_id:
                           type: string
@@ -61,42 +66,79 @@ spec:
                       type: object
                     type: array
                   project_id:
-                    description: ProjectID associated with the allowlist.
                     type: integer
+                  update_time:
+                    format: date-time
+                    type: string
                 type: object
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check for drift.
+                  A value of 0 (or omitted) disables periodic drift detection.
+                type: string
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
               metadata:
-                additionalProperties:
-                  type: string
-                description: Metadata holds additional project settings.
+                description: Metadata holds additional configuration for the Harbor
+                  project.
+                properties:
+                  auto_sbom_generation:
+                    type: string
+                  auto_scan:
+                    type: string
+                  enable_content_trust:
+                    type: string
+                  enable_content_trust_cosign:
+                    type: string
+                  prevent_vul:
+                    type: string
+                  proxy_speed_kb:
+                    type: string
+                  public:
+                    type: string
+                  retention_id:
+                    type: string
+                  reuse_sys_cve_allowlist:
+                    type: string
+                  severity:
+                    type: string
                 type: object
               name:
-                description: Name is the name of the project.
-                minLength: 1
+                description: |-
+                  Name is the name of the project.
+                  It is recommended to leave this field empty so that the operator defaults it
+                  to the custom resource’s metadata name.
+                type: string
+              owner:
+                description: Owner is an optional field for the project owner.
                 type: string
               public:
-                description: Public indicates if the project should be public.
+                default: true
+                description: Public indicates whether the project is public.
                 type: boolean
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
+                type: string
               registryName:
                 description: |-
-                  RegistryName is the name of the registry that this project should use as a proxy cache.
-                  It is recommended that this matches the metadata.name of the Registry custom resource.
+                  RegistryName is the name of the registry to use for proxy cache projects.
+                  The operator will search Harbor for a registry with this name.
                 type: string
-              storageLimit:
-                description: StorageLimit defines the storage limit in bytes.
-                format: int64
+              storage_limit:
+                description: StorageLimit is the storage limit for the project.
                 type: integer
             required:
             - harborConnectionRef
-            - name
             - public
-            - registryName
             type: object
           status:
             description: ProjectStatus defines the observed state of Project.
+            properties:
+              harborProjectID:
+                description: HarborProjectID is the ID of the project in Harbor.
+                type: integer
             type: object
         type: object
     served: true

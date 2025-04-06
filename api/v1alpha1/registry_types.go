@@ -41,7 +41,7 @@ type RegistrySpec struct {
 	// DriftDetectionInterval is the interval at which the operator will check for drift.
 	// A value of 0 (or omitted) disables periodic drift detection.
 	// +optional
-	DriftDetectionInterval metav1.Duration `json:"driftDetectionInterval,omitempty"`
+	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
 
 	// ReconcileNonce is an optional field that, when updated, forces an immediate reconcile.
 	// +optional
@@ -64,6 +64,10 @@ type Registry struct {
 
 	Spec   RegistrySpec   `json:"spec,omitempty"`
 	Status RegistryStatus `json:"status,omitempty"`
+}
+
+func (r *Registry) GetDriftDetectionInterval() *metav1.Duration {
+	return r.Spec.DriftDetectionInterval
 }
 
 // +kubebuilder:object:root=true
