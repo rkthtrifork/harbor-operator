@@ -41,11 +41,11 @@ type harborRegistryResponse struct {
 
 // createRegistryRequest is the payload sent to Harbor when creating or updating a registry.
 type createRegistryRequest struct {
-	URL         string `json:"url"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-	Insecure    bool   `json:"insecure"`
+	URL         string `json:"url,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Insecure    bool   `json:"insecure,omitempty"`
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=registries,verbs=get;list;watch;create;update;patch;delete

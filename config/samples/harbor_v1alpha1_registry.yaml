@@ -8,6 +8,7 @@ metadata:
 spec:
   harborConnectionRef: harborconnection-sample
   insecure: false
-  name: registry-sample # I recommend not specifying this field in which case the metadata.name will be used
+  # I recommend not specifying this field in which case the metadata.name will be used
+  # name: registry-sample
   type: github-ghcr
   url: https://ghcr.io
