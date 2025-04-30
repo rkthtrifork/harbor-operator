@@ -8,6 +8,6 @@ metadata:
 spec:
   harborConnectionRef: harborconnection-sample
   email: example@email.com
-  password: Password1
   username: user-sample
+  password: Password1
   realname: User Sample
