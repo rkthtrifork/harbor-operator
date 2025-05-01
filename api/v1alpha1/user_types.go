@@ -6,9 +6,7 @@ import (
 
 // UserSpec defines the desired state of User.
 type UserSpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
 	// Username is the Harbor username.
 	// It is recommended to leave this field empty so that the operator defaults it
@@ -31,20 +29,6 @@ type UserSpec struct {
 	// Password for the user. Only used when the user is created.
 	// +optional
 	Password string `json:"password,omitempty"`
-
-	// AllowTakeover indicates whether the operator is allowed to adopt an existing
-	// user in Harbor with the same username.
-	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
-
-	// DriftDetectionInterval is the interval at which the operator will check for drift.
-	// A value of 0 (or omitted) disables periodic drift detection.
-	// +optional
-	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
-
-	// ReconcileNonce forces an immediate reconcile when updated.
-	// +optional
-	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
 // UserStatus defines the observed state of User.
@@ -63,11 +47,6 @@ type User struct {
 
 	Spec   UserSpec   `json:"spec,omitempty"`
 	Status UserStatus `json:"status,omitempty"`
-}
-
-// GetDriftDetectionInterval returns the drift detection interval.
-func (u *User) GetDriftDetectionInterval() *metav1.Duration {
-	return u.Spec.DriftDetectionInterval
 }
 
 // +kubebuilder:object:root=true

@@ -140,7 +140,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			r.logger.V(1).Info("Registry is already in sync with desired state", "RegistryName", registry.Spec.Name)
 		}
 
-		return returnWithDriftDetection(&registry)
+		return returnWithDriftDetection(&registry.Spec.HarborSpecBase)
 	}
 
 	// If the registry is not found, create a new one.
@@ -160,7 +160,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	r.logger.Info("Successfully created registry on Harbor", "RegistryName", registry.Spec.Name, "HarborRegistryID", newID)
 
-	return returnWithDriftDetection(&registry)
+	return returnWithDriftDetection(&registry.Spec.HarborSpecBase)
 }
 
 // adoptExistingRegistry attempts to adopt an existing registry from Harbor by name.

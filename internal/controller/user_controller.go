@@ -150,7 +150,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		} else {
 			r.logger.V(1).Info("User is already in sync with desired state", "Username", user.Spec.Username)
 		}
-		return returnWithDriftDetection(&user)
+		return returnWithDriftDetection(&user.Spec.HarborSpecBase)
 	}
 
 	// If the user is not found, create a new one.
@@ -170,7 +170,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	r.logger.Info("Successfully created user on Harbor", "Username", user.Spec.Username, "HarborUserID", newID)
 
-	return returnWithDriftDetection(&user)
+	return returnWithDriftDetection(&user.Spec.HarborSpecBase)
 }
 
 // adoptExistingUser attempts to adopt an existing user from Harbor by username.

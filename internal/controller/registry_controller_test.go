@@ -165,12 +165,14 @@ var _ = Describe("Registry Controller", func() {
 				Namespace: "default",
 			},
 			Spec: harborv1alpha1.RegistrySpec{
-				HarborConnectionRef: "test-harbor",
-				Type:                "github-ghcr",
-				Name:                "test-registry",
-				Description:         "Test Description",
-				URL:                 "http://example.com",
-				Insecure:            false,
+				HarborSpecBase: harborv1alpha1.HarborSpecBase{
+					HarborConnectionRef: "test-harbor",
+				},
+				Type:        "github-ghcr",
+				Name:        "test-registry",
+				Description: "Test Description",
+				URL:         "http://example.com",
+				Insecure:    false,
 			},
 		}
 		Expect(k8sClient.Create(ctx, registry)).To(Succeed())
@@ -245,12 +247,14 @@ var _ = Describe("Registry Controller", func() {
 			Expect(k8sClient.Create(ctx, registry)).To(Succeed())
 		}
 		registry.Spec = harborv1alpha1.RegistrySpec{
-			HarborConnectionRef: "test-harbor",
-			Type:                "github-ghcr",
-			Name:                "test-registry",
-			Description:         "Updated Description",
-			URL:                 "http://example.com/updated",
-			Insecure:            true,
+			HarborSpecBase: harborv1alpha1.HarborSpecBase{
+				HarborConnectionRef: "test-harbor",
+			},
+			Type:        "github-ghcr",
+			Name:        "test-registry",
+			Description: "Updated Description",
+			URL:         "http://example.com/updated",
+			Insecure:    true,
 		}
 		Expect(k8sClient.Update(ctx, registry)).To(Succeed())
 

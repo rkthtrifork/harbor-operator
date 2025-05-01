@@ -8,6 +8,7 @@ metadata:
 spec:
   harborConnectionRef: harborconnection-sample
   email: example@email.com
-  username: user-sample
+  # I recommend not specifying this field in which case the metadata.name will be used
+  # username: project-sample
   password: Password1
   realname: User Sample

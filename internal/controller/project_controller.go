@@ -185,7 +185,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		} else {
 			r.logger.V(1).Info("Project is already in sync with desired state", "ProjectName", project.Spec.Name)
 		}
-		return returnWithDriftDetection(&project)
+		return returnWithDriftDetection(&project.Spec.HarborSpecBase)
 	}
 
 	// If the project is not found, create a new one.
@@ -205,7 +205,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	r.logger.Info("Successfully created project on Harbor", "ProjectName", project.Spec.Name, "HarborProjectID", newID)
 
-	return returnWithDriftDetection(&project)
+	return returnWithDriftDetection(&project.Spec.HarborSpecBase)
 }
 
 func (r *ProjectReconciler) adoptExistingProject(ctx context.Context, harborConn *harborv1alpha1.HarborConnection, project *harborv1alpha1.Project) (*harborProjectResponse, error) {
