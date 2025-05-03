@@ -3,7 +3,6 @@ package harborclient
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 type ProjectMetadata struct {
@@ -51,10 +50,6 @@ type CreateProjectRequest struct {
 	RegistryID   *int            `json:"registry_id,omitempty"`
 }
 
-// -----------------------------------------------------------------------------
-// List / Get
-// -----------------------------------------------------------------------------
-
 func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
 	var ps []Project
 	_, err := c.do(ctx, "GET", "/api/v2.0/projects", nil, &ps)
@@ -68,12 +63,7 @@ func (c *Client) GetProjectByID(ctx context.Context, id int) (*Project, error) {
 	return &p, err
 }
 
-// -----------------------------------------------------------------------------
-// Create / Update / Delete
-// -----------------------------------------------------------------------------
-
-func (c *Client) CreateProject(ctx context.Context,
-	in CreateProjectRequest) (int, error) {
+func (c *Client) CreateProject(ctx context.Context, in CreateProjectRequest) (int, error) {
 
 	resp, err := c.do(ctx, "POST", "/api/v2.0/projects", &in, nil)
 	if err != nil {
@@ -82,8 +72,7 @@ func (c *Client) CreateProject(ctx context.Context,
 	return extractLocationID(resp)
 }
 
-func (c *Client) UpdateProject(ctx context.Context, id int,
-	in CreateProjectRequest) error {
+func (c *Client) UpdateProject(ctx context.Context, id int, in CreateProjectRequest) error {
 
 	_, err := c.do(ctx, "PUT",
 		fmt.Sprintf("/api/v2.0/projects/%d", id), &in, nil)
@@ -97,15 +86,4 @@ func (c *Client) DeleteProject(ctx context.Context, id int) error {
 		return nil
 	}
 	return err
-}
-
-// -----------------------------------------------------------------------------
-// Small helper
-// -----------------------------------------------------------------------------
-
-func toRFC3339(t *time.Time) string {
-	if t == nil || t.IsZero() {
-		return ""
-	}
-	return t.UTC().Format(time.RFC3339)
 }

@@ -10,10 +10,6 @@ import (
 	"strings"
 )
 
-// ----------------------------------------------------------------------------
-// Typed error ----------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
 // HTTPError wraps a non-2xx response.
 type HTTPError struct {
 	StatusCode int
@@ -37,10 +33,6 @@ func isStatus(err error, code int) bool {
 	return false
 }
 
-// ----------------------------------------------------------------------------
-// Client ---------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
@@ -57,13 +49,9 @@ func New(baseURL, user, pass string) *Client {
 	}
 }
 
-func (c *Client) do(ctx context.Context,
-	method, relURL string,
-	in, out any) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*http.Response, error) {
 
-	//----------------------------------------------------------------------
 	// request body
-	//----------------------------------------------------------------------
 	var body io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
@@ -73,9 +61,7 @@ func (c *Client) do(ctx context.Context,
 		body = bytes.NewBuffer(b)
 	}
 
-	//----------------------------------------------------------------------
 	// build request
-	//----------------------------------------------------------------------
 	req, err := http.NewRequestWithContext(ctx, method,
 		c.BaseURL+relURL, body)
 	if err != nil {
@@ -84,17 +70,13 @@ func (c *Client) do(ctx context.Context,
 	req.SetBasicAuth(c.Username, c.Password)
 	req.Header.Set("Content-Type", "application/json")
 
-	//----------------------------------------------------------------------
 	// perform
-	//----------------------------------------------------------------------
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	//----------------------------------------------------------------------
 	// non-2xx → wrap in *HTTPError
-	//----------------------------------------------------------------------
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
 		msg, _ := io.ReadAll(resp.Body)
@@ -104,9 +86,7 @@ func (c *Client) do(ctx context.Context,
 		}
 	}
 
-	//----------------------------------------------------------------------
-	// decode (optional)
-	//----------------------------------------------------------------------
+	// decode
 	if out != nil {
 		defer resp.Body.Close()
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {

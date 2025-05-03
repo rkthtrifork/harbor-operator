@@ -28,7 +28,6 @@ type UpdateUserRequest struct {
 	Comment  string `json:"comment,omitempty"`
 }
 
-// ListUsers GET /users
 func (c *Client) ListUsers(ctx context.Context, query string) ([]User, error) {
 	rel := "/api/v2.0/users"
 	if query != "" {
@@ -46,8 +45,7 @@ func (c *Client) GetUserByID(ctx context.Context, id int) (*User, error) {
 	return &u, err
 }
 
-func (c *Client) CreateUser(ctx context.Context,
-	in CreateUserRequest) (int, error) {
+func (c *Client) CreateUser(ctx context.Context, in CreateUserRequest) (int, error) {
 
 	resp, err := c.do(ctx, "POST", "/api/v2.0/users", &in, nil)
 	if err != nil {
@@ -56,8 +54,7 @@ func (c *Client) CreateUser(ctx context.Context,
 	return extractLocationID(resp)
 }
 
-func (c *Client) UpdateUser(ctx context.Context, id int,
-	in UpdateUserRequest) error {
+func (c *Client) UpdateUser(ctx context.Context, id int, in CreateUserRequest) error {
 
 	_, err := c.do(ctx, "PUT",
 		fmt.Sprintf("/api/v2.0/users/%d", id), &in, nil)

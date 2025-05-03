@@ -18,10 +18,6 @@ import (
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
-// -----------------------------------------------------------------------------
-// Reconciler
-// -----------------------------------------------------------------------------
-
 type ProjectReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -36,11 +32,9 @@ type ProjectReconciler struct {
 func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[Project:%s]", req.NamespacedName))
 
-	//---------------------------------------------------------------------------
-	// 1. Load CR
-	//---------------------------------------------------------------------------
-	var projCR harborv1alpha1.Project
-	if err := r.Get(ctx, req.NamespacedName, &projCR); err != nil {
+	// Load CR
+	var cr harborv1alpha1.Project
+	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
 		if errors.IsNotFound(err) {
 			r.logger.V(1).Info("Resource disappeared")
 			return ctrl.Result{}, nil
@@ -48,10 +42,8 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	//---------------------------------------------------------------------------
-	// 2. Resolve Harbor connection + typed client
-	//---------------------------------------------------------------------------
-	conn, err := getHarborConnection(ctx, r.Client, projCR.Namespace, projCR.Spec.HarborConnectionRef)
+	// Resolve Harbor connection + typed client
+	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -61,97 +53,85 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
-	//---------------------------------------------------------------------------
-	// 3. Handle deletion
-	//---------------------------------------------------------------------------
-	if !projCR.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&projCR, finalizerName) {
-			if err := r.deleteProject(ctx, hc, &projCR); err != nil {
+	// Handle deletion
+	if !cr.DeletionTimestamp.IsZero() {
+		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
+			if err := r.deleteProject(ctx, hc, &cr); err != nil {
 				return ctrl.Result{}, err
 			}
-			controllerutil.RemoveFinalizer(&projCR, finalizerName)
-			if err := r.Update(ctx, &projCR); err != nil {
+			controllerutil.RemoveFinalizer(&cr, finalizerName)
+			if err := r.Update(ctx, &cr); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 		return ctrl.Result{}, nil
 	}
 
-	//---------------------------------------------------------------------------
-	// 4. Ensure finalizer
-	//---------------------------------------------------------------------------
-	if !controllerutil.ContainsFinalizer(&projCR, finalizerName) {
-		controllerutil.AddFinalizer(&projCR, finalizerName)
-		if err := r.Update(ctx, &projCR); err != nil {
+	// Ensure finalizer
+	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
+		controllerutil.AddFinalizer(&cr, finalizerName)
+		if err := r.Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	//---------------------------------------------------------------------------
-	// 5. Defaults & adoption
-	//---------------------------------------------------------------------------
-	if projCR.Spec.Name == "" {
-		projCR.Spec.Name = projCR.Name
+	// Defaults & adoption
+	if cr.Spec.Name == "" {
+		cr.Spec.Name = cr.Name
 	}
 
-	if projCR.Status.HarborProjectID == 0 && projCR.Spec.AllowTakeover {
-		if adopted, err := r.adoptExisting(ctx, hc, &projCR); err != nil {
+	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
+		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, err
 		} else if adopted {
 			r.logger.Info("Adopted existing project",
-				"Name", projCR.Spec.Name, "ID", projCR.Status.HarborProjectID)
+				"Name", cr.Spec.Name, "ID", cr.Status.HarborProjectID)
 		}
 	}
 
-	//---------------------------------------------------------------------------
-	// 6. Desired payload
-	//---------------------------------------------------------------------------
-	desired, err := r.buildCreateReq(ctx, hc, &projCR)
+	// Desired payload
+	createReq, err := r.buildCreateReq(ctx, hc, &cr)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	//---------------------------------------------------------------------------
-	// 7. Create / Update path
-	//---------------------------------------------------------------------------
-	if projCR.Status.HarborProjectID == 0 {
+	// Create / Update path
+	if cr.Status.HarborProjectID == 0 {
 		// create
-		newID, err := hc.CreateProject(ctx, desired)
+		newID, err := hc.CreateProject(ctx, createReq)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		projCR.Status.HarborProjectID = newID
-		if err := r.Status().Update(ctx, &projCR); err != nil {
+		cr.Status.HarborProjectID = newID
+		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created project", "ID", newID)
-		return returnWithDriftDetection(&projCR.Spec.HarborSpecBase)
+		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
 
-	// update
-	current, err := hc.GetProjectByID(ctx, projCR.Status.HarborProjectID)
+	// get current state
+	current, err := hc.GetProjectByID(ctx, cr.Status.HarborProjectID)
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			// It was deleted out-of-band → clear status and requeue immediately
-			projCR.Status.HarborProjectID = 0
-			_ = r.Status().Update(ctx, &projCR)
+			cr.Status.HarborProjectID = 0
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	if projectNeedsUpdate(desired, *current) {
-		if err := hc.UpdateProject(ctx, current.ProjectID, desired); err != nil {
+	// compare desired vs. current
+	if projectNeedsUpdate(createReq, *current) {
+		// update
+		if err := hc.UpdateProject(ctx, current.ProjectID, createReq); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Updated project", "ID", current.ProjectID)
 	}
-	return returnWithDriftDetection(&projCR.Spec.HarborSpecBase)
+	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
-
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
 
 func (r *ProjectReconciler) deleteProject(ctx context.Context, hc *harborclient.Client,
 	cr *harborv1alpha1.Project) error {
@@ -168,8 +148,7 @@ func (r *ProjectReconciler) deleteProject(ctx context.Context, hc *harborclient.
 }
 
 // adoption by name
-func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client,
-	cr *harborv1alpha1.Project) (bool, error) {
+func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Project) (bool, error) {
 
 	projects, err := hc.ListProjects(ctx)
 	if err != nil {
@@ -184,14 +163,7 @@ func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.
 	return false, nil
 }
 
-// -----------------------------------------------------------------------------
-// Build desired payload
-// -----------------------------------------------------------------------------
-
-func (r *ProjectReconciler) buildCreateReq(ctx context.Context,
-	hc *harborclient.Client, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
-
-	// Metadata ----------------------------------
+func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
 	var meta harborclient.ProjectMetadata
 	if m := cr.Spec.Metadata; m != nil {
 		meta = harborclient.ProjectMetadata{
@@ -208,7 +180,6 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context,
 		}
 	}
 
-	// CVE allow-list ----------------------------
 	var allow harborclient.CVEAllowlist
 	if a := cr.Spec.CVEAllowlist; a != nil {
 		allow.ID = a.ID
@@ -222,13 +193,11 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context,
 		}
 	}
 
-	// Storage limit -----------------------------
 	var storageLimit *int
 	if cr.Spec.StorageLimit != 0 {
 		storageLimit = &cr.Spec.StorageLimit
 	}
 
-	// Registry lookup (optional) ----------------
 	var registryID *int
 	if rn := cr.Spec.RegistryName; rn != "" {
 		regs, err := hc.ListRegistries(ctx)
@@ -257,10 +226,6 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context,
 		RegistryID:   registryID,
 	}, nil
 }
-
-// -----------------------------------------------------------------------------
-// Update comparison
-// -----------------------------------------------------------------------------
 
 func projectNeedsUpdate(desired harborclient.CreateProjectRequest,
 	current harborclient.Project) bool {
@@ -318,10 +283,6 @@ func projectNeedsUpdate(desired harborclient.CreateProjectRequest,
 	}
 	return false
 }
-
-// -----------------------------------------------------------------------------
-// Setup
-// -----------------------------------------------------------------------------
 
 func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
