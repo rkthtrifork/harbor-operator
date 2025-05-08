@@ -6,9 +6,7 @@ import (
 
 // RegistrySpec defines the desired state of Registry.
 type RegistrySpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
 	// Type of the registry, e.g., "github-ghcr".
 	// +kubebuilder:validation:Enum=github-ghcr;other-types-if-needed
@@ -30,22 +28,6 @@ type RegistrySpec struct {
 
 	// Insecure indicates if remote certificates should be verified.
 	Insecure bool `json:"insecure"`
-
-	// AllowTakeover indicates whether the operator is allowed to adopt an existing registry
-	// in Harbor if one with the same name already exists.
-	// If true, the operator will search for an existing registry with the same name and, if found,
-	// update its configuration to match the custom resource.
-	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
-
-	// DriftDetectionInterval is the interval at which the operator will check for drift.
-	// A value of 0 (or omitted) disables periodic drift detection.
-	// +optional
-	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
-
-	// ReconcileNonce is an optional field that, when updated, forces an immediate reconcile.
-	// +optional
-	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
 // RegistryStatus defines the observed state of Registry.
@@ -64,10 +46,6 @@ type Registry struct {
 
 	Spec   RegistrySpec   `json:"spec,omitempty"`
 	Status RegistryStatus `json:"status,omitempty"`
-}
-
-func (r *Registry) GetDriftDetectionInterval() *metav1.Duration {
-	return r.Spec.DriftDetectionInterval
 }
 
 // +kubebuilder:object:root=true

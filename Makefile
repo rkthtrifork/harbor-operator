@@ -171,7 +171,7 @@ kind-down: ## Stop (delete) the Kind cluster named "kind"
 	kind delete cluster
 
 .PHONY: kind-deploy
-kind-deploy: manifests generate install ## Build the image, load it into Kind, and deploy the operator.
+kind-deploy: generate install ## Build the image, load it into Kind, and deploy the operator.
 	@echo "Building local image..."
 	$(MAKE) docker-build IMG=$(IMG_LOCAL)
 	@echo "Loading image into Kind cluster..."
@@ -179,8 +179,15 @@ kind-deploy: manifests generate install ## Build the image, load it into Kind, a
 	@echo "Deploying harbor-operator to the cluster..."
 	$(MAKE) deploy IMG=$(IMG_LOCAL)
 
-.PHONY: kind-undeploy
-kind-undeploy: uninstall undeploy ## Undeploy the operator from the Kind cluster.
+.PHONY: clean-samples
+clean-samples: ## Delete sample CRs (ignore if not found)
+	$(KUBECTL) delete -k config/samples --ignore-not-found=true
+
+.PHONY: kind-reset
+kind-reset: clean-samples undeploy ## Remove operator + CRDs + CRs
+
+.PHONY: kind-redeploy
+kind-redeploy: kind-reset kind-deploy ## Full rebuild/redeploy on Kind
 
 ##@ Dependencies
 

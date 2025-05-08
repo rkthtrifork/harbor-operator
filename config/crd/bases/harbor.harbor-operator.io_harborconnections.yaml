@@ -54,9 +54,22 @@ spec:
                     minLength: 1
                     type: string
                   accessSecretRef:
-                    description: AccessSecretRef is a reference to a Kubernetes Secret
-                      containing the access secret.
-                    type: string
+                    description: AccessSecretRef points to the Kubernetes Secret that
+                      stores the password / token.
+                    properties:
+                      key:
+                        description: Key inside the Secret data. Defaults to "access_secret".
+                        type: string
+                      name:
+                        description: Name of the Secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the Secret. Omit to use the HarborConnection
+                          namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
                   type:
                     description: Type of the credential, e.g., "basic".
                     enum:

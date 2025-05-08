@@ -41,18 +41,16 @@ spec:
             properties:
               allowTakeover:
                 description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an existing registry
-                  in Harbor if one with the same name already exists.
-                  If true, the operator will search for an existing registry with the same name and, if found,
-                  update its configuration to match the custom resource.
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
                 type: boolean
               description:
                 description: Description is an optional description.
                 type: string
               driftDetectionInterval:
                 description: |-
-                  DriftDetectionInterval is the interval at which the operator will check for drift.
-                  A value of 0 (or omitted) disables periodic drift detection.
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
@@ -68,8 +66,7 @@ spec:
                   to the custom resource's metadata name.
                 type: string
               reconcileNonce:
-                description: ReconcileNonce is an optional field that, when updated,
-                  forces an immediate reconcile.
+                description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
               type:
                 description: Type of the registry, e.g., "github-ghcr".
