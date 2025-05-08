@@ -40,9 +40,9 @@ func getHarborAuth(ctx context.Context, c client.Client, harborConn *harborv1alp
 		return "", "", err
 	}
 
-	accessSecretBytes, ok := secret.Data["access_secret"]
+	accessSecretBytes, ok := secret.Data[harborConn.Spec.Credentials.AccessSecretRef.Key]
 	if !ok {
-		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
+		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", secretKey.Namespace, secretKey.Name)
 	}
 	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
 }

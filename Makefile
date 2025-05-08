@@ -181,16 +181,13 @@ kind-deploy: generate install ## Build the image, load it into Kind, and deploy 
 
 .PHONY: clean-samples
 clean-samples: ## Delete sample CRs (ignore if not found)
-	$(KUBECTL) delete -f config/samples --ignore-not-found=true
+	$(KUBECTL) delete -k config/samples --ignore-not-found=true
 
 .PHONY: kind-reset
-kind-reset: clean-samples kind-undeploy ## Remove operator + CRDs + CRs
+kind-reset: clean-samples undeploy ## Remove operator + CRDs + CRs
 
 .PHONY: kind-redeploy
 kind-redeploy: kind-reset kind-deploy ## Full rebuild/redeploy on Kind
-
-.PHONY: kind-undeploy
-kind-undeploy: uninstall undeploy ## Undeploy the operator from the Kind cluster.
 
 ##@ Dependencies
 

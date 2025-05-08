@@ -41,16 +41,16 @@ spec:
             properties:
               allowTakeover:
                 description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an existing
-                  user in Harbor with the same username.
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
                 type: boolean
               comment:
                 description: Comment is an optional comment for the user.
                 type: string
               driftDetectionInterval:
                 description: |-
-                  DriftDetectionInterval is the interval at which the operator will check for drift.
-                  A value of 0 (or omitted) disables periodic drift detection.
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               email:
                 description: Email address of the user.

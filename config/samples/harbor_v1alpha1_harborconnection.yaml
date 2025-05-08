@@ -10,4 +10,6 @@ spec:
   credentials:
     type: basic
     accessKey: admin
-    accessSecretRef: harbor-password
+    accessSecretRef:
+      name: harbor-core
+      key: HARBOR_ADMIN_PASSWORD

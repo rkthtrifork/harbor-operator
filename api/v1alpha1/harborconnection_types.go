@@ -28,7 +28,7 @@ type Credentials struct {
 	AccessKey string `json:"accessKey"`
 
 	// AccessSecretRef points to the Kubernetes Secret that stores the password / token.
-	AccessSecretRef SecretReference `json:"secretRef"`
+	AccessSecretRef SecretReference `json:"accessSecretRef"`
 }
 
 // SecretReference is similar to a corev1.SecretKeySelector but allows
