@@ -191,7 +191,7 @@ func (r *MemberReconciler) validateBaseURL(baseURL string) error {
 func (r *MemberReconciler) getHarborAuth(ctx context.Context, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
 	secretKey := types.NamespacedName{
 		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.AccessSecretRef,
+		Name:      "temp",
 	}
 	var secret corev1.Secret
 	if err := r.Get(ctx, secretKey, &secret); err != nil {

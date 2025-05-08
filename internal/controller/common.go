@@ -27,9 +27,13 @@ func getHarborConnection(ctx context.Context, c client.Client, namespace, name s
 // getHarborAuth is a helper function that retrieves Harbor authentication credentials.
 // It can be called from any reconciler that has access to a client.Client.
 func getHarborAuth(ctx context.Context, c client.Client, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
+
 	secretKey := types.NamespacedName{
-		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.AccessSecretRef,
+		Namespace: harborConn.Spec.Credentials.AccessSecretRef.Namespace,
+		Name:      harborConn.Spec.Credentials.AccessSecretRef.Name,
+	}
+	if secretKey.Namespace == "" {
+		secretKey.Namespace = harborConn.Namespace
 	}
 	var secret corev1.Secret
 	if err := c.Get(ctx, secretKey, &secret); err != nil {

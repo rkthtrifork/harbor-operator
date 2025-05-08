@@ -27,8 +27,21 @@ type Credentials struct {
 	// +kubebuilder:validation:MinLength=1
 	AccessKey string `json:"accessKey"`
 
-	// AccessSecretRef is a reference to a Kubernetes Secret containing the access secret.
-	AccessSecretRef string `json:"accessSecretRef"`
+	// AccessSecretRef points to the Kubernetes Secret that stores the password / token.
+	AccessSecretRef SecretReference `json:"secretRef"`
+}
+
+// SecretReference is similar to a corev1.SecretKeySelector but allows
+// cross-namespace references when enabled in the operator RBAC.
+type SecretReference struct {
+	// Name of the Secret.
+	Name string `json:"name"`
+	// Key inside the Secret data. Defaults to "access_secret".
+	// +optional
+	Key string `json:"key,omitempty"`
+	// Namespace of the Secret. Omit to use the HarborConnection namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // HarborConnectionStatus defines the observed state of HarborConnection.
