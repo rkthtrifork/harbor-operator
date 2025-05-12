@@ -39,35 +39,52 @@ spec:
           spec:
             description: UserSpec defines the desired state of User.
             properties:
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
+                type: boolean
               comment:
-                description: Comment holds additional information or a comment about
-                  the user.
+                description: Comment is an optional comment for the user.
+                type: string
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               email:
-                description: Email is the email address of the user.
+                description: Email address of the user.
+                format: email
                 type: string
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
               password:
-                description: Password is the password for the new user.
+                description: Password for the user. Only used when the user is created.
                 type: string
               realname:
-                description: RealName is the real name of the user.
+                description: Realname is an optional full name.
+                type: string
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
               username:
-                description: Username is the unique username for the user.
+                description: |-
+                  Username is the Harbor username.
+                  It is recommended to leave this field empty so that the operator defaults it
+                  to the custom resource's metadata name.
                 type: string
             required:
             - email
             - harborConnectionRef
-            - password
-            - realname
-            - username
             type: object
           status:
             description: UserStatus defines the observed state of User.
+            properties:
+              harborUserID:
+                description: HarborUserID is the ID of the user in Harbor.
+                type: integer
             type: object
         type: object
     served: true

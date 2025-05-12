@@ -1,9 +1,9 @@
 ## Append samples of your project ##
 resources:
-  - harbor-password-secret.yaml
+  # - harbor-password-secret.yaml
   - harbor_v1alpha1_registry.yaml
   - harbor_v1alpha1_project.yaml
-  # - harbor_v1alpha1_user.yaml
+  - harbor_v1alpha1_user.yaml
   # - harbor_v1alpha1_member.yaml
   - harbor_v1alpha1_harborconnection.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

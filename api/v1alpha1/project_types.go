@@ -6,9 +6,7 @@ import (
 
 // ProjectSpec defines the desired state of Project.
 type ProjectSpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
 	// Name is the name of the project.
 	// It is recommended to leave this field empty so that the operator defaults it
@@ -23,20 +21,6 @@ type ProjectSpec struct {
 	// Owner is an optional field for the project owner.
 	// +optional
 	Owner string `json:"owner,omitempty"`
-
-	// AllowTakeover indicates whether the operator is allowed to adopt an existing
-	// project in Harbor with the same name.
-	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
-
-	// DriftDetectionInterval is the interval at which the operator will check for drift.
-	// A value of 0 (or omitted) disables periodic drift detection.
-	// +optional
-	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
-
-	// ReconcileNonce forces an immediate reconcile when updated.
-	// +optional
-	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 
 	// Metadata holds additional configuration for the Harbor project.
 	// +optional
@@ -101,11 +85,6 @@ type Project struct {
 
 	Spec   ProjectSpec   `json:"spec,omitempty"`
 	Status ProjectStatus `json:"status,omitempty"`
-}
-
-// GetDriftDetectionInterval returns the drift detection interval.
-func (p *Project) GetDriftDetectionInterval() *metav1.Duration {
-	return p.Spec.DriftDetectionInterval
 }
 
 // +kubebuilder:object:root=true

@@ -6,35 +6,35 @@ import (
 
 // UserSpec defines the desired state of User.
 type UserSpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
-	// Email is the email address of the user.
-	// +kubebuilder:validation:Required
+	// Username is the Harbor username.
+	// It is recommended to leave this field empty so that the operator defaults it
+	// to the custom resource's metadata name.
+	// +optional
+	Username string `json:"username,omitempty"`
+
+	// Email address of the user.
+	// +kubebuilder:validation:Format=email
 	Email string `json:"email"`
 
-	// RealName is the real name of the user.
-	// +kubebuilder:validation:Required
-	RealName string `json:"realname"`
+	// Realname is an optional full name.
+	// +optional
+	Realname string `json:"realname,omitempty"`
 
-	// Comment holds additional information or a comment about the user.
+	// Comment is an optional comment for the user.
 	// +optional
 	Comment string `json:"comment,omitempty"`
 
-	// Password is the password for the new user.
-	// +kubebuilder:validation:Required
-	Password string `json:"password"`
-
-	// Username is the unique username for the user.
-	// +kubebuilder:validation:Required
-	Username string `json:"username"`
+	// Password for the user. Only used when the user is created.
+	// +optional
+	Password string `json:"password,omitempty"`
 }
 
 // UserStatus defines the observed state of User.
 type UserStatus struct {
-	// Add any additional status fields if needed.
-	// For example, you might add a "Created" flag or record the Harbor user ID.
+	// HarborUserID is the ID of the user in Harbor.
+	HarborUserID int `json:"harborUserID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

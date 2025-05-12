@@ -1,182 +1,161 @@
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"strings"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
+	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
-// UserReconciler reconciles a User object.
 type UserReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	logger logr.Logger
 }
 
-// RBAC permissions.
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=users,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=users/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
 
-// Reconcile implements the reconciliation loop for the User resource.
 func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[User:%s]", req.NamespacedName))
 
-	// Fetch the User instance.
-	var user harborv1alpha1.User
-	if err := r.Get(ctx, req.NamespacedName, &user); err != nil {
+	// Load CR
+	var cr harborv1alpha1.User
+	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.Info("User resource not found; it may have been deleted")
 			return ctrl.Result{}, nil
 		}
-		r.logger.Error(err, "Failed to get User")
 		return ctrl.Result{}, err
 	}
 
-	// Retrieve the HarborConnection referenced by the User.
-	harborConn, err := r.getHarborConnection(ctx, user.Namespace, user.Spec.HarborConnectionRef)
+	// Harbor client
+	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", user.Spec.HarborConnectionRef)
 		return ctrl.Result{}, err
 	}
-
-	// Validate the Harbor BaseURL.
-	if err := r.validateBaseURL(harborConn.Spec.BaseURL); err != nil {
-		r.logger.Error(err, "Invalid Harbor BaseURL", "BaseURL", harborConn.Spec.BaseURL)
-		return ctrl.Result{}, err
-	}
-
-	// Build the user creation payload.
-	userRequest := r.buildUserRequest(&user)
-
-	// Build the Harbor API URL for creating a user.
-	usersURL := fmt.Sprintf("%s/api/v2.0/users", harborConn.Spec.BaseURL)
-	r.logger.Info("Sending user creation request", "url", usersURL)
-
-	// Marshal the payload to JSON.
-	payloadBytes, err := json.Marshal(userRequest)
+	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
-		r.logger.Error(err, "Failed to marshal user payload")
 		return ctrl.Result{}, err
 	}
+	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
-	// Create the HTTP POST request.
-	reqHTTP, err := http.NewRequest("POST", usersURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		r.logger.Error(err, "Failed to create HTTP request for user creation")
-		return ctrl.Result{}, err
-	}
-	reqHTTP.Header.Set("Content-Type", "application/json")
-
-	// Set authentication using HarborConnection credentials.
-	authUser, authPass, err := r.getHarborAuth(ctx, harborConn)
-	if err != nil {
-		r.logger.Error(err, "Failed to get Harbor authentication credentials")
-		return ctrl.Result{}, err
-	}
-	reqHTTP.SetBasicAuth(authUser, authPass)
-
-	// Perform the HTTP request.
-	resp, err := http.DefaultClient.Do(reqHTTP)
-	if err != nil {
-		r.logger.Error(err, "Failed to perform HTTP request for user creation")
-		return ctrl.Result{}, err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			r.logger.Error(err, "failed to close response body")
+	// Deletion
+	if !cr.DeletionTimestamp.IsZero() {
+		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
+			if err := r.deleteUser(ctx, hc, &cr); err != nil {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(&cr, finalizerName)
+			_ = r.Update(ctx, &cr)
 		}
-	}()
+		return ctrl.Result{}, nil
+	}
 
-	// Check for a successful status code (e.g., 201 Created).
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		err := fmt.Errorf("failed to create user: status %d, body: %s", resp.StatusCode, string(body))
-		r.logger.Error(err, "Harbor user creation failed")
+	// Finalizer
+	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
+		controllerutil.AddFinalizer(&cr, finalizerName)
+		_ = r.Update(ctx, &cr)
+	}
+
+	// Defaults & adoption
+	if cr.Spec.Username == "" {
+		cr.Spec.Username = cr.Name
+	}
+
+	if cr.Status.HarborUserID == 0 && cr.Spec.AllowTakeover {
+		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
+			return ctrl.Result{}, err
+		} else if ok {
+			r.logger.Info("Adopted user", "ID", cr.Status.HarborUserID)
+		}
+	}
+
+	// Desired payload
+	createReq := r.buildCreateReq(cr)
+
+	// Create / Update
+	if cr.Status.HarborUserID == 0 {
+		id, err := hc.CreateUser(ctx, createReq)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		cr.Status.HarborUserID = id
+		_ = r.Status().Update(ctx, &cr)
+		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	}
+
+	current, err := hc.GetUserByID(ctx, cr.Status.HarborUserID)
+	if err != nil {
+		if harborclient.IsNotFound(err) {
+			cr.Status.HarborUserID = 0
+			_ = r.Status().Update(ctx, &cr)
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
-	r.logger.Info("Successfully created user on Harbor", "Username", user.Spec.Username)
-	// Optionally update User status here if needed.
-	return ctrl.Result{}, nil
-}
-
-// getHarborConnection retrieves the HarborConnection referenced in the User.
-func (r *UserReconciler) getHarborConnection(ctx context.Context, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
-	var harborConn harborv1alpha1.HarborConnection
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &harborConn); err != nil {
-		return nil, err
+	if userNeedsUpdate(createReq, *current) {
+		if err := hc.UpdateUser(ctx, current.UserID, createReq); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
-	return &harborConn, nil
+	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 
-// validateBaseURL verifies that the provided URL is valid and contains a scheme.
-func (r *UserReconciler) validateBaseURL(baseURL string) error {
-	parsedURL, err := url.Parse(baseURL)
+func (r *UserReconciler) buildCreateReq(cr harborv1alpha1.User) harborclient.CreateUserRequest {
+	createReq := harborclient.CreateUserRequest{
+		Email:    cr.Spec.Email,
+		Realname: cr.Spec.Realname,
+		Comment:  cr.Spec.Comment,
+		Password: cr.Spec.Password,
+		Username: cr.Spec.Username,
+	}
+	return createReq
+}
+
+func (r *UserReconciler) deleteUser(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.User) error {
+	if cr.Status.HarborUserID == 0 {
+		return nil
+	}
+	err := hc.DeleteUser(ctx, cr.Status.HarborUserID)
+	if harborclient.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func (r *UserReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.User) (bool, error) {
+	users, err := hc.ListUsers(ctx, "username="+cr.Spec.Username)
 	if err != nil {
-		return err
+		return false, err
 	}
-	if parsedURL.Scheme == "" {
-		return fmt.Errorf("baseURL %s is missing a protocol scheme", baseURL)
+	for _, u := range users {
+		if strings.EqualFold(u.Username, cr.Spec.Username) {
+			cr.Status.HarborUserID = u.UserID
+			return true, r.Status().Update(ctx, cr)
+		}
 	}
-	return nil
+	return false, nil
 }
 
-// createUserRequest represents the payload sent to Harbor to create a user.
-type createUserRequest struct {
-	Email    string `json:"email"`
-	RealName string `json:"realname"`
-	Comment  string `json:"comment,omitempty"`
-	Password string `json:"password"`
-	Username string `json:"username"`
+func userNeedsUpdate(desired harborclient.CreateUserRequest, current harborclient.User) bool {
+	return desired.Email != current.Email ||
+		desired.Realname != current.Realname ||
+		desired.Comment != current.Comment
 }
 
-// buildUserRequest constructs the JSON payload for the user creation request.
-func (r *UserReconciler) buildUserRequest(user *harborv1alpha1.User) createUserRequest {
-	return createUserRequest{
-		Email:    user.Spec.Email,
-		RealName: user.Spec.RealName,
-		Comment:  user.Spec.Comment,
-		Password: user.Spec.Password,
-		Username: user.Spec.Username,
-	}
-}
-
-// getHarborAuth retrieves the Harbor authentication credentials from the HarborConnection.
-func (r *UserReconciler) getHarborAuth(ctx context.Context, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
-	secretKey := types.NamespacedName{
-		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.AccessSecretRef,
-	}
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		return "", "", err
-	}
-
-	accessSecretBytes, ok := secret.Data["access_secret"]
-	if !ok {
-		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", harborConn.Namespace, harborConn.Spec.Credentials.AccessSecretRef)
-	}
-	return harborConn.Spec.Credentials.AccessKey, string(accessSecretBytes), nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
 func (r *UserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&harborv1alpha1.User{}).
