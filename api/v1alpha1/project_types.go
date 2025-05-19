@@ -1,16 +1,31 @@
+// Copyright 2025 The Harbor-Operator Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+// -----------------------------------------------------------------------------
+// Project - Spec
+// -----------------------------------------------------------------------------
 
 // ProjectSpec defines the desired state of Project.
 type ProjectSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// Name is the name of the project.
-	// It is recommended to leave this field empty so that the operator defaults it
-	// to the custom resource’s metadata name.
+	// Name of the project in Harbor.
+	// If omitted, the operator will default to `.metadata.name` when reconciling.
 	// +optional
 	Name string `json:"name,omitempty"`
 
@@ -18,7 +33,7 @@ type ProjectSpec struct {
 	// +kubebuilder:default:=true
 	Public bool `json:"public"`
 
-	// Owner is an optional field for the project owner.
+	// Owner is the Harbor username that will be set as project owner.
 	// +optional
 	Owner string `json:"owner,omitempty"`
 
@@ -28,17 +43,21 @@ type ProjectSpec struct {
 
 	// CVEAllowlist holds the configuration for the CVE allowlist.
 	// +optional
-	CVEAllowlist *CVEAllowlist `json:"cve_allowlist,omitempty"`
+	CVEAllowlist *CVEAllowlist `json:"cveAllowlist,omitempty"`
 
-	// StorageLimit is the storage limit for the project.
+	// StorageLimit in bytes.  nil means no limit.
 	// +optional
-	StorageLimit int `json:"storage_limit,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	StorageLimit *int64 `json:"storageLimit,omitempty"`
 
-	// RegistryName is the name of the registry to use for proxy cache projects.
-	// The operator will search Harbor for a registry with this name.
+	// RegistryName is the name of the proxy-cache registry to link with.
 	// +optional
 	RegistryName string `json:"registryName,omitempty"`
 }
+
+// -----------------------------------------------------------------------------
+// Project - Sub-structs
+// -----------------------------------------------------------------------------
 
 // ProjectMetadata defines additional metadata for the project.
 type ProjectMetadata struct {
@@ -69,14 +88,31 @@ type CVEAllowlist struct {
 	UpdateTime   metav1.Time        `json:"update_time,omitempty"`
 }
 
+// -----------------------------------------------------------------------------
+// Project - Status
+// -----------------------------------------------------------------------------
+
 // ProjectStatus defines the observed state of Project.
 type ProjectStatus struct {
-	// HarborProjectID is the ID of the project in Harbor.
+	// HarborProjectID is the numeric ID of the project in Harbor.
+	// +optional
 	HarborProjectID int `json:"harborProjectID,omitempty"`
+
+	// ObservedGeneration is the .metadata.generation last processed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions represent the latest available observations of a Project's state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+// +kubebuilder:printcolumn:name="Public",type="boolean",JSONPath=".spec.public"
+// +kubebuilder:printcolumn:name="Owner",type="string",priority=1,JSONPath=".spec.owner"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Project is the Schema for the projects API.
 type Project struct {

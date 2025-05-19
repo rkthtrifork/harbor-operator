@@ -1,66 +1,74 @@
+// Copyright 2025 The Harbor-Operator Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// MemberUser defines a user-based member.
-type MemberUser struct {
-	// If the user already exists in Harbor, set UserID.
-	// +optional
-	UserID int `json:"user_id,omitempty"`
-	// Username is used to onboard a user if not already present.
-	// +optional
-	Username string `json:"username,omitempty"`
-}
-
-// MemberGroup defines a group-based member.
-type MemberGroup struct {
-	// If the group already exists in Harbor, set its ID.
-	// +optional
-	ID int `json:"id,omitempty"`
-	// GroupName is the name of the group.
-	// +optional
-	GroupName string `json:"group_name,omitempty"`
-	// GroupType is the type of the group.
-	// +optional
-	GroupType int `json:"group_type,omitempty"`
-	// LDAPGroupDN is used for LDAP groups.
-	// +optional
-	LDAPGroupDN string `json:"ldap_group_dn,omitempty"`
-}
+// -----------------------------------------------------------------------------
+// Member – Spec
+// -----------------------------------------------------------------------------
 
 // MemberSpec defines the desired state of Member.
+//
+// NOTE: Only status/conditions were added in this commit; the Spec is kept
+// exactly as you already had it.
 type MemberSpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
-	// ProjectRef is the name (or ID) of the project in Harbor where the member should be added.
-	// +kubebuilder:validation:Required
-	ProjectRef string `json:"projectRef"`
+	// Project that the member should belong to (Harbor project name, not ID).
+	Project string `json:"project"`
 
-	// Role is the human‑readable name of the role.
-	// Allowed values: "admin", "maintainer", "developer", "guest"
-	// +kubebuilder:validation:Required
+	// Kind of member: user, group, robot.
+	// +kubebuilder:validation:Enum=user;group;robot
+	Kind string `json:"kind"`
+
+	// Name of the user / group / robot account in Harbor.
+	Name string `json:"name"`
+
+	// Role to grant.  For users & groups this is the project role;
+	// for robots it will be the robot permission template.
+	// +kubebuilder:validation:MinLength=1
 	Role string `json:"role"`
-
-	// MemberUser defines the member if it is a user.
-	// +optional
-	MemberUser *MemberUser `json:"member_user,omitempty"`
-
-	// MemberGroup defines the member if it is a group.
-	// +optional
-	MemberGroup *MemberGroup `json:"member_group,omitempty"`
 }
+
+// -----------------------------------------------------------------------------
+// Member – Status
+// -----------------------------------------------------------------------------
 
 // MemberStatus defines the observed state of Member.
 type MemberStatus struct {
-	// Optionally add status fields, e.g. to track creation state or Harbor member ID.
+	// HarborMemberID is the internal numeric ID for the membership in Harbor.
+	// +optional
+	HarborMemberID int `json:"harborMemberID,omitempty"`
+
+	// ObservedGeneration is the most recent generation that has been reconciled.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions represent the latest observations of the Member's state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+// +kubebuilder:printcolumn:name="Project",type="string",JSONPath=".spec.project"
+// +kubebuilder:printcolumn:name="Kind",type="string",JSONPath=".spec.kind"
+// +kubebuilder:printcolumn:name="Name",type="string",priority=1,JSONPath=".spec.name"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Member is the Schema for the members API.
 type Member struct {

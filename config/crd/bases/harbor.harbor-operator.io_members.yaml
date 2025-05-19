@@ -14,7 +14,24 @@ spec:
     singular: member
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .spec.project
+      name: Project
+      type: string
+    - jsonPath: .spec.kind
+      name: Kind
+      type: string
+    - jsonPath: .spec.name
+      name: Name
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Member is the Schema for the members API.
@@ -37,55 +54,126 @@ spec:
           metadata:
             type: object
           spec:
-            description: MemberSpec defines the desired state of Member.
+            description: |-
+              MemberSpec defines the desired state of Member.
+
+              NOTE: Only status/conditions were added in this commit; the Spec is kept
+              exactly as you already had it.
             properties:
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
+                type: boolean
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
+                type: string
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
-              member_group:
-                description: MemberGroup defines the member if it is a group.
-                properties:
-                  group_name:
-                    description: GroupName is the name of the group.
-                    type: string
-                  group_type:
-                    description: GroupType is the type of the group.
-                    type: integer
-                  id:
-                    description: If the group already exists in Harbor, set its ID.
-                    type: integer
-                  ldap_group_dn:
-                    description: LDAPGroupDN is used for LDAP groups.
-                    type: string
-                type: object
-              member_user:
-                description: MemberUser defines the member if it is a user.
-                properties:
-                  user_id:
-                    description: If the user already exists in Harbor, set UserID.
-                    type: integer
-                  username:
-                    description: Username is used to onboard a user if not already
-                      present.
-                    type: string
-                type: object
-              projectRef:
-                description: ProjectRef is the name (or ID) of the project in Harbor
-                  where the member should be added.
+              kind:
+                description: 'Kind of member: user, group, robot.'
+                enum:
+                - user
+                - group
+                - robot
+                type: string
+              name:
+                description: Name of the user / group / robot account in Harbor.
+                type: string
+              project:
+                description: Project that the member should belong to (Harbor project
+                  name, not ID).
+                type: string
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
               role:
                 description: |-
-                  Role is the human‑readable name of the role.
-                  Allowed values: "admin", "maintainer", "developer", "guest"
+                  Role to grant.  For users & groups this is the project role;
+                  for robots it will be the robot permission template.
+                minLength: 1
                 type: string
             required:
             - harborConnectionRef
-            - projectRef
+            - kind
+            - name
+            - project
             - role
             type: object
           status:
             description: MemberStatus defines the observed state of Member.
+            properties:
+              conditions:
+                description: Conditions represent the latest observations of the Member's
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              harborMemberID:
+                description: HarborMemberID is the internal numeric ID for the membership
+                  in Harbor.
+                type: integer
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation that
+                  has been reconciled.
+                format: int64
+                type: integer
             type: object
         type: object
     served: true

@@ -38,6 +38,7 @@ type Project struct {
 	OwnerName  string          `json:"owner_name"`
 	Metadata   ProjectMetadata `json:"metadata"`
 	CVEAllowlist
+	StorageLimit int64 `json:"storage_limit,omitempty"`
 }
 
 type CreateProjectRequest struct {
@@ -46,7 +47,7 @@ type CreateProjectRequest struct {
 	Owner        string          `json:"owner,omitempty"`
 	Metadata     ProjectMetadata `json:"metadata,omitempty"`
 	CVEAllowlist CVEAllowlist    `json:"cve_allowlist,omitempty"`
-	StorageLimit *int            `json:"storage_limit,omitempty"`
+	StorageLimit *int64          `json:"storage_limit,omitempty"`
 	RegistryID   *int            `json:"registry_id,omitempty"`
 }
 

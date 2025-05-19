@@ -1,3 +1,17 @@
+// Copyright 2025 The Harbor-Operator Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package controller
 
 import (
@@ -7,8 +21,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -18,11 +33,16 @@ import (
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
+// -----------------------------------------------------------------------------
+// HarborConnectionReconciler
+// -----------------------------------------------------------------------------
+
 // HarborConnectionReconciler reconciles a HarborConnection object.
 type HarborConnectionReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme   *runtime.Scheme
+	logger   logr.Logger
+	recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch;create;update;patch;delete
@@ -30,113 +50,154 @@ type HarborConnectionReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
-// Reconcile fetches the HarborConnection resource, validates the BaseURL, and either performs a non-authenticated
-// connectivity check or an authenticated check based on whether credentials are provided.
 func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[HarborConnection:%s]", req.NamespacedName))
 
-	// Fetch the HarborConnection instance.
+	// ---------------------------------------------------------------------
+	// Load CR
+	// ---------------------------------------------------------------------
 	var conn harborv1alpha1.HarborConnection
 	if err := r.Get(ctx, req.NamespacedName, &conn); err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.Info("HarborConnection resource not found; it may have been deleted")
+			// CR deleted – nothing to do.
 			return ctrl.Result{}, nil
 		}
-		r.logger.Error(err, "Failed to get HarborConnection")
 		return ctrl.Result{}, err
 	}
 
-	// Validate the BaseURL.
+	// ---------------------------------------------------------------------
+	// Mark Reconciling=True
+	// ---------------------------------------------------------------------
+	r.markReconciling(&conn)
+	_ = r.Status().Update(ctx, &conn)
+
+	// ---------------------------------------------------------------------
+	// Validate BaseURL
+	// ---------------------------------------------------------------------
 	if err := r.validateBaseURL(&conn); err != nil {
+		r.markStalled(&conn, "InvalidBaseURL", err.Error())
+		_ = r.Status().Update(ctx, &conn)
+		r.recorder.Event(&conn, corev1.EventTypeWarning, "InvalidBaseURL", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	// If no credentials are provided, perform a non-authenticated connectivity check.
-	if conn.Spec.Credentials == nil {
-		return r.checkNonAuthConnectivity(ctx, &conn)
+	// ---------------------------------------------------------------------
+	// Obtain credentials (may be empty for anonymous ping)
+	// ---------------------------------------------------------------------
+	user, pass, err := getHarborAuth(ctx, r.Client, &conn)
+	if err != nil {
+		r.markStalled(&conn, "SecretError", err.Error())
+		_ = r.Status().Update(ctx, &conn)
+		r.recorder.Event(&conn, corev1.EventTypeWarning, "SecretError", err.Error())
+		return ctrl.Result{}, err
 	}
 
-	// Otherwise, perform an authenticated check.
-	return r.checkAuthenticatedConnection(ctx, &conn)
+	// ---------------------------------------------------------------------
+	// Connectivity / authentication check
+	// ---------------------------------------------------------------------
+	if conn.Spec.Credentials == nil {
+		err = r.checkNonAuthConnectivity(ctx, &conn)
+	} else {
+		err = r.checkAuthenticatedConnection(ctx, &conn, user, pass)
+	}
+
+	if err != nil {
+		r.markStalled(&conn, "ConnectionError", err.Error())
+		_ = r.Status().Update(ctx, &conn)
+		r.recorder.Event(&conn, corev1.EventTypeWarning, "ConnectionError", err.Error())
+		return ctrl.Result{}, err
+	}
+
+	// ---------------------------------------------------------------------
+	// Success – Ready=True
+	// ---------------------------------------------------------------------
+	r.markReady(&conn)
+	if err := r.Status().Update(ctx, &conn); err != nil {
+		return ctrl.Result{}, err
+	}
+	r.recorder.Event(&conn, corev1.EventTypeNormal, "Reconciled", "Harbor endpoint verified")
+
+	return ctrl.Result{}, nil
 }
 
-// validateBaseURL verifies that the BaseURL is a valid URL and includes a protocol scheme.
+// -----------------------------------------------------------------------------
+// Status helpers
+// -----------------------------------------------------------------------------
+
+func (r *HarborConnectionReconciler) markReconciling(cr *harborv1alpha1.HarborConnection) {
+	harborv1alpha1.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
+		Type:    harborv1alpha1.ConditionReconciling,
+		Status:  metav1.ConditionTrue,
+		Reason:  "Reconciling",
+		Message: "Reconciling resource",
+	})
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionStalled)
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionReady)
+	cr.Status.ObservedGeneration = cr.Generation
+}
+
+func (r *HarborConnectionReconciler) markStalled(cr *harborv1alpha1.HarborConnection, reason, msg string) {
+	harborv1alpha1.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
+		Type:    harborv1alpha1.ConditionStalled,
+		Status:  metav1.ConditionTrue,
+		Reason:  reason,
+		Message: msg,
+	})
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionReconciling)
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionReady)
+	cr.Status.ObservedGeneration = cr.Generation
+}
+
+func (r *HarborConnectionReconciler) markReady(cr *harborv1alpha1.HarborConnection) {
+	harborv1alpha1.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
+		Type:    harborv1alpha1.ConditionReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  "Reconciled",
+		Message: "Resource is ready",
+	})
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionReconciling)
+	harborv1alpha1.RemoveCondition(&cr.Status.Conditions, harborv1alpha1.ConditionStalled)
+	cr.Status.ObservedGeneration = cr.Generation
+}
+
+// -----------------------------------------------------------------------------
+// Validation & connectivity helpers
+// -----------------------------------------------------------------------------
+
+// validateBaseURL verifies that the BaseURL is a valid URL and includes a scheme.
 func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.HarborConnection) error {
-	parsedURL, err := url.Parse(conn.Spec.BaseURL)
+	parsed, err := url.Parse(conn.Spec.BaseURL)
 	if err != nil {
-		r.logger.Error(err, "Invalid baseURL format")
 		return err
 	}
-	if parsedURL.Scheme == "" {
-		err := fmt.Errorf("baseURL %s is missing a protocol scheme", conn.Spec.BaseURL)
-		r.logger.Error(err, "Invalid baseURL")
-		return err
+	if parsed.Scheme == "" {
+		return fmt.Errorf("baseURL %q is missing a protocol scheme", conn.Spec.BaseURL)
 	}
 	return nil
 }
 
-func (r *HarborConnectionReconciler) checkNonAuthConnectivity(
-	ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
-
-	hc := harborclient.New(conn.Spec.BaseURL, "", "") // no creds
-	if err := hc.Ping(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-	r.logger.Info("Harbor reachable without credentials")
-	return ctrl.Result{}, nil
+func (r *HarborConnectionReconciler) checkNonAuthConnectivity(ctx context.Context, conn *harborv1alpha1.HarborConnection) error {
+	hc := harborclient.New(conn.Spec.BaseURL, "", "")
+	return hc.Ping(ctx)
 }
 
 func (r *HarborConnectionReconciler) checkAuthenticatedConnection(
-	ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
-
-	user := conn.Spec.Credentials.AccessKey
-	pass, err := r.getPassword(ctx, r.Client, conn) // unchanged helper
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
-	if _, err := hc.GetCurrentUser(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.logger.Info("Successfully authenticated with Harbor API")
-	return ctrl.Result{}, nil
+	ctx context.Context,
+	conn *harborv1alpha1.HarborConnection,
+	username, password string,
+) error {
+	hc := harborclient.New(conn.Spec.BaseURL, username, password)
+	_, err := hc.GetCurrentUser(ctx)
+	return err
 }
 
-// Retrieve the secret containing the access secret.
-func (r *HarborConnectionReconciler) getPassword(ctx context.Context, client client.Client, conn *harborv1alpha1.HarborConnection) (string, error) {
-	secret, err := r.getSecret(ctx, conn)
-	if err != nil {
-		return "", err
-	}
-
-	secretKey := conn.Spec.Credentials.AccessSecretRef.Key
-	if secretKey == "" {
-		secretKey = "access_secret"
-	}
-	accessSecretBytes, ok := secret.Data[secretKey]
-	if !ok {
-		return "", fmt.Errorf("key %q not found in secret %s/%s", secretKey, secret.Namespace, secret.Name)
-	}
-	return string(accessSecretBytes), nil
-}
-
-// getSecret fetches the secret specified in the HarborConnection credentials.
-func (r *HarborConnectionReconciler) getSecret(ctx context.Context, conn *harborv1alpha1.HarborConnection) (*corev1.Secret, error) {
-	secretKey := types.NamespacedName{
-		Namespace: conn.Namespace,
-		Name:      conn.Spec.Credentials.AccessSecretRef.Name,
-	}
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		return nil, err
-	}
-	return &secret, nil
-}
+// -----------------------------------------------------------------------------
+// Setup
+// -----------------------------------------------------------------------------
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HarborConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.recorder = mgr.GetEventRecorderFor("harbor-operator")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&harborv1alpha1.HarborConnection{}).
 		Named("harborconnection").

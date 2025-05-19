@@ -14,7 +14,21 @@ spec:
     singular: project
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .spec.public
+      name: Public
+      type: boolean
+    - jsonPath: .spec.owner
+      name: Owner
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Project is the Schema for the projects API.
@@ -44,7 +58,7 @@ spec:
                   AllowTakeover indicates whether the operator is allowed to adopt an
                   existing object in Harbor with the same name/ID.
                 type: boolean
-              cve_allowlist:
+              cveAllowlist:
                 description: CVEAllowlist holds the configuration for the CVE allowlist.
                 properties:
                   creation_time:
@@ -107,12 +121,12 @@ spec:
                 type: object
               name:
                 description: |-
-                  Name is the name of the project.
-                  It is recommended to leave this field empty so that the operator defaults it
-                  to the custom resource’s metadata name.
+                  Name of the project in Harbor.
+                  If omitted, the operator will default to `.metadata.name` when reconciling.
                 type: string
               owner:
-                description: Owner is an optional field for the project owner.
+                description: Owner is the Harbor username that will be set as project
+                  owner.
                 type: string
               public:
                 default: true
@@ -122,12 +136,13 @@ spec:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
               registryName:
-                description: |-
-                  RegistryName is the name of the registry to use for proxy cache projects.
-                  The operator will search Harbor for a registry with this name.
+                description: RegistryName is the name of the proxy-cache registry
+                  to link with.
                 type: string
-              storage_limit:
-                description: StorageLimit is the storage limit for the project.
+              storageLimit:
+                description: StorageLimit in bytes.  nil means no limit.
+                format: int64
+                minimum: 1
                 type: integer
             required:
             - harborConnectionRef
@@ -136,8 +151,71 @@ spec:
           status:
             description: ProjectStatus defines the observed state of Project.
             properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of a Project's state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               harborProjectID:
-                description: HarborProjectID is the ID of the project in Harbor.
+                description: HarborProjectID is the numeric ID of the project in Harbor.
+                type: integer
+              observedGeneration:
+                description: ObservedGeneration is the .metadata.generation last processed
+                  by the controller.
+                format: int64
                 type: integer
             type: object
         type: object
