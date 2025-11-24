@@ -25,19 +25,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
-// -----------------------------------------------------------------------------
-// HarborConnectionReconciler
-// -----------------------------------------------------------------------------
-
-// HarborConnectionReconciler reconciles a HarborConnection object.
 type HarborConnectionReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
@@ -53,9 +50,6 @@ type HarborConnectionReconciler struct {
 func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[HarborConnection:%s]", req.NamespacedName))
 
-	// ---------------------------------------------------------------------
-	// Load CR
-	// ---------------------------------------------------------------------
 	var conn harborv1alpha1.HarborConnection
 	if err := r.Get(ctx, req.NamespacedName, &conn); err != nil {
 		if errors.IsNotFound(err) {
@@ -65,36 +59,30 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// ---------------------------------------------------------------------
-	// Mark Reconciling=True
-	// ---------------------------------------------------------------------
 	r.markReconciling(&conn)
-	_ = r.Status().Update(ctx, &conn)
+	if err := r.Status().Update(ctx, &conn); err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// ---------------------------------------------------------------------
-	// Validate BaseURL
-	// ---------------------------------------------------------------------
 	if err := r.validateBaseURL(&conn); err != nil {
 		r.markStalled(&conn, "InvalidBaseURL", err.Error())
-		_ = r.Status().Update(ctx, &conn)
+		if err := r.Status().Update(ctx, &conn); err != nil {
+			return ctrl.Result{}, err
+		}
 		r.recorder.Event(&conn, corev1.EventTypeWarning, "InvalidBaseURL", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	// ---------------------------------------------------------------------
-	// Obtain credentials (may be empty for anonymous ping)
-	// ---------------------------------------------------------------------
 	user, pass, err := getHarborAuth(ctx, r.Client, &conn)
 	if err != nil {
 		r.markStalled(&conn, "SecretError", err.Error())
-		_ = r.Status().Update(ctx, &conn)
+		if err := r.Status().Update(ctx, &conn); err != nil {
+			return ctrl.Result{}, err
+		}
 		r.recorder.Event(&conn, corev1.EventTypeWarning, "SecretError", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	// ---------------------------------------------------------------------
-	// Connectivity / authentication check
-	// ---------------------------------------------------------------------
 	if conn.Spec.Credentials == nil {
 		err = r.checkNonAuthConnectivity(ctx, &conn)
 	} else {
@@ -103,14 +91,13 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if err != nil {
 		r.markStalled(&conn, "ConnectionError", err.Error())
-		_ = r.Status().Update(ctx, &conn)
+		if err := r.Status().Update(ctx, &conn); err != nil {
+			return ctrl.Result{}, err
+		}
 		r.recorder.Event(&conn, corev1.EventTypeWarning, "ConnectionError", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	// ---------------------------------------------------------------------
-	// Success – Ready=True
-	// ---------------------------------------------------------------------
 	r.markReady(&conn)
 	if err := r.Status().Update(ctx, &conn); err != nil {
 		return ctrl.Result{}, err
@@ -119,10 +106,6 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	return ctrl.Result{}, nil
 }
-
-// -----------------------------------------------------------------------------
-// Status helpers
-// -----------------------------------------------------------------------------
 
 func (r *HarborConnectionReconciler) markReconciling(cr *harborv1alpha1.HarborConnection) {
 	harborv1alpha1.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
@@ -160,10 +143,6 @@ func (r *HarborConnectionReconciler) markReady(cr *harborv1alpha1.HarborConnecti
 	cr.Status.ObservedGeneration = cr.Generation
 }
 
-// -----------------------------------------------------------------------------
-// Validation & connectivity helpers
-// -----------------------------------------------------------------------------
-
 // validateBaseURL verifies that the BaseURL is a valid URL and includes a scheme.
 func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.HarborConnection) error {
 	parsed, err := url.Parse(conn.Spec.BaseURL)
@@ -191,15 +170,11 @@ func (r *HarborConnectionReconciler) checkAuthenticatedConnection(
 	return err
 }
 
-// -----------------------------------------------------------------------------
-// Setup
-// -----------------------------------------------------------------------------
-
-// SetupWithManager sets up the controller with the Manager.
 func (r *HarborConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.recorder = mgr.GetEventRecorderFor("harbor-operator")
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.HarborConnection{}).
+		For(&harborv1alpha1.HarborConnection{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Named("harborconnection").
 		Complete(r)
 }
