@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // HTTPError wraps a non-2xx response.
@@ -40,17 +41,20 @@ type Client struct {
 	Password   string
 }
 
+var defaultHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
 func New(baseURL, user, pass string) *Client {
 	return &Client{
 		BaseURL:    strings.TrimRight(baseURL, "/"),
-		HTTPClient: http.DefaultClient,
+		HTTPClient: defaultHTTPClient,
 		Username:   user,
 		Password:   pass,
 	}
 }
 
 func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*http.Response, error) {
-
 	// request body
 	var body io.Reader
 	if in != nil {
@@ -75,10 +79,10 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*h
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	// non-2xx → wrap in *HTTPError
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		defer resp.Body.Close()
 		msg, _ := io.ReadAll(resp.Body)
 		return nil, &HTTPError{
 			StatusCode: resp.StatusCode,

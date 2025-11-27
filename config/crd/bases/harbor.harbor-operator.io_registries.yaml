@@ -72,7 +72,6 @@ spec:
                 description: Type of the registry, e.g., "github-ghcr".
                 enum:
                 - github-ghcr
-                - other-types-if-needed
                 type: string
               url:
                 description: URL is the registry URL.

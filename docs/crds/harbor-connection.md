@@ -1,53 +1,61 @@
 # HarborConnection CRD
 
-The **HarborConnection** custom resource lets you define the connection details for your existing Harbor instance. This resource is used by other Harbor CRDs to access your Harbor API.
+The **HarborConnection** custom resource describes how the operator should connect
+to an existing Harbor instance. All other Harbor CRDs reference a HarborConnection.
+
+Typical use:
+
+- Define one or more HarborConnection objects (e.g. one for dev Harbor, one for prod).
+- Point Registry / Project / User / Member CRs at the right connection via `harborConnectionRef`.
 
 ## Quick Start
-
-Create a HarborConnection resource by providing at least the Harbor API endpoint (baseURL). Optionally, you can include credentials for authentication.
-
-#### Example
 
 ```yaml
 apiVersion: harbor.harbor-operator.io/v1alpha1
 kind: HarborConnection
 metadata:
-  name: my-harbor-connection
+  name: my-harbor
 spec:
-  # The Harbor API endpoint. Must include the protocol (http:// or https://).
+  # Harbor API endpoint. Must include protocol (http:// or https://).
   baseURL: "https://harbor.example.com"
 
   # Optional credentials for API access.
   credentials:
-    # Currently, only "basic" auth is supported.
     type: basic
-    # The username to use for authentication.
     accessKey: "my-username"
-    # Name of the Kubernetes Secret that holds the password in the "access_secret" key.
+    # Name of a Secret in the same namespace with key "access_secret".
     accessSecretRef: "my-harbor-secret"
 ```
 
-## Field Descriptions
+## Key Fields
 
-- **baseURL**:  
-  The URL of your Harbor API. It must include the protocol (e.g., `https://`).
+- **spec.baseURL** (string, required)
+  Harbor API base URL. Must include scheme, e.g. `https://harbor.example.com`.
 
-- **credentials** (optional):  
-  Details used for authenticating to Harbor.
-  - **type**: The type of authentication. Currently, only `basic` is supported.
-  - **accessKey**: The username used to authenticate with Harbor.
-  - **accessSecretRef**: A reference to a Kubernetes Secret containing the password (stored under the key `access_secret`).
+- **spec.credentials** (object, optional)
 
-## Advanced Details
+  - **type** (string) – currently `basic` is supported.
+  - **accessKey** (string) – username for Harbor.
+  - **accessSecretRef** (string) – name of a `Secret` in the same namespace.
+    The secret must contain a key `access_secret` with the password.
 
-- **Connectivity Checks:**  
-  The operator validates the provided `baseURL` to ensure it’s a proper URL with a protocol.
+## Behavior
 
-  - If no credentials are provided, the operator performs a connectivity check by calling the `/api/v2.0/ping` endpoint.
-  - If credentials are provided, it uses them to call `/api/v2.0/users/current` for authentication verification.
+- **Validation**
 
-- **Error Handling:**  
-  If the URL is invalid or the connectivity check fails (unexpected status codes), the operator logs detailed error messages. This can help diagnose issues like missing protocol schemes or network problems.
+  - The operator checks that `baseURL` parses and includes a scheme.
 
-- **Credential Retrieval:**  
-  The operator retrieves the secret referenced in `accessSecretRef` and expects a key named `access_secret` to obtain the authentication password.
+- **Connectivity check**
+
+  - Without credentials: calls `/api/v2.0/ping`.
+  - With credentials: calls `/api/v2.0/users/current` to verify auth.
+
+- **Error handling**
+
+  - If the URL is invalid or Harbor returns an error status, the operator logs
+    a clear error to help diagnose connectivity/auth issues.
+
+- **Secret usage**
+
+  - The secret referenced by `accessSecretRef` is read at reconcile time.
+  - Password is passed to Harbor via basic auth on each request.

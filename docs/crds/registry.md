@@ -1,18 +1,18 @@
+
+
+
 # Registry CRD
 
-The **Registry** custom resource defines a registry to be managed by the operator on your Harbor instance. It references a HarborConnection for accessing the Harbor API and supports both creation and ongoing reconciliation.
+A **Registry** custom resource represents an external registry configured in Harbor
+(e.g. GHCR, AWS ECR) and managed by the operator.
+
+It references a HarborConnection and supports:
+
+- Creation / update of the registry in Harbor
+- Optional adoption of an existing registry
+- Optional periodic drift detection
 
 ## Quick Start
-
-Define a Registry resource with the required connection and configuration details. When applied, the operator ensures that the corresponding registry is created (or updated) in Harbor. If a registry with the same name already exists in Harbor and `allowTakeover` is enabled, the operator will adopt it by updating the CR status with its Harbor ID and reconfiguring the registry to match the desired state.
-
-> [!CAUTION]  
-> Setting `allowTakeover` to true means that if a registry with the same name already exists in Harbor, the operator will take control of it and update its configuration to match your custom resource. Use this setting only when you are sure that you want the operator to manage (and potentially modify) that existing registry.
-
-**Recommendation:**  
-It is recommended to leave the `name` field empty. When omitted, the operator will default the registry name to the custom resource’s metadata name, ensuring that your cluster remains the single source of truth.
-
-#### Example
 
 ```yaml
 apiVersion: harbor.harbor-operator.io/v1alpha1
@@ -21,75 +21,97 @@ metadata:
   name: my-registry
 spec:
   # Reference to the HarborConnection resource.
-  harborConnectionRef: "my-harbor-connection"
-  # The registry type, e.g., "github-ghcr".
+  harborConnectionRef: "my-harbor"
+
+  # The registry type, e.g. "github-ghcr".
   type: github-ghcr
-  # Leave this field empty to default to the CR's metadata name.
+
+  # Optional explicit registry name in Harbor.
+  # Recommendation: leave empty to default to metadata.name.
   name: ""
+
   # The registry URL.
   url: "https://registry.example.com"
-  # Set to true to bypass certificate verification if necessary.
+
+  # Set to true to bypass certificate verification.
   insecure: false
-  # If true, the operator will search for and adopt an existing registry with the same name in Harbor.
+
+  # Allow adoption of an existing Harbor registry with the same name.
   allowTakeover: true
-  # Optional: interval for periodic drift detection (e.g., "5m" for five minutes).
-  # Defaults to no drift detection if omitted or set to 0.
+
+  # Periodic drift detection (e.g. "5m" for five minutes). 0 = disabled.
   driftDetectionInterval: 5m
-  # Optional: update this value to force an immediate reconcile.
+
+  # Bump this to force a manual reconcile.
   reconcileNonce: "update-123"
 ```
 
-## Field Descriptions
+> [!CAUTION]
+> If `allowTakeover` is `true` and a registry with the same name already exists
+> in Harbor, the operator will take control of it and update its configuration
+> to match the CR.
 
-- **harborConnectionRef**:  
-  The name of the HarborConnection resource that contains the connection details for your Harbor instance.
+## Key Fields
 
-- **type**:  
-  The type of registry (e.g., `github-ghcr`). Only supported types are accepted.
+- **spec.harborConnectionRef** (string, required)
+  The name of the HarborConnection to use.
 
-- **name**:  
-  The registry’s name.
+- **spec.type** (string, required)
+  The Harbor registry type (e.g. `github-ghcr`). Must be one of the supported types.
 
-  - **Recommendation:** Leave this field empty so the operator defaults it to the custom resource’s metadata name. This ensures your cluster remains the single source of truth.
+- **spec.name** (string, optional)
+  Name of the registry in Harbor.
 
-- **url**:  
-  The URL of the registry. This value is validated to ensure it is a proper URL.
+  - If empty, the operator uses `metadata.name`.
+  - Using the CR name keeps the cluster as the single source of truth.
 
-- **insecure**:  
-  A boolean flag indicating whether to skip certificate verification.
+- **spec.url** (string, required)
+  Registry URL. Validated as a URL.
 
-- **allowTakeover**:  
-  If set to true and a registry with the specified name already exists in Harbor, the operator will adopt it.
+- **spec.insecure** (bool, optional)
+  If `true`, skips TLS verification when Harbor connects to this registry.
 
-  - **Caution:** This means the operator will update the existing registry’s configuration to match the desired state defined in the custom resource. Use this option carefully.
+- **spec.allowTakeover** (bool, optional)
+  If `true`, and a registry with the same name already exists in Harbor, the
+  operator will:
 
-- **driftDetectionInterval**:  
-  Specifies the interval at which the operator will periodically check that the registry’s configuration in Harbor matches the desired state defined in the CR.
+  - adopt it,
+  - store its Harbor ID in status,
+  - and reconcile its configuration.
 
-  - This field uses a duration type (e.g., `"5m"` for five minutes).
-  - **Note:** The default is no drift detection (i.e. zero duration). To enable periodic checks, explicitly set a non-zero value.
+- **spec.driftDetectionInterval** (duration, optional)
+  How often to re-check that Harbor’s config still matches the CR.
+  `"0"` or omitted → drift detection disabled.
 
-- **reconcileNonce**:  
-  An optional field that forces an immediate reconciliation when updated. This is useful for triggering manual updates without waiting for the next drift check.
+- **spec.reconcileNonce** (string, optional)
+  Changing this value forces an immediate reconcile, even if nothing else changed.
 
-## Advanced Details
+## Behavior
 
-- **Resource Adoption:**  
-  If a registry with the specified name already exists in Harbor and `allowTakeover` is enabled, the operator will adopt the existing registry by updating the CR’s status with its Harbor ID and ensuring that its configuration is changed to match the desired state.
+- **Create**
 
-- **API Interactions:**  
-  The operator communicates with Harbor using standard HTTP methods:
+  - Lists registries and checks for one with the desired name.
+  - Creates a new registry via Harbor’s API if none exists.
+  - If `allowTakeover` is `true` and a registry exists, it is adopted.
 
-  - **POST:** To create a new registry when none exists.
-  - **PUT:** To update an existing registry if differences are detected.
-  - **GET:** To list and retrieve registry details for comparison.
-  - **DELETE:** Triggered via a finalizer when a Registry resource is removed from Kubernetes.
+- **Update**
 
-- **Authentication:**  
-  For all Harbor API calls, the operator uses credentials defined in the referenced HarborConnection. The password is retrieved from the Kubernetes Secret specified in `accessSecretRef`.
+  - Compares desired spec with the Harbor registry.
+  - Applies changes via Harbor’s update APIs.
 
-- **Drift Detection:**  
-  When `driftDetectionInterval` is set to a non-zero duration, the operator requeues the registry for periodic checks. If the configuration in Harbor drifts from the desired state, an update is initiated.
+- **Delete**
 
-- **Finalizer Usage:**  
-  A finalizer is attached to the Registry resource to ensure that if the CR is deleted, the corresponding registry in Harbor is also removed. In deletion, the operator trusts the stored HarborRegistryID—if the registry is not found using that ID, it assumes the registry has already been deleted.
+  - A finalizer ensures Harbor’s registry is deleted (if possible) on CR deletion.
+  - If the stored Harbor registry ID is not found, deletion is treated as successful
+    (assumed already removed).
+
+- **Drift detection**
+
+  - If `driftDetectionInterval` > 0, the controller requeues periodically to:
+
+    - fetch the current registry configuration from Harbor
+    - compare against the CR
+    - update Harbor if drift is detected.
+
+
+

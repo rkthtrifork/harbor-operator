@@ -1,185 +1,212 @@
-> [!IMPORTANT]
-> This operator does **not** deploy Harbor. Instead, it introduces a CRD called **HarborConnection** that lets you define the connection details for an existing Harbor instance. All other CRDs reference a HarborConnection to obtain these details, ensuring that the operator works with your already-deployed Harbor instance.
-
 # harbor-operator
 
-harbor-operator is a Kubernetes operator that enables you to manage Harbor resources—such as registries, projects, users, and members—using declarative Custom Resources (CRs) in your Kubernetes cluster.
+> [!IMPORTANT]
+> This operator does **not** install Harbor in “real” clusters.  
+> It assumes Harbor is already running and introduces a **HarborConnection** CRD
+> that stores connection details for that instance.  
+> All other CRDs reference a HarborConnection.
 
-## Description
+**harbor-operator** is a Kubernetes operator that lets you manage Harbor resources
+— registries, projects, users, and members — as Kubernetes Custom Resources (CRs).
 
-With harbor-operator, you define your desired Harbor configuration as CRDs, and the operator synchronizes these definitions with your existing Harbor instance via its API. Instead of deploying Harbor (which is a complex system in itself), the operator uses a dedicated **HarborConnection** CRD. This resource holds the connection details (like the Harbor API base URL and optional credentials) for an already-deployed Harbor instance.
+Instead of clicking around in the Harbor UI, you describe your desired state in YAML.
+The operator then reconciles that state with your Harbor instance via its API.
 
-All other Harbor CRDs (e.g., Registry, Project, User, Member) reference a HarborConnection to access the necessary connection information. This design allows you to manage Harbor resources declaratively without the need for the operator to handle Harbor's deployment.
+## Concepts
+
+- **HarborConnection**  
+  Connection details for an existing Harbor instance (base URL, optional credentials).
+  All other CRs reference this.
+
+- **Registry**  
+  Represents a Harbor “target registry” (e.g. GHCR) and its configuration.
+
+- **Project**  
+  Represents a Harbor project, including metadata (public/private, auto-scan, etc.).
+
+- **User**  
+  Represents a Harbor user and (optionally) its lifecycle.
+
+- **Member**  
+  Represents membership of a user or group in a Harbor project with a given role.
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Go**
-- **Docker**
-- **kubectl**
-- **Access to a Kubernetes cluster** (may be [Kind](https://kind.sigs.k8s.io/))
+- Go
+- Docker (or compatible container runtime)
+- kubectl
+- A Kubernetes cluster (Kind is fine for dev)
 
-### Local Development
+## Local Development with Kind
 
-For local development with Kind, follow these steps:
+This repo ships with a Kind-based dev environment that:
 
-1. **Edit Your Hosts File**
+- Creates a Kind cluster
+- Installs Traefik
+- Installs Harbor via the official Helm chart
+- Builds and deploys harbor-operator into that cluster
 
-   Add the following line to your hosts file (e.g., `/etc/hosts` on Linux or macOS):
+> This is just for development convenience. In a real environment, you bring your own Harbor.
 
-   ```sh
-   127.0.0.1 core.harbor.domain
-   ```
+### 1. Hosts Entry (for Harbor ingress)
 
-   This entry allows you to resolve Harbor’s ingress locally.
+Add this line to `/etc/hosts` (or your platform’s hosts file):
 
-2. **Start a Kind Cluster**
+```sh
+127.0.0.1 core.harbor.domain
+```
 
-   Run the following command to create a Kind cluster:
+### 2. Start Kind + Harbor + Operator
 
-   ```sh
-   make kind-up
-   ```
+```sh
+make kind-up
+```
 
-   This command creates a Kind cluster and deploys Nginx and Harbor (if needed) for local testing.
+This will:
 
-3. **Deploy harbor-operator in Kind**
+- Create a Kind cluster using `hack/kind-configuration.yaml`
+- Install Traefik (NodePorts 30080/30443 by default)
+- Install Harbor via Helm
+- Build a local `harbor-operator:local` image, load it into Kind, and deploy it
 
-   Build a local image and deploy the operator with:
+If you also want sample CRs applied:
 
-   ```sh
-   make kind-deploy
-   ```
+```sh
+make kind-up-with-samples
+```
 
-   This target builds the image for the operator, loads it into the Kind cluster, and deploys it.
+### 3. Working with Samples
 
-4. **Apply Sample Custom Resources**
+Apply or remove sample CRs (in `config/samples`):
 
-   To get started with testing the operator, you can apply the sample CRs from the `config/samples/` directory:
+```sh
+# Apply sample HarborConnection, Registry, Project, etc.
+make samples-apply
 
-   ```sh
-   kubectl apply -k config/samples/
-   ```
+# Delete all Harbor CRs (HarborConnection last) in all namespaces
+make clean-samples
+```
 
-   This creates sample instances of your HarborConnection, Registry, and other resources.
+> `clean-samples` removes **all** custom resources in the
+> `harbor.harbor-operator.io` API group, not just the manifests in `config/samples/`.
 
-### To Deploy on a Cluster
+### 4. Rebuilding and Redeploying
 
-1. **Build and Push the Image**
+If you change the operator code:
 
-   Build and push the operator image to your registry:
+```sh
+make kind-redeploy
+```
 
-   ```sh
-   make docker-build docker-push IMG=<your-registry>/harbor-operator:tag
-   ```
+This will:
 
-2. **Install the CRDs**
+- Delete all Harbor CRs managed by the operator (HarborConnection last)
+- Remove the operator deployment and CRDs
+- Rebuild the image
+- Load it into Kind
+- Reinstall CRDs and redeploy the operator
 
-   Install the Custom Resource Definitions into your cluster:
+### 5. Tearing Down
+
+To delete only the Kind cluster:
+
+```sh
+make kind-down
+```
+
+## Deploying to Another Cluster
+
+For a non-Kind cluster, you typically:
+
+1. Make sure an image of the operator is available to the cluster
+   (e.g. build+push in CI to `ghcr.io/.../harbor-operator:<tag>`).
+
+2. Install CRDs:
 
    ```sh
    make install
    ```
 
-3. **Deploy the Operator**
-
-   Deploy harbor-operator to your cluster using the image built above:
+3. Configure the operator image in `config/manager/kustomization.yaml` or via:
 
    ```sh
-   make deploy IMG=<your-registry>/harbor-operator:tag
+   cd config/manager
+   kustomize edit set image controller=<your-registry>/harbor-operator:<tag>
    ```
 
-4. **Create Instances of Your CRs**
-
-   Apply the sample CRs (or your custom YAMLs) to create Harbor resources:
+4. Deploy the operator:
 
    ```sh
-   kubectl apply -k config/samples/
+   make deploy
    ```
 
-   > **NOTE:** Make sure the sample YAMLs have default values suitable for your environment.
+5. Create a `HarborConnection` and any `Registry` / `Project` / `User` / `Member` CRs you need.
 
-### To Uninstall
+## Installer Bundle
 
-1. **Delete Sample Custom Resources**
+If you want to ship a single `install.yaml` that contains CRDs plus the operator deployment:
 
-   ```sh
-   kubectl delete -k config/samples/
-   ```
+```sh
+make build-installer
+```
 
-2. **Uninstall the CRDs**
+This will:
 
-   ```sh
-   make uninstall
-   ```
+- Set the image in `config/manager` to `harbor-operator:local` (or whatever `IMG_LOCAL` is)
+- Build `config/default` with kustomize
+- Write the result to `dist/install.yaml`
 
-3. **Undeploy the Operator**
+You can then install with:
 
-   ```sh
-   make undeploy
-   ```
+```sh
+kubectl apply -f dist/install.yaml
+```
 
-## Project Distribution
+If you publish this file (e.g. in a GitHub release), users can install via a raw URL.
 
-### By Providing a Bundle with All YAML Files
+## Uninstalling
 
-1. **Build the Installer**
+If you want to remove Harbor-managed resources, CRDs, and the operator:
 
-   Build an installer that includes all CRDs and deployment manifests:
+```sh
+# Remove Harbor CRs (HarborConnection last)
+make clean-samples
 
-   ```sh
-   make build-installer IMG=<your-registry>/harbor-operator:tag
-   ```
+# Remove CRDs for the harbor.harbor-operator.io API group
+make uninstall
 
-   This command generates an `install.yaml` file in the `dist/` directory.
+# Remove the operator deployment
+make undeploy
+```
 
-2. **Deploy Using the Installer**
+In a Kind dev cluster, a full reset is just:
 
-   Users can install harbor-operator by running:
-
-   ```sh
-   kubectl apply -f https://raw.githubusercontent.com/<org>/harbor-operator/<tag-or-branch>/dist/install.yaml
-   ```
-
-### By Providing a Helm Chart
-
-1. **Generate the Helm Chart**
-
-   Generate a Helm Chart using the Helm plugin:
-
-   ```sh
-   kubebuilder edit --plugins=helm/v1-alpha
-   ```
-
-   This creates a chart under the `dist/chart` directory.
-
-2. **Distribute the Chart**
-
-   Users can then install harbor-operator using Helm from the generated chart.
-
-   > **NOTE:** After making changes to the project, update the Helm Chart by re-running the above command (with the `--force` flag if necessary) to synchronize your changes.
+```sh
+make kind-reset
+# or
+make kind-down
+```
 
 ## Contributing
 
-Contributions are welcome! To contribute:
+- Format and vet:
 
-- Fork the repository and create a feature branch.
-- Ensure your changes pass all tests and linters (`make fmt`, `make vet`, `make lint`).
-- Submit a pull request with detailed descriptions of your changes.
+  ```sh
+  make fmt vet
+  ```
 
-For more detailed guidelines, please refer to the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html).
+- Run tests:
 
-## License
+  ```sh
+  make test
+  ```
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+- Run linters:
 
-    http://www.apache.org/licenses/LICENSE-2.0
+  ```sh
+  make lint
+  ```
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Open a PR with a clear description of what you changed and why.
