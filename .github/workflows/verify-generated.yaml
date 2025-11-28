@@ -1,0 +1,35 @@
+name: Verify generated CRDs
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify-generated:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Regenerate code and CRDs
+        run: make generate manifests
+
+      - name: Check for uncommitted changes
+        run: |
+          git status --short
+          if ! git diff --quiet; then
+            echo "ERROR: Running 'make generate manifests' produced changes."
+            echo "Please run 'make generate manifests' locally and commit the results."
+            exit 1
+          fi
