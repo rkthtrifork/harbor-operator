@@ -3,6 +3,8 @@ resources:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
-- name: controller
+- name: ghcr.io/rkthtrifork/harbor-operator/harbor-operator:latest
   newName: harbor-operator
+  newTag: local
+- name: harbor-operator
   newTag: local

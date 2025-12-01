@@ -91,7 +91,7 @@ docker-build: ## Build docker image with the manager.
 .PHONY: build-installer
 build-installer: kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p dist
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image ${IMG}
 	$(KUSTOMIZE) build config/default > dist/install.yaml
 
 ##@ Deployment
@@ -106,7 +106,7 @@ uninstall: ## Uninstall CRDs for the harbor.harbor-operator.io API group.
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_LOCAL}
+	cd config/manager && $(KUSTOMIZE) edit set image ${IMG_LOCAL}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
 .PHONY: undeploy
