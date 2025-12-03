@@ -89,7 +89,7 @@ func (r *HarborConnectionReconciler) checkNonAuthConnectivity(
 func (r *HarborConnectionReconciler) checkAuthenticatedConnection(
 	ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
 
-	user := conn.Spec.Credentials.AccessKey
+	user := conn.Spec.Credentials.Username
 	pass, err := r.getPassword(ctx, r.Client, conn) // unchanged helper
 	if err != nil {
 		return ctrl.Result{}, err
@@ -111,7 +111,7 @@ func (r *HarborConnectionReconciler) getPassword(ctx context.Context, client cli
 		return "", err
 	}
 
-	secretKey := conn.Spec.Credentials.AccessSecretRef.Key
+	secretKey := conn.Spec.Credentials.PasswordSecretRef.Key
 	if secretKey == "" {
 		secretKey = "access_secret"
 	}
@@ -126,7 +126,7 @@ func (r *HarborConnectionReconciler) getPassword(ctx context.Context, client cli
 func (r *HarborConnectionReconciler) getSecret(ctx context.Context, conn *harborv1alpha1.HarborConnection) (*corev1.Secret, error) {
 	secretKey := types.NamespacedName{
 		Namespace: conn.Namespace,
-		Name:      conn.Spec.Credentials.AccessSecretRef.Name,
+		Name:      conn.Spec.Credentials.PasswordSecretRef.Name,
 	}
 	var secret corev1.Secret
 	if err := r.Get(ctx, secretKey, &secret); err != nil {

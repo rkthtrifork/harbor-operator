@@ -9,7 +9,7 @@ type RegistrySpec struct {
 	HarborSpecBase `json:",inline"`
 
 	// Type of the registry, e.g., "github-ghcr".
-	// +kubebuilder:validation:Enum=github-ghcr
+	// +kubebuilder:validation:Enum=github-ghcr;ali-acr;aws-ecr;azure-acr;docker-hub;docker-registry;google-gcr;harbor;huawei-SWR;jfrog-artifactory;tencent-tcr;volcengine-cr
 	Type string `json:"type"`
 
 	// Name is the registry name.

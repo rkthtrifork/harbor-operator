@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -20,25 +21,12 @@ type Credentials struct {
 	// +kubebuilder:validation:Enum=basic
 	Type string `json:"type"`
 
-	// AccessKey for authentication.
+	// Username for authentication.
 	// +kubebuilder:validation:MinLength=1
-	AccessKey string `json:"accessKey"`
+	Username string `json:"username"`
 
-	// AccessSecretRef points to the Kubernetes Secret that stores the password / token.
-	AccessSecretRef SecretReference `json:"accessSecretRef"`
-}
-
-// SecretReference is similar to a corev1.SecretKeySelector but allows
-// cross-namespace references when enabled in the operator RBAC.
-type SecretReference struct {
-	// Name of the Secret.
-	Name string `json:"name"`
-	// Key inside the Secret data. Defaults to "access_secret".
-	// +optional
-	Key string `json:"key,omitempty"`
-	// Namespace of the Secret. Omit to use the HarborConnection namespace.
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	// PasswordSecretRef points to the Kubernetes Secret that stores the password / token.
+	PasswordSecretRef corev1.SecretKeySelector `json:"passwordSecretRef"`
 }
 
 // HarborConnectionStatus defines the observed state of HarborConnection.

@@ -6,9 +6,6 @@ import (
 
 // MemberUser defines a user-based member.
 type MemberUser struct {
-	// If the user already exists in Harbor, set UserID.
-	// +optional
-	UserID int `json:"user_id,omitempty"`
 	// Username is used to onboard a user if not already present.
 	// +optional
 	Username string `json:"username,omitempty"`
@@ -16,9 +13,6 @@ type MemberUser struct {
 
 // MemberGroup defines a group-based member.
 type MemberGroup struct {
-	// If the group already exists in Harbor, set its ID.
-	// +optional
-	ID int `json:"id,omitempty"`
 	// GroupName is the name of the group.
 	// +optional
 	GroupName string `json:"group_name,omitempty"`
@@ -32,9 +26,7 @@ type MemberGroup struct {
 
 // MemberSpec defines the desired state of Member.
 type MemberSpec struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborSpecBase `json:",inline"`
 
 	// ProjectRef is the name (or ID) of the project in Harbor where the member should be added.
 	// +kubebuilder:validation:Required
@@ -47,11 +39,11 @@ type MemberSpec struct {
 
 	// MemberUser defines the member if it is a user.
 	// +optional
-	MemberUser *MemberUser `json:"member_user,omitempty"`
+	MemberUser *MemberUser `json:"memberUser,omitempty"`
 
 	// MemberGroup defines the member if it is a group.
 	// +optional
-	MemberGroup *MemberGroup `json:"member_group,omitempty"`
+	MemberGroup *MemberGroup `json:"memberGroup,omitempty"`
 }
 
 // MemberStatus defines the observed state of Member.

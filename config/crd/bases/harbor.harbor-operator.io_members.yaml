@@ -39,11 +39,21 @@ spec:
           spec:
             description: MemberSpec defines the desired state of Member.
             properties:
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
+                type: boolean
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
+                type: string
               harborConnectionRef:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
-              member_group:
+              memberGroup:
                 description: MemberGroup defines the member if it is a group.
                 properties:
                   group_name:
@@ -52,19 +62,13 @@ spec:
                   group_type:
                     description: GroupType is the type of the group.
                     type: integer
-                  id:
-                    description: If the group already exists in Harbor, set its ID.
-                    type: integer
                   ldap_group_dn:
                     description: LDAPGroupDN is used for LDAP groups.
                     type: string
                 type: object
-              member_user:
+              memberUser:
                 description: MemberUser defines the member if it is a user.
                 properties:
-                  user_id:
-                    description: If the user already exists in Harbor, set UserID.
-                    type: integer
                   username:
                     description: Username is used to onboard a user if not already
                       present.
@@ -73,6 +77,9 @@ spec:
               projectRef:
                 description: ProjectRef is the name (or ID) of the project in Harbor
                   where the member should be added.
+                type: string
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
               role:
                 description: |-
