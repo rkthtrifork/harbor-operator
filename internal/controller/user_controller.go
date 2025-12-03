@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -83,7 +85,11 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Desired payload
-	createReq := r.buildCreateReq(cr)
+	userPassword, err := r.getUserPassword(ctx, r.Client, cr)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	createReq := r.buildCreateReq(cr, userPassword)
 
 	// Create / Update
 	if cr.Status.HarborUserID == 0 {
@@ -106,7 +112,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if userNeedsUpdate(createReq, *current) {
+	if userNeedsUpdate(createReq, current) {
 		if err := hc.UpdateUser(ctx, current.UserID, createReq); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -114,15 +120,31 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 
-func (r *UserReconciler) buildCreateReq(cr harborv1alpha1.User) harborclient.CreateUserRequest {
-	createReq := harborclient.CreateUserRequest{
+func (r *UserReconciler) getUserPassword(ctx context.Context, c client.Client, cr harborv1alpha1.User) (string, error) {
+	var passwordSecret corev1.Secret
+	namespacedName := types.NamespacedName{
+		Namespace: cr.Namespace,
+		Name:      cr.Spec.PasswordSecretRef.Name,
+	}
+	if err := r.Get(ctx, namespacedName, &passwordSecret); err != nil {
+		return "", fmt.Errorf("failed to get password secret %s: %w", namespacedName, err)
+	}
+	passwordBytes, ok := passwordSecret.Data[cr.Spec.PasswordSecretRef.Key]
+	if !ok {
+		return "", fmt.Errorf("key %s not found in secret %s", cr.Spec.PasswordSecretRef.Key, namespacedName)
+	}
+
+	return string(passwordBytes), nil
+}
+
+func (r *UserReconciler) buildCreateReq(cr harborv1alpha1.User, password string) harborclient.CreateUserRequest {
+	return harborclient.CreateUserRequest{
 		Email:    cr.Spec.Email,
 		Realname: cr.Spec.Realname,
 		Comment:  cr.Spec.Comment,
-		Password: cr.Spec.Password,
+		Password: password,
 		Username: cr.Spec.Username,
 	}
-	return createReq
 }
 
 func (r *UserReconciler) deleteUser(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.User) error {

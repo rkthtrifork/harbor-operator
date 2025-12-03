@@ -23,6 +23,19 @@ type HarborSpecBase struct {
 	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
+// SecretReference is similar to a corev1.SecretKeySelector but allows
+// cross-namespace references when enabled in the operator RBAC.
+type SecretReference struct {
+	// Name of the Secret.
+	Name string `json:"name"`
+	// Key inside the Secret data. Defaults to "access_secret".
+	// +optional
+	Key string `json:"key,omitempty"`
+	// Namespace of the Secret. Omit to use the HarborConnection namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // GetDriftDetectionInterval returns the drift detection interval.
 func (base *HarborSpecBase) GetDriftDetectionInterval() *metav1.Duration {
 	return base.DriftDetectionInterval

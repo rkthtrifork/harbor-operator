@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,9 +27,8 @@ type UserSpec struct {
 	// +optional
 	Comment string `json:"comment,omitempty"`
 
-	// Password for the user. Only used when the user is created.
-	// +optional
-	Password string `json:"password,omitempty"`
+	// PasswordSecretRef references a secret key that contains the password for the user.
+	PasswordSecretRef corev1.SecretKeySelector `json:"passwordSecretRef,omitempty"`
 }
 
 // UserStatus defines the observed state of User.

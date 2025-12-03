@@ -5,8 +5,11 @@ GROUP="${HARBOR_API_GROUP:-harbor.harbor-operator.io}"
 
 echo "Cleaning custom resources in API group: ${GROUP}"
 
-# Get all resource kinds (plural names) in the group, e.g. projects, users, harborconnections, ...
-RESOURCES="$(kubectl api-resources --api-group="${GROUP}" -o name 2>/dev/null || true)"
+# Get resource kinds (plural) in the group and strip the group suffix so we get:
+#   harborconnections.harbor.harbor-operator.io -> harborconnections
+#   projects.harbor.harbor-operator.io          -> projects
+RESOURCES="$(kubectl api-resources --api-group="${GROUP}" -o name 2>/dev/null \
+  | sed 's/\..*$//' || true)"
 
 if [[ -z "${RESOURCES}" ]]; then
   echo "No API resources found for group ${GROUP}, nothing to delete."
@@ -19,16 +22,24 @@ echo "${RESOURCES}"
 # First delete everything except harborconnections
 for r in ${RESOURCES}; do
   if [[ "${r}" == "harborconnections" ]]; then
+    # Delete this kind later, after everything else
     continue
   fi
-  echo "Deleting all ${r} in all namespaces..."
-  kubectl delete "${r}" --all-namespaces --ignore-not-found=true || true
+
+  echo "Deleting all ${r}.${GROUP} in all namespaces..."
+  kubectl delete "${r}.${GROUP}" \
+    --all \
+    --all-namespaces \
+    --ignore-not-found=true || true
 done
 
-# Then delete harborconnections last (but only if the type exists)
-if echo "${RESOURCES}" | grep -qx "harborconnections"; then
-  echo "Deleting all harborconnections in all namespaces..."
-  kubectl delete harborconnections --all-namespaces --ignore-not-found=true || true
+# Then delete harborconnections last (if it exists)
+if grep -qx "harborconnections" <<< "${RESOURCES}"; then
+  echo "Deleting all harborconnections.${GROUP} in all namespaces..."
+  kubectl delete "harborconnections.${GROUP}" \
+    --all \
+    --all-namespaces \
+    --ignore-not-found=true || true
 else
   echo "Resource type 'harborconnections' not found in group ${GROUP}, skipping."
 fi

@@ -53,16 +53,9 @@ spec:
 - **spec.realname** (string, optional)
   Full name / display name.
 
-- **spec.admin** (bool, optional)
-  Whether this user should be a Harbor system admin.
-
 - **spec.passwordSecretRef** (string, optional)
   Secret that contains the user’s password (key name depends on your schema,
   e.g. `password`).
-
-- **spec.manageLifecycle** (bool, optional)
-  If `true`, the operator will delete the Harbor user when the CR is deleted.
-  If `false`, deletion of the CR leaves the Harbor user intact.
 
 ## Behavior
 

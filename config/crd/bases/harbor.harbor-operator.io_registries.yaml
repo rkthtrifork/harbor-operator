@@ -72,6 +72,17 @@ spec:
                 description: Type of the registry, e.g., "github-ghcr".
                 enum:
                 - github-ghcr
+                - ali-acr
+                - aws-ecr
+                - azure-acr
+                - docker-hub
+                - docker-registry
+                - google-gcr
+                - harbor
+                - huawei-SWR
+                - jfrog-artifactory
+                - tencent-tcr
+                - volcengine-cr
                 type: string
               url:
                 description: URL is the registry URL.

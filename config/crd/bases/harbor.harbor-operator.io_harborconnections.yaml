@@ -49,36 +49,44 @@ spec:
                 description: Credentials holds the default credentials for Harbor
                   API calls.
                 properties:
-                  accessKey:
-                    description: AccessKey for authentication.
-                    minLength: 1
-                    type: string
-                  accessSecretRef:
-                    description: AccessSecretRef points to the Kubernetes Secret that
-                      stores the password / token.
+                  passwordSecretRef:
+                    description: PasswordSecretRef points to the Kubernetes Secret
+                      that stores the password / token.
                     properties:
                       key:
-                        description: Key inside the Secret data. Defaults to "access_secret".
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
                         type: string
                       name:
-                        description: Name of the Secret.
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
-                      namespace:
-                        description: Namespace of the Secret. Omit to use the HarborConnection
-                          namespace.
-                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
                     required:
-                    - name
+                    - key
                     type: object
+                    x-kubernetes-map-type: atomic
                   type:
                     description: Type of the credential, e.g., "basic".
                     enum:
                     - basic
                     type: string
+                  username:
+                    description: Username for authentication.
+                    minLength: 1
+                    type: string
                 required:
-                - accessKey
-                - accessSecretRef
+                - passwordSecretRef
                 - type
+                - username
                 type: object
             required:
             - baseURL

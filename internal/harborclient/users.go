@@ -38,15 +38,14 @@ func (c *Client) ListUsers(ctx context.Context, query string) ([]User, error) {
 	return us, err
 }
 
-func (c *Client) GetUserByID(ctx context.Context, id int) (*User, error) {
+func (c *Client) GetUserByID(ctx context.Context, id int) (User, error) {
 	var u User
 	_, err := c.do(ctx, "GET",
 		fmt.Sprintf("/api/v2.0/users/%d", id), nil, &u)
-	return &u, err
+	return u, err
 }
 
 func (c *Client) CreateUser(ctx context.Context, in CreateUserRequest) (int, error) {
-
 	resp, err := c.do(ctx, "POST", "/api/v2.0/users", &in, nil)
 	if err != nil {
 		return 0, err
@@ -55,7 +54,6 @@ func (c *Client) CreateUser(ctx context.Context, in CreateUserRequest) (int, err
 }
 
 func (c *Client) UpdateUser(ctx context.Context, id int, in CreateUserRequest) error {
-
 	_, err := c.do(ctx, "PUT",
 		fmt.Sprintf("/api/v2.0/users/%d", id), &in, nil)
 	return err
