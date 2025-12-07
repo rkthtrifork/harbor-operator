@@ -80,7 +80,7 @@ func TestGetCondition(t *testing.T) {
 	// Test getting existing condition
 	cond := GetCondition(conditions, TypeReady)
 	if cond == nil {
-		t.Error("Expected to find condition, got nil")
+		t.Fatal("Expected to find condition, got nil")
 	}
 	if cond.Type != TypeReady {
 		t.Errorf("Expected condition type %s, got %s", TypeReady, cond.Type)
