@@ -45,10 +45,16 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Resolve Harbor connection + typed client
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get HarborConnection: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get Harbor credentials: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
@@ -81,7 +87,13 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonAdopting, "Attempting to adopt existing project")
+		_ = r.Status().Update(ctx, &cr)
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to adopt project: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Adoption failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		} else if adopted {
 			r.logger.Info("Adopted existing project",
@@ -92,17 +104,29 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Desired payload
 	createReq, err := r.buildCreateReq(ctx, hc, &cr)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonInvalidSpec, fmt.Sprintf("Failed to build project request: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonInvalidSpec, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 
 	// Create / Update path
 	if cr.Status.HarborProjectID == 0 {
 		// create
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonCreating, "Creating project in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		newID, err := hc.CreateProject(ctx, createReq)
 		if err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to create project: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Creation failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 		cr.Status.HarborProjectID = newID
+		SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "Project created successfully")
+		SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+		SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -116,20 +140,35 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if harborclient.IsNotFound(err) {
 			// It was deleted out-of-band → clear status and requeue immediately
 			cr.Status.HarborProjectID = 0
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Project was deleted out-of-band")
+			SetReconcilingCondition(&cr.Status.Conditions, true, ReasonReconcileError, "Recreating project")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to get project: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 
 	// compare desired vs. current
 	if projectNeedsUpdate(createReq, *current) {
 		// update
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonUpdating, "Updating project in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		if err := hc.UpdateProject(ctx, current.ProjectID, createReq); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to update project: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Update failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Updated project", "ID", current.ProjectID)
 	}
+	SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "Project reconciled successfully")
+	SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, &cr)
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 

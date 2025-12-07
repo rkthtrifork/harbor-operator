@@ -45,10 +45,16 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Harbor client
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get HarborConnection: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get Harbor credentials: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
@@ -77,7 +83,13 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if cr.Status.HarborUserID == 0 && cr.Spec.AllowTakeover {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonAdopting, "Attempting to adopt existing user")
+		_ = r.Status().Update(ctx, &cr)
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to adopt user: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Adoption failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		} else if ok {
 			r.logger.Info("Adopted user", "ID", cr.Status.HarborUserID)
@@ -87,17 +99,29 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Desired payload
 	userPassword, err := r.getUserPassword(ctx, r.Client, cr)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonInvalidSpec, fmt.Sprintf("Failed to get user password: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonInvalidSpec, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	createReq := r.buildCreateReq(cr, userPassword)
 
 	// Create / Update
 	if cr.Status.HarborUserID == 0 {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonCreating, "Creating user in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		id, err := hc.CreateUser(ctx, createReq)
 		if err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to create user: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Creation failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 		cr.Status.HarborUserID = id
+		SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "User created successfully")
+		SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+		SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
 		_ = r.Status().Update(ctx, &cr)
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
@@ -106,17 +130,32 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborUserID = 0
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, "User was deleted out-of-band")
+			SetReconcilingCondition(&cr.Status.Conditions, true, ReasonReconcileError, "Recreating user")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to get user: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 
 	if userNeedsUpdate(createReq, current) {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonUpdating, "Updating user in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		if err := hc.UpdateUser(ctx, current.UserID, createReq); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to update user: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Update failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 	}
+	SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "User reconciled successfully")
+	SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, &cr)
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 

@@ -43,10 +43,16 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Harbor client
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get HarborConnection: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get Harbor credentials: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
@@ -75,7 +81,13 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if cr.Status.HarborRegistryID == 0 && cr.Spec.AllowTakeover {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonAdopting, "Attempting to adopt existing registry")
+		_ = r.Status().Update(ctx, &cr)
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to adopt registry: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Adoption failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		} else if ok {
 			r.logger.Info("Adopted registry", "ID", cr.Status.HarborRegistryID)
@@ -87,11 +99,20 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Create / Update
 	if cr.Status.HarborRegistryID == 0 {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonCreating, "Creating registry in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		id, err := hc.CreateRegistry(ctx, createReq)
 		if err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to create registry: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Creation failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 		cr.Status.HarborRegistryID = id
+		SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "Registry created successfully")
+		SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+		SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
 		_ = r.Status().Update(ctx, &cr)
 		r.logger.Info("Created registry", "ID", id)
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -101,18 +122,33 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRegistryID = 0
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Registry was deleted out-of-band")
+			SetReconcilingCondition(&cr.Status.Conditions, true, ReasonReconcileError, "Recreating registry")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
+		SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to get registry: %v", err))
+		SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+		_ = r.Status().Update(ctx, &cr)
 		return ctrl.Result{}, err
 	}
 
 	if registryNeedsUpdate(createReq, *current) {
+		SetReconcilingCondition(&cr.Status.Conditions, true, ReasonUpdating, "Updating registry in Harbor")
+		_ = r.Status().Update(ctx, &cr)
 		if err := hc.UpdateRegistry(ctx, current.ID, createReq); err != nil {
+			SetReadyCondition(&cr.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to update registry: %v", err))
+			SetStalledCondition(&cr.Status.Conditions, true, ReasonReconcileError, err.Error())
+			SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileError, "Update failed")
+			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Updated registry", "ID", current.ID)
 	}
+	SetReadyCondition(&cr.Status.Conditions, true, ReasonReconcileSuccess, "Registry reconciled successfully")
+	SetReconcilingCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&cr.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, &cr)
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 

@@ -48,7 +48,11 @@ type MemberSpec struct {
 
 // MemberStatus defines the observed state of Member.
 type MemberStatus struct {
-	// Optionally add status fields, e.g. to track creation state or Harbor member ID.
+	// Conditions represent the latest available observations of the Member's state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

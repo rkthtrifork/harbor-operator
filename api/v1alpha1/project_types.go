@@ -73,6 +73,12 @@ type CVEAllowlist struct {
 type ProjectStatus struct {
 	// HarborProjectID is the ID of the project in Harbor.
 	HarborProjectID int `json:"harborProjectID,omitempty"`
+
+	// Conditions represent the latest available observations of the Project's state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

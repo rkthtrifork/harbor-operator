@@ -35,6 +35,12 @@ type UserSpec struct {
 type UserStatus struct {
 	// HarborUserID is the ID of the user in Harbor.
 	HarborUserID int `json:"harborUserID,omitempty"`
+
+	// Conditions represent the latest available observations of the User's state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
