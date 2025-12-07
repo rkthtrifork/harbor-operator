@@ -48,8 +48,15 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Validate the BaseURL.
 	if err := r.validateBaseURL(&conn); err != nil {
+		SetReadyCondition(&conn.Status.Conditions, false, ReasonInvalidSpec, err.Error())
+		SetStalledCondition(&conn.Status.Conditions, true, ReasonInvalidSpec, err.Error())
+		_ = r.Status().Update(ctx, &conn)
 		return ctrl.Result{}, err
 	}
+
+	// Set reconciling condition
+	SetReconcilingCondition(&conn.Status.Conditions, true, ReasonReconcileSuccess, "Checking Harbor connectivity")
+	_ = r.Status().Update(ctx, &conn)
 
 	// If no credentials are provided, perform a non-authenticated connectivity check.
 	if conn.Spec.Credentials == nil {
@@ -80,9 +87,17 @@ func (r *HarborConnectionReconciler) checkNonAuthConnectivity(
 
 	hc := harborclient.New(conn.Spec.BaseURL, "", "") // no creds
 	if err := hc.Ping(ctx); err != nil {
+		SetReadyCondition(&conn.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to connect to Harbor: %v", err))
+		SetStalledCondition(&conn.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		SetReconcilingCondition(&conn.Status.Conditions, false, ReasonReconcileError, "Connection failed")
+		_ = r.Status().Update(ctx, conn)
 		return ctrl.Result{}, err
 	}
 	r.logger.Info("Harbor reachable without credentials")
+	SetReadyCondition(&conn.Status.Conditions, true, ReasonReconcileSuccess, "Harbor is reachable")
+	SetReconcilingCondition(&conn.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&conn.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, conn)
 	return ctrl.Result{}, nil
 }
 
@@ -92,15 +107,27 @@ func (r *HarborConnectionReconciler) checkAuthenticatedConnection(
 	user := conn.Spec.Credentials.Username
 	pass, err := r.getPassword(ctx, r.Client, conn) // unchanged helper
 	if err != nil {
+		SetReadyCondition(&conn.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get credentials: %v", err))
+		SetStalledCondition(&conn.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		SetReconcilingCondition(&conn.Status.Conditions, false, ReasonReconcileError, "Failed to get credentials")
+		_ = r.Status().Update(ctx, conn)
 		return ctrl.Result{}, err
 	}
 
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 	if _, err := hc.GetCurrentUser(ctx); err != nil {
+		SetReadyCondition(&conn.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to authenticate with Harbor: %v", err))
+		SetStalledCondition(&conn.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		SetReconcilingCondition(&conn.Status.Conditions, false, ReasonReconcileError, "Authentication failed")
+		_ = r.Status().Update(ctx, conn)
 		return ctrl.Result{}, err
 	}
 
 	r.logger.Info("Successfully authenticated with Harbor API")
+	SetReadyCondition(&conn.Status.Conditions, true, ReasonReconcileSuccess, "Successfully authenticated with Harbor")
+	SetReconcilingCondition(&conn.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&conn.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, conn)
 	return ctrl.Result{}, nil
 }
 

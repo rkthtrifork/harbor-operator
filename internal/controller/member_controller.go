@@ -48,18 +48,27 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	conn, err := getHarborConnection(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
 		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", member.Spec.HarborConnectionRef)
+		SetReadyCondition(&member.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get HarborConnection: %v", err))
+		SetStalledCondition(&member.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &member)
 		return ctrl.Result{}, err
 	}
 
 	if conn.Spec.Credentials == nil {
 		err := fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
 		r.logger.Error(err, "Cannot manage Harbor members without credentials")
+		SetReadyCondition(&member.Status.Conditions, false, ReasonInvalidSpec, err.Error())
+		SetStalledCondition(&member.Status.Conditions, true, ReasonInvalidSpec, err.Error())
+		_ = r.Status().Update(ctx, &member)
 		return ctrl.Result{}, err
 	}
 
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
 		r.logger.Error(err, "Failed to get Harbor authentication credentials")
+		SetReadyCondition(&member.Status.Conditions, false, ReasonConnectionFailed, fmt.Sprintf("Failed to get Harbor credentials: %v", err))
+		SetStalledCondition(&member.Status.Conditions, true, ReasonConnectionFailed, err.Error())
+		_ = r.Status().Update(ctx, &member)
 		return ctrl.Result{}, err
 	}
 
@@ -91,17 +100,30 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	roleID, err := convertRoleNameToID(member.Spec.Role)
 	if err != nil {
 		r.logger.Error(err, "Invalid role", "Role", member.Spec.Role)
+		SetReadyCondition(&member.Status.Conditions, false, ReasonInvalidSpec, fmt.Sprintf("Invalid role: %v", err))
+		SetStalledCondition(&member.Status.Conditions, true, ReasonInvalidSpec, err.Error())
+		_ = r.Status().Update(ctx, &member)
 		return ctrl.Result{}, err
 	}
 
 	// Ensure desired member state in Harbor (create/update as needed).
+	SetReconcilingCondition(&member.Status.Conditions, true, ReasonReconcileSuccess, "Ensuring member in Harbor")
+	_ = r.Status().Update(ctx, &member)
 	if err := r.ensureMemberPresent(ctx, hc, &member, roleID); err != nil {
 		r.logger.Error(err, "Failed to ensure member in Harbor",
 			"ProjectRef", member.Spec.ProjectRef,
 			"RoleID", roleID)
+		SetReadyCondition(&member.Status.Conditions, false, ReasonReconcileError, fmt.Sprintf("Failed to ensure member: %v", err))
+		SetStalledCondition(&member.Status.Conditions, true, ReasonReconcileError, err.Error())
+		SetReconcilingCondition(&member.Status.Conditions, false, ReasonReconcileError, "Member reconciliation failed")
+		_ = r.Status().Update(ctx, &member)
 		return ctrl.Result{}, err
 	}
 
+	SetReadyCondition(&member.Status.Conditions, true, ReasonReconcileSuccess, "Member reconciled successfully")
+	SetReconcilingCondition(&member.Status.Conditions, false, ReasonReconcileSuccess, "Reconciliation complete")
+	SetStalledCondition(&member.Status.Conditions, false, ReasonReconcileSuccess, "")
+	_ = r.Status().Update(ctx, &member)
 	return returnWithDriftDetection(&member.Spec.HarborSpecBase)
 }
 

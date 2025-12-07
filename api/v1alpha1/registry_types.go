@@ -34,6 +34,12 @@ type RegistrySpec struct {
 type RegistryStatus struct {
 	// HarborRegistryID is the ID of the registry in Harbor.
 	HarborRegistryID int `json:"harborRegistryID,omitempty"`
+
+	// Conditions represent the latest available observations of the Registry's state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
