@@ -30,6 +30,12 @@ The operator then reconciles that state with your Harbor instance via its API.
 - **Member**  
   Represents membership of a user or group in a Harbor project with a given role.
 
+- **Robot**  
+  Represents a Harbor robot account (system or project level).
+
+- **Configuration**  
+  Represents Harbor system configuration (OIDC, robot defaults, etc.).
+
 ## Getting Started
 
 ### Prerequisites

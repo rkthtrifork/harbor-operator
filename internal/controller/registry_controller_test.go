@@ -9,11 +9,13 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,7 +23,7 @@ import (
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
-var _ = Describe("User Controller", func() {
+var _ = Describe("Registry Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -31,35 +33,65 @@ var _ = Describe("User Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		user := &harborv1alpha1.User{}
+		registry := &harborv1alpha1.Registry{}
+		var server *httptest.Server
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind User")
-			err := k8sClient.Get(ctx, typeNamespacedName, user)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &harborv1alpha1.User{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != "admin" || pass != "password" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/registries" {
+					w.Header().Set("Location", "/api/v2.0/registries/7")
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "default", "harbor-admin", "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", "harbor-conn", server.URL, "admin", "harbor-admin", "password")).To(Succeed())
+
+			By("creating the custom resource for the Kind Registry")
+			resource := &harborv1alpha1.Registry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.RegistrySpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: "harbor-conn",
+					},
+					Name:        resourceName,
+					URL:         "https://registry.example.com",
+					Description: "test registry",
+					Type:        "docker-hub",
+					Insecure:    false,
+				},
 			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &harborv1alpha1.User{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			server.Close()
+			resource := &harborv1alpha1.Registry{}
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
-			By("Cleanup the specific resource instance User")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			By("Cleanup the specific resource instance Registry")
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin", Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &UserReconciler{
+			controllerReconciler := &RegistryReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
@@ -68,8 +100,9 @@ var _ = Describe("User Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, registry)).To(Succeed())
+			Expect(registry.Status.HarborRegistryID).To(Equal(7))
 		})
 	})
 })

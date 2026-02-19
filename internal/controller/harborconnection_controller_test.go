@@ -18,10 +18,11 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -40,31 +41,37 @@ var _ = Describe("HarborConnection Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		harborconnection := &harborv1alpha1.HarborConnection{}
+		var server *httptest.Server
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind HarborConnection")
-			err := k8sClient.Get(ctx, typeNamespacedName, harborconnection)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &harborv1alpha1.HarborConnection{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/v2.0/ping" {
+					w.WriteHeader(http.StatusOK)
+					return
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				http.NotFound(w, r)
+			}))
+
+			By("creating the custom resource for the Kind HarborConnection")
+			resource := &harborv1alpha1.HarborConnection{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.HarborConnectionSpec{
+					BaseURL: server.URL,
+				},
 			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
+			server.Close()
 			resource := &harborv1alpha1.HarborConnection{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
 			By("Cleanup the specific resource instance HarborConnection")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			_ = k8sClient.Delete(ctx, resource)
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")

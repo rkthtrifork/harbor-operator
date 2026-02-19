@@ -1,3 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: harbor-user-password
+type: Opaque
+stringData:
+  password: Password123!
+---
 apiVersion: harbor.harbor-operator.io/v1alpha1
 kind: User
 metadata:
@@ -9,6 +17,8 @@ spec:
   harborConnectionRef: harborconnection-sample
   email: example@email.com
   # I recommend not specifying this field in which case the metadata.name will be used
-  # username: project-sample
-  password: Password1
+  username: project-sample
+  passwordSecretRef:
+    name: harbor-user-password
+    key: password
   realname: User Sample

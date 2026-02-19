@@ -1,0 +1,103 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: configurations.harbor.harbor-operator.io
+spec:
+  group: harbor.harbor-operator.io
+  names:
+    kind: Configuration
+    listKind: ConfigurationList
+    plural: configurations
+    singular: configuration
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Configuration is the Schema for the configurations API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ConfigurationSpec defines the desired state of Harbor system
+              configuration.
+            properties:
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing object in Harbor with the same name/ID.
+                type: boolean
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
+                type: string
+              harborConnectionRef:
+                description: HarborConnectionRef references the HarborConnection resource
+                  to use.
+                type: string
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
+                type: string
+              secretSettings:
+                additionalProperties:
+                  description: |-
+                    SecretReference is similar to a corev1.SecretKeySelector but allows
+                    cross-namespace references when enabled in the operator RBAC.
+                  properties:
+                    key:
+                      description: |-
+                        Key inside the Secret data. When omitted, the controller using this
+                        reference will apply a sensible default.
+                      type: string
+                    name:
+                      description: Name of the Secret.
+                      type: string
+                    namespace:
+                      description: Namespace of the Secret. Omit to use the HarborConnection
+                        namespace.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                description: |-
+                  SecretSettings references secret-backed configuration values such as
+                  oidc_client_secret. The secret data is read and injected into Settings
+                  during reconciliation.
+                type: object
+              settings:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Settings contains Harbor configuration keys and their desired values.
+                  Values can be strings, numbers, booleans, or JSON objects.
+                type: object
+            required:
+            - harborConnectionRef
+            type: object
+          status:
+            description: ConfigurationStatus defines the observed state of Configuration.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

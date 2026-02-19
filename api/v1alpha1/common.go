@@ -28,7 +28,8 @@ type HarborSpecBase struct {
 type SecretReference struct {
 	// Name of the Secret.
 	Name string `json:"name"`
-	// Key inside the Secret data. Defaults to "access_secret".
+	// Key inside the Secret data. When omitted, the controller using this
+	// reference will apply a sensible default.
 	// +optional
 	Key string `json:"key,omitempty"`
 	// Namespace of the Secret. Omit to use the HarborConnection namespace.

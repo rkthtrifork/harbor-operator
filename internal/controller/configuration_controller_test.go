@@ -24,15 +24,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
-var _ = Describe("Project Controller", func() {
+var _ = Describe("Configuration Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,41 +40,50 @@ var _ = Describe("Project Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
-		project := &harborv1alpha1.Project{}
+		config := &harborv1alpha1.Configuration{}
 		var server *httptest.Server
+		var putCalled bool
 
 		BeforeEach(func() {
+			putCalled = false
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
 				if !ok || user != "admin" || pass != "password" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects" {
-					w.Header().Set("Location", "/api/v2.0/projects/42")
-					w.WriteHeader(http.StatusCreated)
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/configurations":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"robot_name_prefix":{"value":"robot$","editable":true}}`))
 					return
+				case r.Method == http.MethodPut && r.URL.Path == "/api/v2.0/configurations":
+					putCalled = true
+					w.WriteHeader(http.StatusOK)
+					return
+				default:
+					http.NotFound(w, r)
 				}
-				http.NotFound(w, r)
 			}))
 
 			Expect(createPasswordSecret(ctx, k8sClient, "default", "harbor-admin", "password", "password")).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, "default", "harbor-conn", server.URL, "admin", "harbor-admin", "password")).To(Succeed())
 
-			By("creating the custom resource for the Kind Project")
-			resource := &harborv1alpha1.Project{
+			By("creating the custom resource for the Kind Configuration")
+			resource := &harborv1alpha1.Configuration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: "default",
 				},
-				Spec: harborv1alpha1.ProjectSpec{
+				Spec: harborv1alpha1.ConfigurationSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
 						HarborConnectionRef: "harbor-conn",
 					},
-					Name:   resourceName,
-					Public: false,
+					Settings: map[string]apiextensionsv1.JSON{
+						"robot_name_prefix": {Raw: []byte(`"robot+"`)},
+					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -82,10 +91,10 @@ var _ = Describe("Project Controller", func() {
 
 		AfterEach(func() {
 			server.Close()
-			resource := &harborv1alpha1.Project{}
+			resource := &harborv1alpha1.Configuration{}
 			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
-			By("Cleanup the specific resource instance Project")
+			By("Cleanup the specific resource instance Configuration")
 			_ = k8sClient.Delete(ctx, resource)
 
 			conn := &harborv1alpha1.HarborConnection{}
@@ -95,9 +104,10 @@ var _ = Describe("Project Controller", func() {
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin", Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
 		})
+
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &ProjectReconciler{
+			controllerReconciler := &ConfigurationReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
@@ -106,9 +116,9 @@ var _ = Describe("Project Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(putCalled).To(BeTrue())
 
-			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
-			Expect(project.Status.HarborProjectID).To(Equal(42))
+			Expect(k8sClient.Get(ctx, typeNamespacedName, config)).To(Succeed())
 		})
 	})
 })

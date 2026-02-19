@@ -1,0 +1,20 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Robot
+metadata:
+  name: ci
+spec:
+  harborConnectionRef: "my-harbor"
+  level: project
+  permissions:
+  - kind: project
+    namespace: "library"
+    access:
+    - resource: repository
+      action: pull
+      effect: allow
+    - resource: repository
+      action: push
+      effect: allow
+  secretRef:
+    name: harbor-robot-ci
+    key: secret

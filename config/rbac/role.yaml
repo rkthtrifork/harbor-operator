@@ -9,16 +9,21 @@ rules:
   resources:
   - secrets
   verbs:
+  - create
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - configurations
   - harborconnections
   - members
   - projects
   - registries
+  - robots
   - users
   verbs:
   - create
@@ -31,18 +36,20 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
-  - harborconnections/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - harbor.harbor-operator.io
-  resources:
+  - configurations/status
   - harborconnections/status
   - members/status
   - projects/status
   - registries/status
+  - robots/status
   - users/status
   verbs:
   - get
   - patch
+  - update
+- apiGroups:
+  - harbor.harbor-operator.io
+  resources:
+  - harborconnections/finalizers
+  verbs:
   - update

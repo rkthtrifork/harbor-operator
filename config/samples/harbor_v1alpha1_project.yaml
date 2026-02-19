@@ -10,4 +10,3 @@ spec:
   # I recommend not specifying this field in which case the metadata.name will be used
   # name: project-sample
   public: false
-  registryName: registry-sample

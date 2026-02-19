@@ -179,6 +179,13 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient
 			ProxySpeedKB:             m.ProxySpeedKB,
 		}
 	}
+	if meta.Public == "" {
+		if cr.Spec.Public {
+			meta.Public = "true"
+		} else {
+			meta.Public = "false"
+		}
+	}
 
 	var allow harborclient.CVEAllowlist
 	if a := cr.Spec.CVEAllowlist; a != nil {
