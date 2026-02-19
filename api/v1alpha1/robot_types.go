@@ -2,15 +2,78 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// RobotAction is the action of a robot permission access rule.
+type RobotAction string
+
+const (
+	RobotActionAll         RobotAction = "*"
+	RobotActionPull        RobotAction = "pull"
+	RobotActionPush        RobotAction = "push"
+	RobotActionCreate      RobotAction = "create"
+	RobotActionRead        RobotAction = "read"
+	RobotActionUpdate      RobotAction = "update"
+	RobotActionDelete      RobotAction = "delete"
+	RobotActionList        RobotAction = "list"
+	RobotActionOperate     RobotAction = "operate"
+	RobotActionScannerPull RobotAction = "scanner-pull"
+	RobotActionStop        RobotAction = "stop"
+)
+
+// RobotResource is the resource of a robot permission access rule.
+type RobotResource string
+
+const (
+	RobotResourceAll                RobotResource = "*"
+	RobotResourceConfiguration      RobotResource = "configuration"
+	RobotResourceLabel              RobotResource = "label"
+	RobotResourceLog                RobotResource = "log"
+	RobotResourceLDAPUser           RobotResource = "ldap-user"
+	RobotResourceMember             RobotResource = "member"
+	RobotResourceMetadata           RobotResource = "metadata"
+	RobotResourceQuota              RobotResource = "quota"
+	RobotResourceRepository         RobotResource = "repository"
+	RobotResourceTagRetention       RobotResource = "tag-retention"
+	RobotResourceImmutableTag       RobotResource = "immutable-tag"
+	RobotResourceRobot              RobotResource = "robot"
+	RobotResourceNotificationPolicy RobotResource = "notification-policy"
+	RobotResourceScan               RobotResource = "scan"
+	RobotResourceSBOM               RobotResource = "sbom"
+	RobotResourceScanner            RobotResource = "scanner"
+	RobotResourceArtifact           RobotResource = "artifact"
+	RobotResourceTag                RobotResource = "tag"
+	RobotResourceAccessory          RobotResource = "accessory"
+	RobotResourceArtifactAddition   RobotResource = "artifact-addition"
+	RobotResourceArtifactLabel      RobotResource = "artifact-label"
+	RobotResourcePreheatPolicy      RobotResource = "preheat-policy"
+	RobotResourcePreheatInstance    RobotResource = "preheat-instance"
+	RobotResourceAuditLog           RobotResource = "audit-log"
+	RobotResourceCatalog            RobotResource = "catalog"
+	RobotResourceProject            RobotResource = "project"
+	RobotResourceUser               RobotResource = "user"
+	RobotResourceUserGroup          RobotResource = "user-group"
+	RobotResourceRegistry           RobotResource = "registry"
+	RobotResourceReplication        RobotResource = "replication"
+	RobotResourceDistribution       RobotResource = "distribution"
+	RobotResourceGarbageCollection  RobotResource = "garbage-collection"
+	RobotResourceReplicationAdapter RobotResource = "replication-adapter"
+	RobotResourceReplicationPolicy  RobotResource = "replication-policy"
+	RobotResourceScanAll            RobotResource = "scan-all"
+	RobotResourceSystemVolumes      RobotResource = "system-volumes"
+	RobotResourcePurgeAudit         RobotResource = "purge-audit"
+	RobotResourceExportCVE          RobotResource = "export-cve"
+	RobotResourceJobServiceMonitor  RobotResource = "jobservice-monitor"
+	RobotResourceSecurityHub        RobotResource = "security-hub"
+)
+
 // RobotAccess defines a single access rule for a robot account.
 type RobotAccess struct {
 	// Resource defines the resource to grant access to.
-	// +kubebuilder:validation:MinLength=1
-	Resource string `json:"resource"`
+	// +kubebuilder:validation:Enum=*;configuration;label;log;ldap-user;member;metadata;quota;repository;tag-retention;immutable-tag;robot;notification-policy;scan;sbom;scanner;artifact;tag;accessory;artifact-addition;artifact-label;preheat-policy;preheat-instance;audit-log;catalog;project;user;user-group;registry;replication;distribution;garbage-collection;replication-adapter;replication-policy;scan-all;system-volumes;purge-audit;export-cve;jobservice-monitor;security-hub
+	Resource RobotResource `json:"resource"`
 
 	// Action defines the action to permit.
-	// +kubebuilder:validation:MinLength=1
-	Action string `json:"action"`
+	// +kubebuilder:validation:Enum=*;pull;push;create;read;update;delete;list;operate;scanner-pull;stop
+	Action RobotAction `json:"action"`
 
 	// Effect defines the effect of the access rule, typically "allow".
 	// +optional

@@ -92,7 +92,18 @@ spec:
                         properties:
                           action:
                             description: Action defines the action to permit.
-                            minLength: 1
+                            enum:
+                            - '*'
+                            - pull
+                            - push
+                            - create
+                            - read
+                            - update
+                            - delete
+                            - list
+                            - operate
+                            - scanner-pull
+                            - stop
                             type: string
                           effect:
                             description: Effect defines the effect of the access rule,
@@ -101,7 +112,47 @@ spec:
                           resource:
                             description: Resource defines the resource to grant access
                               to.
-                            minLength: 1
+                            enum:
+                            - '*'
+                            - configuration
+                            - label
+                            - log
+                            - ldap-user
+                            - member
+                            - metadata
+                            - quota
+                            - repository
+                            - tag-retention
+                            - immutable-tag
+                            - robot
+                            - notification-policy
+                            - scan
+                            - sbom
+                            - scanner
+                            - artifact
+                            - tag
+                            - accessory
+                            - artifact-addition
+                            - artifact-label
+                            - preheat-policy
+                            - preheat-instance
+                            - audit-log
+                            - catalog
+                            - project
+                            - user
+                            - user-group
+                            - registry
+                            - replication
+                            - distribution
+                            - garbage-collection
+                            - replication-adapter
+                            - replication-policy
+                            - scan-all
+                            - system-volumes
+                            - purge-audit
+                            - export-cve
+                            - jobservice-monitor
+                            - security-hub
                             type: string
                         required:
                         - action
