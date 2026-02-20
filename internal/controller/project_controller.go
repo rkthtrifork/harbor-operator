@@ -42,14 +42,20 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Resolve Harbor connection + typed client
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
@@ -82,7 +88,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if adopted {
 			r.logger.Info("Adopted existing project",
 				"Name", cr.Spec.Name, "ID", cr.Status.HarborProjectID)
@@ -92,7 +98,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Desired payload
 	createReq, err := r.buildCreateReq(ctx, hc, &cr)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	// Create / Update path
@@ -100,9 +106,10 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// create
 		newID, err := hc.CreateProject(ctx, createReq)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborProjectID = newID
+		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Project created")
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -116,19 +123,25 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if harborclient.IsNotFound(err) {
 			// It was deleted out-of-band → clear status and requeue immediately
 			cr.Status.HarborProjectID = 0
+			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Project not found in Harbor")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	// compare desired vs. current
 	if projectNeedsUpdate(createReq, *current) {
 		// update
 		if err := hc.UpdateProject(ctx, current.ProjectID, createReq); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated project", "ID", current.ProjectID)
+	}
+	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Project reconciled"); changed {
+		if err := r.Status().Update(ctx, &cr); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

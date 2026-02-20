@@ -33,6 +33,8 @@ type UserSpec struct {
 
 // UserStatus defines the observed state of User.
 type UserStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborUserID is the ID of the user in Harbor.
 	HarborUserID int `json:"harborUserID,omitempty"`
 }

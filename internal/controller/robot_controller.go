@@ -44,14 +44,14 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	if conn.Spec.Credentials == nil {
-		return ctrl.Result{}, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name))
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
@@ -75,18 +75,24 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		cr.Spec.Name = cr.Name
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if err := validateRobotSpec(&cr); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	secretRef, manageSecret, err := resolveRobotSecretRef(&cr)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if cr.Status.HarborRobotID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
 			r.logger.Info("Adopted robot", "ID", cr.Status.HarborRobotID)
 		}
@@ -96,7 +102,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		createReq := buildRobotCreateRequest(&cr)
 		created, err := hc.CreateRobot(ctx, createReq)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborRobotID = int(created.ID)
 		if manageSecret {
@@ -104,15 +110,16 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			if storedSecret == "" {
 				storedSecret, err = rotateRobotSecret(ctx, hc, cr.Status.HarborRobotID)
 				if err != nil {
-					return ctrl.Result{}, err
+					return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 				}
 			}
 			if err := upsertSecretValue(ctx, r.Client, secretRef.Namespace, secretRef.Name, secretRef.Key, storedSecret); err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 			}
 			now := metav1.Now()
 			cr.Status.LastRotatedAt = &now
 		}
+		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Robot created")
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -124,49 +131,51 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRobotID = 0
+			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Robot not found in Harbor")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if !robotLevelMatches(cr.Spec.Level, current.Level) {
-		return ctrl.Result{}, fmt.Errorf("robot level mismatch: desired %q, current %q", cr.Spec.Level, current.Level)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("robot level mismatch: desired %q, current %q", cr.Spec.Level, current.Level))
 	}
 
 	desired := buildRobotUpdateRequest(&cr, current)
 	if robotNeedsUpdate(desired, current) {
 		if err := hc.UpdateRobot(ctx, current.ID, desired); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated robot", "ID", current.ID)
 	}
 
-	if updated := updateRobotExpiryStatus(&cr, current.ExpiresAt); updated {
-		if err := r.Status().Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
+	statusChanged := updateRobotExpiryStatus(&cr, current.ExpiresAt)
 
 	if manageSecret && shouldRotateRobot(&cr) {
 		rotatedSecret, err := rotateRobotSecret(ctx, hc, current.ID)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		if err := upsertSecretValue(ctx, r.Client, secretRef.Namespace, secretRef.Name, secretRef.Key, rotatedSecret); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		now := metav1.Now()
 		cr.Status.LastRotatedAt = &now
 		// Refresh expires_at after rotation.
 		refreshed, err := hc.GetRobotByID(ctx, current.ID)
 		if err == nil {
-			updateRobotExpiryStatus(&cr, refreshed.ExpiresAt)
+			statusChanged = updateRobotExpiryStatus(&cr, refreshed.ExpiresAt) || statusChanged
 		}
+		statusChanged = true
+		r.logger.Info("Rotated robot secret", "ID", current.ID)
+	}
+
+	condChanged := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Robot reconciled")
+	if statusChanged || condChanged {
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
-		r.logger.Info("Rotated robot secret", "ID", current.ID)
 	}
 
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -347,8 +356,8 @@ func buildRobotPermissions(cr *harborv1alpha1.Robot) []harborclient.RobotPermiss
 				effect = "allow"
 			}
 			access = append(access, harborclient.Access{
-				Resource: rule.Resource,
-				Action:   rule.Action,
+				Resource: string(rule.Resource),
+				Action:   string(rule.Action),
 				Effect:   effect,
 			})
 		}

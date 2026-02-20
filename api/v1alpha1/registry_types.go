@@ -32,6 +32,8 @@ type RegistrySpec struct {
 
 // RegistryStatus defines the observed state of Registry.
 type RegistryStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborRegistryID is the ID of the registry in Harbor.
 	HarborRegistryID int `json:"harborRegistryID,omitempty"`
 }

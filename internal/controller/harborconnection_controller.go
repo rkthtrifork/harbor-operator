@@ -46,18 +46,52 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	if conn.Status.ObservedGeneration != conn.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Validate the BaseURL.
 	if err := r.validateBaseURL(&conn); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
 
 	// If no credentials are provided, perform a non-authenticated connectivity check.
 	if conn.Spec.Credentials == nil {
-		return r.checkNonAuthConnectivity(ctx, &conn)
+		hc := harborclient.New(conn.Spec.BaseURL, "", "") // no creds
+		if err := hc.Ping(ctx); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
+		}
+		conn.Status.Authenticated = false
+		markReady(&conn.Status.HarborStatusBase, conn.Generation, "Reachable", "Harbor reachable without credentials")
+		if err := r.Status().Update(ctx, &conn); err != nil {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("Harbor reachable without credentials")
+		return ctrl.Result{}, nil
 	}
 
 	// Otherwise, perform an authenticated check.
-	return r.checkAuthenticatedConnection(ctx, &conn)
+	user := conn.Spec.Credentials.Username
+	pass, err := r.getPassword(ctx, r.Client, &conn) // unchanged helper
+	if err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
+	}
+
+	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
+	if _, err := hc.GetCurrentUser(ctx); err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
+	}
+
+	conn.Status.Authenticated = true
+	markReady(&conn.Status.HarborStatusBase, conn.Generation, "Authenticated", "Successfully authenticated with Harbor API")
+	if err := r.Status().Update(ctx, &conn); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	r.logger.Info("Successfully authenticated with Harbor API")
+	return ctrl.Result{}, nil
 }
 
 // validateBaseURL verifies that the BaseURL is a valid URL and includes a protocol scheme.
@@ -73,35 +107,6 @@ func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.Harbor
 		return err
 	}
 	return nil
-}
-
-func (r *HarborConnectionReconciler) checkNonAuthConnectivity(
-	ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
-
-	hc := harborclient.New(conn.Spec.BaseURL, "", "") // no creds
-	if err := hc.Ping(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-	r.logger.Info("Harbor reachable without credentials")
-	return ctrl.Result{}, nil
-}
-
-func (r *HarborConnectionReconciler) checkAuthenticatedConnection(
-	ctx context.Context, conn *harborv1alpha1.HarborConnection) (ctrl.Result, error) {
-
-	user := conn.Spec.Credentials.Username
-	pass, err := r.getPassword(ctx, r.Client, conn) // unchanged helper
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
-	if _, err := hc.GetCurrentUser(ctx); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.logger.Info("Successfully authenticated with Harbor API")
-	return ctrl.Result{}, nil
 }
 
 // Retrieve the secret containing the access secret.

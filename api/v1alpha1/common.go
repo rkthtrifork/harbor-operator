@@ -37,6 +37,17 @@ type SecretReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// HarborStatusBase holds common status fields for Harbor resources.
+type HarborStatusBase struct {
+	// ObservedGeneration is the most recent generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions represent the latest available observations of the resource's state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
 // GetDriftDetectionInterval returns the drift detection interval.
 func (base *HarborSpecBase) GetDriftDetectionInterval() *metav1.Duration {
 	return base.DriftDetectionInterval

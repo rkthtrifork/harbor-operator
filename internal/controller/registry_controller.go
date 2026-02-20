@@ -40,14 +40,20 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Harbor client
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
@@ -76,7 +82,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if cr.Status.HarborRegistryID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
 			r.logger.Info("Adopted registry", "ID", cr.Status.HarborRegistryID)
 		}
@@ -89,9 +95,10 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if cr.Status.HarborRegistryID == 0 {
 		id, err := hc.CreateRegistry(ctx, createReq)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborRegistryID = id
+		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Registry created")
 		_ = r.Status().Update(ctx, &cr)
 		r.logger.Info("Created registry", "ID", id)
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -101,17 +108,23 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRegistryID = 0
+			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Registry not found in Harbor")
 			_ = r.Status().Update(ctx, &cr)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if registryNeedsUpdate(createReq, *current) {
 		if err := hc.UpdateRegistry(ctx, current.ID, createReq); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated registry", "ID", current.ID)
+	}
+	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Registry reconciled"); changed {
+		if err := r.Status().Update(ctx, &cr); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

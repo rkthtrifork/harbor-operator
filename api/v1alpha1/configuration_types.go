@@ -22,7 +22,9 @@ type ConfigurationSpec struct {
 }
 
 // ConfigurationStatus defines the observed state of Configuration.
-type ConfigurationStatus struct{}
+type ConfigurationStatus struct {
+	HarborStatusBase `json:",inline"`
+}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

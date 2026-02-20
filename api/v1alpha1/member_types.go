@@ -48,7 +48,7 @@ type MemberSpec struct {
 
 // MemberStatus defines the observed state of Member.
 type MemberStatus struct {
-	// Optionally add status fields, e.g. to track creation state or Harbor member ID.
+	HarborStatusBase `json:",inline"`
 }
 
 // +kubebuilder:object:root=true

@@ -44,23 +44,29 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	if member.Status.ObservedGeneration != member.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Resolve Harbor connection + typed client
 	conn, err := getHarborConnection(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
 		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", member.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
 	if conn.Spec.Credentials == nil {
 		err := fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
 		r.logger.Error(err, "Cannot manage Harbor members without credentials")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
 		r.logger.Error(err, "Failed to get Harbor authentication credentials")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
@@ -91,7 +97,7 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	roleID, err := convertRoleNameToID(member.Spec.Role)
 	if err != nil {
 		r.logger.Error(err, "Invalid role", "Role", member.Spec.Role)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
 	// Ensure desired member state in Harbor (create/update as needed).
@@ -99,7 +105,13 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.logger.Error(err, "Failed to ensure member in Harbor",
 			"ProjectRef", member.Spec.ProjectRef,
 			"RoleID", roleID)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
+	}
+
+	if changed := markReady(&member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled"); changed {
+		if err := r.Status().Update(ctx, &member); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return returnWithDriftDetection(&member.Spec.HarborSpecBase)

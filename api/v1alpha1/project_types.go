@@ -71,6 +71,8 @@ type CVEAllowlist struct {
 
 // ProjectStatus defines the observed state of Project.
 type ProjectStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborProjectID is the ID of the project in Harbor.
 	HarborProjectID int `json:"harborProjectID,omitempty"`
 }

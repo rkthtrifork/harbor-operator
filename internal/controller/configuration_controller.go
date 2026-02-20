@@ -40,16 +40,22 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	if conn.Spec.Credentials == nil {
-		return ctrl.Result{}, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name))
 	}
 	user, pass, err := getHarborAuth(ctx, r.Client, conn)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
@@ -68,29 +74,39 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	desired, err := r.buildDesiredSettings(ctx, &cr)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	if len(desired) == 0 {
 		r.logger.V(1).Info("No configuration settings specified; nothing to apply")
+		if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Noop", "No configuration changes to apply"); changed {
+			if err := r.Status().Update(ctx, &cr); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetConfigurations(ctx)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if err := ensureEditableSettings(desired, current); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if configurationNeedsUpdate(desired, current) {
 		if err := hc.UpdateConfigurations(ctx, desired); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated Harbor configurations")
 	}
 
+	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Configuration reconciled"); changed {
+		if err := r.Status().Update(ctx, &cr); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 

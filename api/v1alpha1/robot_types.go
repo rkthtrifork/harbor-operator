@@ -136,6 +136,8 @@ type RobotSpec struct {
 
 // RobotStatus defines the observed state of Robot.
 type RobotStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborRobotID is the ID of the robot in Harbor.
 	HarborRobotID int `json:"harborRobotID,omitempty"`
 
