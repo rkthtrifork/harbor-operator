@@ -57,6 +57,21 @@ spec:
                 description: HarborConnectionRef references the HarborConnection resource
                   to use.
                 type: string
+              projectRef:
+                description: |-
+                  ProjectRef references a Project CR to derive the Harbor project ID.
+                  When set, scope.ref is resolved from the Project status and scope.level is forced to "project".
+                properties:
+                  name:
+                    description: Name of the Project resource.
+                    type: string
+                  namespace:
+                    description: Namespace of the Project resource. Defaults to the
+                      RetentionPolicy namespace.
+                    type: string
+                required:
+                - name
+                type: object
               reconcileNonce:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string

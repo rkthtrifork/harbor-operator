@@ -10,6 +10,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -88,7 +89,14 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	policy, err := toRetentionPolicy(cr)
+	scope, err := resolveRetentionScope(ctx, r.Client, &cr)
+	if err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
+	crWithScope := cr
+	crWithScope.Spec.Scope = scope
+
+	policy, err := toRetentionPolicy(crWithScope)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -277,4 +285,38 @@ func (r *RetentionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&harborv1alpha1.RetentionPolicy{}).
 		Named("retentionpolicy").
 		Complete(r)
+}
+
+func resolveRetentionScope(ctx context.Context, c client.Client, cr *harborv1alpha1.RetentionPolicy) (*harborv1alpha1.RetentionScope, error) {
+	if cr.Spec.ProjectRef == nil {
+		return cr.Spec.Scope, nil
+	}
+	if cr.Spec.ProjectRef.Name == "" {
+		return nil, fmt.Errorf("spec.projectRef.name must not be empty")
+	}
+	if cr.Spec.Scope != nil {
+		if cr.Spec.Scope.Ref != 0 {
+			return nil, fmt.Errorf("spec.scope.ref must not be set when spec.projectRef is provided")
+		}
+		if cr.Spec.Scope.Level != "" && cr.Spec.Scope.Level != "project" {
+			return nil, fmt.Errorf("spec.scope.level must be \"project\" when spec.projectRef is provided")
+		}
+	}
+
+	namespace := cr.Spec.ProjectRef.Namespace
+	if namespace == "" {
+		namespace = cr.Namespace
+	}
+	var project harborv1alpha1.Project
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cr.Spec.ProjectRef.Name}, &project); err != nil {
+		return nil, err
+	}
+	if project.Status.HarborProjectID == 0 {
+		return nil, fmt.Errorf("referenced Project %s/%s does not have harborProjectID yet", namespace, cr.Spec.ProjectRef.Name)
+	}
+
+	return &harborv1alpha1.RetentionScope{
+		Level: "project",
+		Ref:   project.Status.HarborProjectID,
+	}, nil
 }

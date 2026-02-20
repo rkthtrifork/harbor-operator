@@ -13,9 +13,8 @@ metadata:
 spec:
   harborConnectionRef: "my-harbor"
   algorithm: or
-  scope:
-    level: project
-    ref: 1
+  projectRef:
+    name: project-sample
   trigger:
     kind: Schedule
     settings:
@@ -48,8 +47,13 @@ spec:
 - **spec.rules** (array, required)
   Retention rules matching the Harbor retention API schema.
 
+- **spec.projectRef** (object, optional)
+  Reference to a Project CR. When set, the controller derives the Harbor project
+  ID and applies `scope.level=project` and `scope.ref=<projectID>`.
+
 - **spec.scope** (object, optional)
   Scope for the policy. Use `level` and `ref` to target a specific project.
+  Must not be set with `projectRef`.
 
 - **spec.trigger** (object, required)
   Defines when the policy runs. Harbor requires a trigger for creation (for

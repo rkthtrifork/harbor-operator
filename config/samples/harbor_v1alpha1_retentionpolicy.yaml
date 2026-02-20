@@ -5,9 +5,8 @@ metadata:
 spec:
   harborConnectionRef: "harbor-conn"
   algorithm: or
-  scope:
-    level: project
-    ref: 1
+  projectRef:
+    name: project-sample
   trigger:
     kind: Schedule
     settings:

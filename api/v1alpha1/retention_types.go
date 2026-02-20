@@ -9,6 +9,11 @@ import (
 type RetentionPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// ProjectRef references a Project CR to derive the Harbor project ID.
+	// When set, scope.ref is resolved from the Project status and scope.level is forced to "project".
+	// +optional
+	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
+
 	// Algorithm defines the retention algorithm, e.g. "or".
 	// +optional
 	Algorithm string `json:"algorithm,omitempty"`
@@ -24,6 +29,15 @@ type RetentionPolicySpec struct {
 	// Scope defines the policy scope.
 	// +optional
 	Scope *RetentionScope `json:"scope,omitempty"`
+}
+
+// ProjectReference identifies a Project custom resource.
+type ProjectReference struct {
+	// Name of the Project resource.
+	Name string `json:"name"`
+	// Namespace of the Project resource. Defaults to the RetentionPolicy namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // RetentionRule defines a retention rule.
