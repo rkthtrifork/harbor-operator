@@ -6,20 +6,41 @@ import (
 )
 
 type Registry struct {
-	ID          int    `json:"id"`
-	URL         string `json:"url"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-	Insecure    bool   `json:"insecure"`
+	ID            int                 `json:"id"`
+	URL           string              `json:"url"`
+	Name          string              `json:"name"`
+	Description   string              `json:"description"`
+	Type          string              `json:"type"`
+	Insecure      bool                `json:"insecure"`
+	CACertificate string              `json:"ca_certificate,omitempty"`
+	Credential    *RegistryCredential `json:"credential,omitempty"`
+}
+
+type RegistryCredential struct {
+	Type         string `json:"type,omitempty"`
+	AccessKey    string `json:"access_key,omitempty"`
+	AccessSecret string `json:"access_secret,omitempty"`
 }
 
 type CreateRegistryRequest struct {
-	URL         string `json:"url,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Insecure    bool   `json:"insecure,omitempty"`
+	URL           string              `json:"url,omitempty"`
+	Name          string              `json:"name,omitempty"`
+	Description   string              `json:"description,omitempty"`
+	Type          string              `json:"type,omitempty"`
+	Insecure      bool                `json:"insecure,omitempty"`
+	CACertificate string              `json:"ca_certificate,omitempty"`
+	Credential    *RegistryCredential `json:"credential,omitempty"`
+}
+
+type UpdateRegistryRequest struct {
+	Name           string `json:"name,omitempty"`
+	Description    string `json:"description,omitempty"`
+	URL            string `json:"url,omitempty"`
+	CredentialType string `json:"credential_type,omitempty"`
+	AccessKey      string `json:"access_key,omitempty"`
+	AccessSecret   string `json:"access_secret,omitempty"`
+	Insecure       bool   `json:"insecure,omitempty"`
+	CACertificate  string `json:"ca_certificate,omitempty"`
 }
 
 func (c *Client) ListRegistries(ctx context.Context) ([]Registry, error) {
@@ -44,7 +65,7 @@ func (c *Client) CreateRegistry(ctx context.Context, in CreateRegistryRequest) (
 	return extractLocationID(resp)
 }
 
-func (c *Client) UpdateRegistry(ctx context.Context, id int, in CreateRegistryRequest) error {
+func (c *Client) UpdateRegistry(ctx context.Context, id int, in UpdateRegistryRequest) error {
 
 	_, err := c.do(ctx, "PUT",
 		fmt.Sprintf("/api/v2.0/registries/%d", id), &in, nil)

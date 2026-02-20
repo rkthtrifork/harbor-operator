@@ -26,8 +26,34 @@ type RegistrySpec struct {
 	// +kubebuilder:validation:Format=url
 	URL string `json:"url"`
 
+	// Credential holds authentication details for the registry.
+	// +optional
+	Credential *RegistryCredentialSpec `json:"credential,omitempty"`
+
+	// CACertificate is the PEM-encoded CA certificate for this registry endpoint.
+	// +optional
+	CACertificate string `json:"caCertificate,omitempty"`
+
+	// CACertificateRef references a secret value holding the PEM-encoded CA certificate.
+	// If set, it overrides CACertificate.
+	// +optional
+	CACertificateRef *SecretReference `json:"caCertificateRef,omitempty"`
+
 	// Insecure indicates if remote certificates should be verified.
 	Insecure bool `json:"insecure"`
+}
+
+// RegistryCredentialSpec defines registry authentication details.
+type RegistryCredentialSpec struct {
+	// Type of the credential, e.g. "basic" or "oauth".
+	// +kubebuilder:validation:Enum=basic;oauth
+	Type string `json:"type"`
+
+	// AccessKeySecretRef references the secret key holding the access key (username).
+	AccessKeySecretRef SecretReference `json:"accessKeySecretRef"`
+
+	// AccessSecretSecretRef references the secret key holding the access secret (password/token).
+	AccessSecretSecretRef SecretReference `json:"accessSecretSecretRef"`
 }
 
 // RegistryStatus defines the observed state of Registry.
@@ -36,6 +62,10 @@ type RegistryStatus struct {
 
 	// HarborRegistryID is the ID of the registry in Harbor.
 	HarborRegistryID int `json:"harborRegistryID,omitempty"`
+
+	// CredentialHash is a hash of the configured credential to detect changes.
+	// +optional
+	CredentialHash string `json:"credentialHash,omitempty"`
 }
 
 // +kubebuilder:object:root=true

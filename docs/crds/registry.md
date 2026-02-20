@@ -33,6 +33,21 @@ spec:
   # The registry URL.
   url: "https://registry.example.com"
 
+  # Optional credentials.
+  credential:
+    type: basic
+    accessKeySecretRef:
+      name: registry-credentials
+      key: access_key
+    accessSecretSecretRef:
+      name: registry-credentials
+      key: access_secret
+
+  # Optional custom CA certificate.
+  caCertificateRef:
+    name: registry-ca
+    key: ca.crt
+
   # Set to true to bypass certificate verification.
   insecure: false
 
@@ -70,6 +85,15 @@ spec:
 
 - **spec.insecure** (bool, optional)
   If `true`, skips TLS verification when Harbor connects to this registry.
+
+- **spec.credential** (object, optional)
+  Credentials for the registry. Use `type: basic` with an access key and secret.
+
+- **spec.caCertificate** (string, optional)
+  PEM-encoded CA certificate. Use `caCertificateRef` instead for secrets.
+
+- **spec.caCertificateRef** (object, optional)
+  Secret reference to a PEM-encoded CA certificate. Overrides `caCertificate`.
 
 - **spec.allowTakeover** (bool, optional)
   If `true`, and a registry with the same name already exists in Harbor, the
@@ -112,6 +136,5 @@ spec:
     - fetch the current registry configuration from Harbor
     - compare against the CR
     - update Harbor if drift is detected.
-
 
 

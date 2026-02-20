@@ -2,6 +2,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +37,11 @@ func readSecretValue(ctx context.Context, c client.Client, ref harborv1alpha1.Se
 		return "", fmt.Errorf("key %s not found in secret %s/%s", key, namespace, ref.Name)
 	}
 	return string(value), nil
+}
+
+func hashSecret(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }
 
 func upsertSecretValue(ctx context.Context, c client.Client, namespace, name, key, value string) error {

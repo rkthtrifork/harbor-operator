@@ -44,6 +44,82 @@ spec:
                   AllowTakeover indicates whether the operator is allowed to adopt an
                   existing object in Harbor with the same name/ID.
                 type: boolean
+              caCertificate:
+                description: CACertificate is the PEM-encoded CA certificate for this
+                  registry endpoint.
+                type: string
+              caCertificateRef:
+                description: |-
+                  CACertificateRef references a secret value holding the PEM-encoded CA certificate.
+                  If set, it overrides CACertificate.
+                properties:
+                  key:
+                    description: |-
+                      Key inside the Secret data. When omitted, the controller using this
+                      reference will apply a sensible default.
+                    type: string
+                  name:
+                    description: Name of the Secret.
+                    type: string
+                  namespace:
+                    description: Namespace of the Secret. Omit to use the HarborConnection
+                      namespace.
+                    type: string
+                required:
+                - name
+                type: object
+              credential:
+                description: Credential holds authentication details for the registry.
+                properties:
+                  accessKeySecretRef:
+                    description: AccessKeySecretRef references the secret key holding
+                      the access key (username).
+                    properties:
+                      key:
+                        description: |-
+                          Key inside the Secret data. When omitted, the controller using this
+                          reference will apply a sensible default.
+                        type: string
+                      name:
+                        description: Name of the Secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the Secret. Omit to use the HarborConnection
+                          namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  accessSecretSecretRef:
+                    description: AccessSecretSecretRef references the secret key holding
+                      the access secret (password/token).
+                    properties:
+                      key:
+                        description: |-
+                          Key inside the Secret data. When omitted, the controller using this
+                          reference will apply a sensible default.
+                        type: string
+                      name:
+                        description: Name of the Secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the Secret. Omit to use the HarborConnection
+                          namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    description: Type of the credential, e.g. "basic" or "oauth".
+                    enum:
+                    - basic
+                    - oauth
+                    type: string
+                required:
+                - accessKeySecretRef
+                - accessSecretSecretRef
+                - type
+                type: object
               description:
                 description: Description is an optional description.
                 type: string
@@ -155,6 +231,10 @@ spec:
                   - type
                   type: object
                 type: array
+              credentialHash:
+                description: CredentialHash is a hash of the configured credential
+                  to detect changes.
+                type: string
               harborRegistryID:
                 description: HarborRegistryID is the ID of the registry in Harbor.
                 type: integer
