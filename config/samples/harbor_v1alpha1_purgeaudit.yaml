@@ -1,0 +1,13 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: PurgeAuditSchedule
+metadata:
+  name: harbor-purge-audit
+spec:
+  harborConnectionRef: "harbor-conn"
+  schedule:
+    type: Custom
+    cron: "0 30 2 * * *"
+  parameters:
+    auditRetentionHour: 168
+    includeEventTypes: "create_artifact,delete_artifact,pull_artifact"
+    dryRun: false

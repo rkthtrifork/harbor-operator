@@ -19,10 +19,13 @@ rules:
   - harbor.harbor-operator.io
   resources:
   - configurations
+  - gcschedules
   - harborconnections
   - members
   - projects
+  - purgeauditschedules
   - registries
+  - retentionpolicies
   - robots
   - users
   verbs:
@@ -37,10 +40,13 @@ rules:
   - harbor.harbor-operator.io
   resources:
   - configurations/status
+  - gcschedules/status
   - harborconnections/status
   - members/status
   - projects/status
+  - purgeauditschedules/status
   - registries/status
+  - retentionpolicies/status
   - robots/status
   - users/status
   verbs:
@@ -50,6 +56,9 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - gcschedules/finalizers
   - harborconnections/finalizers
+  - purgeauditschedules/finalizers
+  - retentionpolicies/finalizers
   verbs:
   - update

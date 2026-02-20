@@ -1,0 +1,9 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: GCSchedule
+metadata:
+  name: harbor-gc-schedule
+spec:
+  harborConnectionRef: "harbor-conn"
+  schedule:
+    type: Custom
+    cron: "0 0 2 * * *"

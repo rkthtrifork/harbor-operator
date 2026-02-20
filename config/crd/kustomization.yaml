@@ -9,6 +9,9 @@ resources:
 - bases/harbor.harbor-operator.io_members.yaml
 - bases/harbor.harbor-operator.io_harborconnections.yaml
 - bases/harbor.harbor-operator.io_robots.yaml
+- bases/harbor.harbor-operator.io_gcschedules.yaml
+- bases/harbor.harbor-operator.io_purgeauditschedules.yaml
+- bases/harbor.harbor-operator.io_retentionpolicies.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

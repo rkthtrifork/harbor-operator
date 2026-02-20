@@ -1,0 +1,29 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: RetentionPolicy
+metadata:
+  name: harbor-retention
+spec:
+  harborConnectionRef: "harbor-conn"
+  algorithm: or
+  scope:
+    level: project
+    ref: 1
+  trigger:
+    kind: Schedule
+    settings:
+      cron: "0 0 0 * * *"
+  rules:
+    - action: retain
+      template: latestPushedK
+      params:
+        latestPushedK:
+          value: 10
+      tagSelectors:
+        - kind: doublestar
+          decoration: matches
+          pattern: "**"
+      scopeSelectors:
+        repository:
+          - kind: doublestar
+            decoration: repoMatches
+            pattern: "**"
