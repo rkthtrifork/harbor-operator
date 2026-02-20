@@ -1,6 +1,9 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // GCScheduleSpec defines the desired schedule for garbage collection.
 type GCScheduleSpec struct {
@@ -8,6 +11,10 @@ type GCScheduleSpec struct {
 
 	// Schedule defines when GC runs.
 	Schedule ScheduleSpec `json:"schedule"`
+
+	// Parameters define GC settings passed to Harbor.
+	// +optional
+	Parameters map[string]apiextensionsv1.JSON `json:"parameters,omitempty"`
 }
 
 // GCScheduleStatus defines the observed state of GCSchedule.

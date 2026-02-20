@@ -15,6 +15,9 @@ spec:
   schedule:
     type: Custom
     cron: "0 0 2 * * *"
+  parameters:
+    delete_untagged: true
+    workers: 1
 ```
 
 ## Key Fields
@@ -28,6 +31,10 @@ spec:
 - **spec.schedule.cron** (string, optional)
   Cron expression. Harbor requires this for any scheduled run (all types except
   `Manual` and `None`).
+
+- **spec.parameters** (map, optional)
+  GC parameters passed through to Harbor (for example `delete_untagged` and
+  `workers`).
 
 ## Behavior
 

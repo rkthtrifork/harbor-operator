@@ -2,9 +2,13 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -71,16 +75,21 @@ func (r *GCScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		_ = r.Update(ctx, &cr)
 	}
 
+	params, paramsHash, err := gcParameters(cr.Spec.Parameters)
+	if err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
 	sched := harborclient.Schedule{
 		Schedule: harborclient.ScheduleObj{
 			Type: cr.Spec.Schedule.Type,
 			Cron: cr.Spec.Schedule.Cron,
 		},
+		Parameters: params,
 	}
 	if sched.Schedule.Type != "Manual" && sched.Schedule.Type != "None" && sched.Schedule.Cron == "" {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("schedule.cron is required for schedule type %q", sched.Schedule.Type))
 	}
-	hashInput := fmt.Sprintf("type=%s\ncron=%s", cr.Spec.Schedule.Type, cr.Spec.Schedule.Cron)
+	hashInput := fmt.Sprintf("type=%s\ncron=%s\nparams=%s", cr.Spec.Schedule.Type, cr.Spec.Schedule.Cron, paramsHash)
 	hash := hashSecret(hashInput)
 
 	if cr.Status.LastAppliedScheduleHash == "" {
@@ -116,4 +125,33 @@ func (r *GCScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&harborv1alpha1.GCSchedule{}).
 		Named("gcschedule").
 		Complete(r)
+}
+
+func gcParameters(in map[string]apiextensionsv1.JSON) (map[string]any, string, error) {
+	if in == nil {
+		return nil, "", nil
+	}
+	out := map[string]any{}
+	keys := make([]string, 0, len(in))
+	for key, raw := range in {
+		if len(raw.Raw) == 0 {
+			continue
+		}
+		var value any
+		if err := json.Unmarshal(raw.Raw, &value); err != nil {
+			return nil, "", fmt.Errorf("invalid gc parameters for %s: %w", key, err)
+		}
+		out[key] = value
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		raw := in[key]
+		if len(raw.Raw) == 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", key, strings.TrimSpace(string(raw.Raw))))
+	}
+	return out, strings.Join(parts, "&"), nil
 }
