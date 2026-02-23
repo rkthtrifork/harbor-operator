@@ -9,6 +9,11 @@ import (
 type UserSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing user in Harbor with the same username.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Username is the Harbor username.
 	// It is recommended to leave this field empty so that the operator defaults it
 	// to the custom resource's metadata name.

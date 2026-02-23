@@ -3,6 +3,7 @@ package harborclient
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 type Registry struct {
@@ -43,10 +44,22 @@ type UpdateRegistryRequest struct {
 	CACertificate  string `json:"ca_certificate,omitempty"`
 }
 
-func (c *Client) ListRegistries(ctx context.Context) ([]Registry, error) {
+func (c *Client) FindRegistryByName(ctx context.Context, name string) (*Registry, error) {
+	if name == "" {
+		return nil, nil
+	}
+	escaped := url.QueryEscape(name)
+	path := fmt.Sprintf("/api/v2.0/registries?page=1&page_size=100&q=name=%s", escaped)
 	var regs []Registry
-	_, err := c.do(ctx, "GET", "/api/v2.0/registries", nil, &regs)
-	return regs, err
+	if _, err := c.do(ctx, "GET", path, nil, &regs); err != nil {
+		return nil, err
+	}
+	for i := range regs {
+		if regs[i].Name == name {
+			return &regs[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (c *Client) GetRegistryByID(ctx context.Context, id int) (*Registry, error) {

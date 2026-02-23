@@ -99,6 +99,11 @@ type RobotPermission struct {
 type RobotSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing robot in Harbor with the same name.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Name is the robot account name (without Harbor's prefix).
 	// Defaults to metadata.name when omitted.
 	// +optional

@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -46,31 +45,17 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	if conn.Spec.Credentials == nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name))
-	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			_ = r.Update(ctx, &cr)
-		}
+		_ = removeFinalizer(ctx, r.Client, &cr)
 		return ctrl.Result{}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		_ = r.Update(ctx, &cr)
-	}
+	_ = ensureFinalizer(ctx, r.Client, &cr)
 
 	desired, err := r.buildDesiredSettings(ctx, &cr)
 	if err != nil {

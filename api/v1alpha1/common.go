@@ -8,11 +8,6 @@ type HarborSpecBase struct {
 	// +kubebuilder:validation:Required
 	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing object in Harbor with the same name/ID.
-	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
-
 	// DriftDetectionInterval is the interval at which the operator will check
 	// for drift. A value of 0 (or omitted) disables periodic drift detection.
 	// +optional

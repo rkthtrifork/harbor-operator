@@ -25,6 +25,9 @@ spec:
   # Optional real name / full name.
   realname: "Alice Example"
 
+  # Allow adopting an existing user with the same username.
+  allowTakeover: false
+
   # Optional admin flag.
   admin: false
 
@@ -57,11 +60,15 @@ spec:
   Secret that contains the user’s password (key name depends on your schema,
   e.g. `password`).
 
+- **spec.allowTakeover** (bool, optional)
+  If `true`, the operator will adopt an existing Harbor user with the same username.
+
 ## Behavior
 
 - **Create**
 
   - Creates the Harbor user with the given username/email/password.
+  - If `allowTakeover` is `true` and a user already exists, it is adopted.
   - Optionally sets admin flag.
 
 - **Update**

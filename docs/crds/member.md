@@ -16,6 +16,7 @@ metadata:
   name: my-project-alice
 spec:
   harborConnectionRef: "my-harbor"
+  allowTakeover: false
 
   # Project reference in Harbor (name or ID, depending on your usage).
   projectRef: "my-project"
@@ -90,6 +91,10 @@ spec:
 
 Exactly one of `memberUser` or `memberGroup` should be set.
 
+- **spec.allowTakeover** (bool, optional)
+  If `true`, the operator will adopt an existing Harbor membership for the same
+  identity (user/group + project).
+
 ## Behavior
 
 - **Create**
@@ -97,6 +102,7 @@ Exactly one of `memberUser` or `memberGroup` should be set.
   - Converts `role` to Harbor’s role ID.
   - Calls Harbor’s project membership API with either `member_user` or `member_group`.
   - Treats “already exists” responses as idempotent (depending on client handling).
+  - If `allowTakeover` is `true` and a membership already exists, it is adopted.
 
 - **Update**
 

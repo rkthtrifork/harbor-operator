@@ -19,6 +19,9 @@ spec:
   # If empty, defaults to metadata.name.
   name: ""
 
+  # Allow adopting an existing project with the same name.
+  allowTakeover: false
+
   # Make project public? (Harbor uses "public" metadata under the hood.)
   public: false
 
@@ -48,6 +51,9 @@ spec:
 - **spec.public** (bool, optional)
   Controls whether the project is public or private.
 
+- **spec.allowTakeover** (bool, optional)
+  If `true`, the operator will adopt an existing Harbor project with the same name.
+
 - **spec.autoScan**, **spec.preventVul**, **spec.severity**, etc. (optional)
   These map to Harbor’s project metadata fields, controlling:
 
@@ -67,6 +73,7 @@ spec:
 
   - Ensures the project exists in Harbor.
   - Updates metadata to match your spec.
+  - If `allowTakeover` is `true` and a project already exists, it is adopted.
 
 - **Delete**
 

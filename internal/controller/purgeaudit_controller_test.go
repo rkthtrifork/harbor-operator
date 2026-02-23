@@ -23,29 +23,28 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
-var _ = Describe("User Controller", func() {
+var _ = Describe("Purge Audit Schedule Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-		const adminSecretName = "harbor-admin-user"
-		const connName = "harbor-conn-user"
-		const userSecretName = "user-password-user"
+		const resourceName = "purge-audit"
+		const adminSecretName = "harbor-admin-purgeaudit"
+		const connName = "harbor-conn-purgeaudit"
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
-		user := &harborv1alpha1.User{}
 		var server *httptest.Server
 
 		BeforeEach(func() {
@@ -55,8 +54,7 @@ var _ = Describe("User Controller", func() {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/users" {
-					w.Header().Set("Location", "/api/v2.0/users/5")
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/system/purgeaudit/schedule" {
 					w.WriteHeader(http.StatusCreated)
 					return
 				}
@@ -65,22 +63,24 @@ var _ = Describe("User Controller", func() {
 
 			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
-			Expect(createPasswordSecret(ctx, k8sClient, "default", userSecretName, "password", "UserPassword1!")).To(Succeed())
 
-			By("creating the custom resource for the Kind User")
-			resource := &harborv1alpha1.User{
+			resource := &harborv1alpha1.PurgeAuditSchedule{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: "default",
 				},
-				Spec: harborv1alpha1.UserSpec{
+				Spec: harborv1alpha1.PurgeAuditScheduleSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
 						HarborConnectionRef: connName,
 					},
-					Email: "user@example.com",
-					PasswordSecretRef: corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: userSecretName},
-						Key:                  "password",
+					Schedule: harborv1alpha1.ScheduleSpec{
+						Type: "Daily",
+						Cron: "0 0 0 * * *",
+					},
+					Parameters: harborv1alpha1.PurgeAuditParameters{
+						AuditRetentionHour: 720,
+						IncludeEventTypes:  "create_artifact,delete_artifact",
+						DryRun:             false,
 					},
 				},
 			}
@@ -89,25 +89,21 @@ var _ = Describe("User Controller", func() {
 
 		AfterEach(func() {
 			server.Close()
-			resource := &harborv1alpha1.User{}
+			resource := &harborv1alpha1.PurgeAuditSchedule{}
 			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
-
-			By("Cleanup the specific resource instance User")
 			_ = k8sClient.Delete(ctx, resource)
 
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
 			_ = k8sClient.Delete(ctx, conn)
+
 			secret := &corev1.Secret{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
-			secret = &corev1.Secret{}
-			_ = k8sClient.Get(ctx, types.NamespacedName{Name: userSecretName, Namespace: "default"}, secret)
-			_ = k8sClient.Delete(ctx, secret)
 		})
+
 		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &UserReconciler{
+			controllerReconciler := &PurgeAuditScheduleReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
@@ -117,8 +113,12 @@ var _ = Describe("User Controller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(k8sClient.Get(ctx, typeNamespacedName, user)).To(Succeed())
-			Expect(user.Status.HarborUserID).To(Equal(5))
+			out := &harborv1alpha1.PurgeAuditSchedule{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
+			Expect(out.Status.LastAppliedScheduleHash).NotTo(BeEmpty())
+			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 		})
 	})
 })

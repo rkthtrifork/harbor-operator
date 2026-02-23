@@ -23,29 +23,29 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
-var _ = Describe("User Controller", func() {
+var _ = Describe("Retention Policy Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-		const adminSecretName = "harbor-admin-user"
-		const connName = "harbor-conn-user"
-		const userSecretName = "user-password-user"
+		const resourceName = "retention-policy"
+		const adminSecretName = "harbor-admin-retention"
+		const connName = "harbor-conn-retention"
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
-		user := &harborv1alpha1.User{}
 		var server *httptest.Server
 
 		BeforeEach(func() {
@@ -55,8 +55,8 @@ var _ = Describe("User Controller", func() {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/users" {
-					w.Header().Set("Location", "/api/v2.0/users/5")
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/retentions" {
+					w.Header().Set("Location", "/api/v2.0/retentions/17")
 					w.WriteHeader(http.StatusCreated)
 					return
 				}
@@ -65,22 +65,57 @@ var _ = Describe("User Controller", func() {
 
 			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
-			Expect(createPasswordSecret(ctx, k8sClient, "default", userSecretName, "password", "UserPassword1!")).To(Succeed())
 
-			By("creating the custom resource for the Kind User")
-			resource := &harborv1alpha1.User{
+			project := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "demo",
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: connName,
+					},
+					Name:   "demo",
+					Public: true,
+				},
+			}
+			Expect(k8sClient.Create(ctx, project)).To(Succeed())
+			project.Status.HarborProjectID = 42
+			Expect(k8sClient.Status().Update(ctx, project)).To(Succeed())
+
+			resource := &harborv1alpha1.RetentionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: "default",
 				},
-				Spec: harborv1alpha1.UserSpec{
+				Spec: harborv1alpha1.RetentionPolicySpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
 						HarborConnectionRef: connName,
 					},
-					Email: "user@example.com",
-					PasswordSecretRef: corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: userSecretName},
-						Key:                  "password",
+					ProjectRef: &harborv1alpha1.ProjectReference{Name: "demo"},
+					Algorithm:  "or",
+					Trigger: &harborv1alpha1.RetentionTrigger{
+						Kind: "Schedule",
+						Settings: map[string]apiextensionsv1.JSON{
+							"cron": {Raw: []byte(`"0 0 0 * * *"`)},
+						},
+					},
+					Rules: []harborv1alpha1.RetentionRule{
+						{
+							Action:   "retain",
+							Template: "latestPushedK",
+							Params: map[string]apiextensionsv1.JSON{
+								"latestPushedK": {Raw: []byte(`{"value":3}`)},
+							},
+							TagSelectors: []harborv1alpha1.RetentionSelector{
+								{Kind: "doublestar", Decoration: "matches", Pattern: "**"},
+							},
+							ScopeSelectors: map[string][]harborv1alpha1.RetentionSelector{
+								"repository": {
+									{Kind: "doublestar", Decoration: "repoMatches", Pattern: "**"},
+								},
+							},
+						},
 					},
 				},
 			}
@@ -89,25 +124,25 @@ var _ = Describe("User Controller", func() {
 
 		AfterEach(func() {
 			server.Close()
-			resource := &harborv1alpha1.User{}
+			resource := &harborv1alpha1.RetentionPolicy{}
 			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
-
-			By("Cleanup the specific resource instance User")
 			_ = k8sClient.Delete(ctx, resource)
+
+			project := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)
+			_ = k8sClient.Delete(ctx, project)
 
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
 			_ = k8sClient.Delete(ctx, conn)
+
 			secret := &corev1.Secret{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
-			secret = &corev1.Secret{}
-			_ = k8sClient.Get(ctx, types.NamespacedName{Name: userSecretName, Namespace: "default"}, secret)
-			_ = k8sClient.Delete(ctx, secret)
 		})
+
 		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &UserReconciler{
+			controllerReconciler := &RetentionPolicyReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
@@ -117,8 +152,12 @@ var _ = Describe("User Controller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(k8sClient.Get(ctx, typeNamespacedName, user)).To(Succeed())
-			Expect(user.Status.HarborUserID).To(Equal(5))
+			out := &harborv1alpha1.RetentionPolicy{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
+			Expect(out.Status.HarborRetentionID).To(Equal(17))
+			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 		})
 	})
 })

@@ -35,6 +35,8 @@ import (
 var _ = Describe("Configuration Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
+		const adminSecretName = "harbor-admin-config"
+		const connName = "harbor-conn-config"
 
 		ctx := context.Background()
 
@@ -68,8 +70,8 @@ var _ = Describe("Configuration Controller", func() {
 				}
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", "harbor-admin", "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", "harbor-conn", server.URL, "admin", "harbor-admin", "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
 
 			By("creating the custom resource for the Kind Configuration")
 			resource := &harborv1alpha1.Configuration{
@@ -79,7 +81,7 @@ var _ = Describe("Configuration Controller", func() {
 				},
 				Spec: harborv1alpha1.ConfigurationSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: "harbor-conn",
+						HarborConnectionRef: connName,
 					},
 					Settings: map[string]apiextensionsv1.JSON{
 						"robot_name_prefix": {Raw: []byte(`"robot+"`)},
@@ -98,10 +100,10 @@ var _ = Describe("Configuration Controller", func() {
 			_ = k8sClient.Delete(ctx, resource)
 
 			conn := &harborv1alpha1.HarborConnection{}
-			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
 			_ = k8sClient.Delete(ctx, conn)
 			secret := &corev1.Secret{}
-			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin", Namespace: "default"}, secret)
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
 		})
 

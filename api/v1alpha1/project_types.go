@@ -8,6 +8,11 @@ import (
 type ProjectSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing project in Harbor with the same name.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Name is the name of the project.
 	// It is recommended to leave this field empty so that the operator defaults it
 	// to the custom resource’s metadata name.

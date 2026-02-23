@@ -12,6 +12,7 @@ metadata:
   name: ci
 spec:
   harborConnectionRef: "my-harbor"
+  allowTakeover: false
   level: project
   permissions:
   - kind: project
@@ -48,6 +49,9 @@ spec:
   Reference to a secret where the operator writes the generated robot secret.
   If omitted, the operator creates `<metadata.name>-secret` with key `secret`.
 
+- **spec.allowTakeover** (bool, optional)
+  If `true`, the operator will adopt an existing Harbor robot with the same name.
+
 Robot secrets are rotated automatically once Harbor reports that the robot
 credential has expired (based on `expires_at`). The operator then refreshes the
 secret and stores it in the referenced Secret.
@@ -58,6 +62,7 @@ secret and stores it in the referenced Secret.
 
   - Creates the robot account with the requested permissions.
   - Uses `spec.name` or defaults to `metadata.name`.
+  - If `allowTakeover` is `true` and a robot already exists, it is adopted.
 
 - **Update**
 

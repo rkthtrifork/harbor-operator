@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -13,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -49,36 +50,22 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	if conn.Spec.Credentials == nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name))
-	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			if cr.Status.HarborRetentionID != 0 {
-				if err := hc.DeleteRetention(ctx, cr.Status.HarborRetentionID); err != nil {
-					return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-				}
+		if cr.Status.HarborRetentionID != 0 {
+			if err := hc.DeleteRetention(ctx, cr.Status.HarborRetentionID); err != nil {
+				return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 			}
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			_ = r.Update(ctx, &cr)
 		}
+		_ = removeFinalizer(ctx, r.Client, &cr)
 		return ctrl.Result{}, nil
 	}
 
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		_ = r.Update(ctx, &cr)
-	}
+	_ = ensureFinalizer(ctx, r.Client, &cr)
 
 	if cr.Spec.Trigger == nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("spec.trigger is required"))
@@ -104,6 +91,18 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if cr.Status.HarborRetentionID == 0 {
 		newID, err := hc.CreateRetention(ctx, policy)
 		if err != nil {
+			if isRetentionAlreadyBound(err) {
+				existingID, lookupErr := r.findExistingRetentionID(ctx, hc, crWithScope.Spec.Scope)
+				if lookupErr != nil {
+					return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, lookupErr)
+				}
+				cr.Status.HarborRetentionID = existingID
+				if err := r.Status().Update(ctx, &cr); err != nil {
+					return ctrl.Result{}, err
+				}
+				r.logger.Info("Adopted existing retention policy", "ID", existingID)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborRetentionID = newID
@@ -143,10 +142,11 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func toRetentionPolicy(cr harborv1alpha1.RetentionPolicy) (harborclient.RetentionPolicy, error) {
 	rules := make([]harborclient.RetentionRule, 0, len(cr.Spec.Rules))
 	for i, rule := range cr.Spec.Rules {
-		params, err := jsonMapToObjectMap(rule.Params)
+		params, err := jsonMapToAny(rule.Params)
 		if err != nil {
 			return harborclient.RetentionPolicy{}, fmt.Errorf("invalid params for rule %d: %w", i, err)
 		}
+		params = normalizeRetentionParamsMap(params)
 		rules = append(rules, harborclient.RetentionRule{
 			Priority:       i + 1,
 			Disabled:       rule.Disabled,
@@ -222,6 +222,15 @@ func toRetentionScopeSelectors(in map[string][]harborv1alpha1.RetentionSelector)
 	return out
 }
 
+func isRetentionAlreadyBound(err error) bool {
+	if he, ok := err.(*harborclient.HTTPError); ok {
+		if he.StatusCode == 400 && strings.Contains(he.Message, "already has retention policy") {
+			return true
+		}
+	}
+	return false
+}
+
 func jsonMapToAny(in map[string]apiextensionsv1.JSON) (map[string]any, error) {
 	if in == nil {
 		return nil, nil
@@ -232,24 +241,6 @@ func jsonMapToAny(in map[string]apiextensionsv1.JSON) (map[string]any, error) {
 			continue
 		}
 		var value any
-		if err := json.Unmarshal(raw.Raw, &value); err != nil {
-			return nil, fmt.Errorf("invalid json for %s: %w", key, err)
-		}
-		out[key] = value
-	}
-	return out, nil
-}
-
-func jsonMapToObjectMap(in map[string]apiextensionsv1.JSON) (map[string]map[string]any, error) {
-	if in == nil {
-		return nil, nil
-	}
-	out := map[string]map[string]any{}
-	for key, raw := range in {
-		if len(raw.Raw) == 0 {
-			continue
-		}
-		var value map[string]any
 		if err := json.Unmarshal(raw.Raw, &value); err != nil {
 			return nil, fmt.Errorf("invalid json for %s: %w", key, err)
 		}
@@ -277,7 +268,36 @@ func normalizeRetentionPolicy(in harborclient.RetentionPolicy) harborclient.Rete
 
 func normalizeRetentionRule(in harborclient.RetentionRule) harborclient.RetentionRule {
 	in.ID = 0
+	in.Params = normalizeRetentionParamsAny(in.Params)
 	return in
+}
+
+func normalizeRetentionParamsMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := map[string]any{}
+	for key, value := range in {
+		if nested, ok := value.(map[string]any); ok && len(nested) == 1 {
+			if v, ok := nested["value"]; ok {
+				out[key] = v
+				continue
+			}
+		}
+		out[key] = value
+	}
+	return out
+}
+
+func normalizeRetentionParamsAny(in any) any {
+	if in == nil {
+		return nil
+	}
+	m, ok := in.(map[string]any)
+	if !ok {
+		return in
+	}
+	return normalizeRetentionParamsMap(m)
 }
 
 func (r *RetentionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -285,6 +305,24 @@ func (r *RetentionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&harborv1alpha1.RetentionPolicy{}).
 		Named("retentionpolicy").
 		Complete(r)
+}
+
+func (r *RetentionPolicyReconciler) findExistingRetentionID(ctx context.Context, hc *harborclient.Client, scope *harborv1alpha1.RetentionScope) (int, error) {
+	if scope == nil || scope.Level != "project" || scope.Ref == 0 {
+		return 0, fmt.Errorf("cannot resolve existing retention policy without project scope")
+	}
+	project, err := hc.GetProjectByID(ctx, scope.Ref)
+	if err != nil {
+		return 0, err
+	}
+	if project.Metadata.RetentionID == "" {
+		return 0, fmt.Errorf("project %d has no retention_id metadata", scope.Ref)
+	}
+	id, err := strconv.Atoi(project.Metadata.RetentionID)
+	if err != nil {
+		return 0, fmt.Errorf("parse retention_id %q: %w", project.Metadata.RetentionID, err)
+	}
+	return id, nil
 }
 
 func resolveRetentionScope(ctx context.Context, c client.Client, cr *harborv1alpha1.RetentionPolicy) (*harborv1alpha1.RetentionScope, error) {

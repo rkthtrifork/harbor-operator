@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -49,37 +48,22 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Resolve Harbor connection + typed client
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	// Handle deletion
 	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			if err := r.deleteProject(ctx, hc, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			if err := r.Update(ctx, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
+		if err := r.deleteProject(ctx, hc, &cr); err != nil {
+			return ctrl.Result{}, err
 		}
+		_ = removeFinalizer(ctx, r.Client, &cr)
 		return ctrl.Result{}, nil
 	}
 
 	// Ensure finalizer
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		if err := r.Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
+	_ = ensureFinalizer(ctx, r.Client, &cr)
 
 	// Defaults & adoption
 	if cr.Spec.Name == "" {
@@ -220,20 +204,15 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient
 
 	var registryID *int
 	if rn := cr.Spec.RegistryName; rn != "" {
-		regs, err := hc.ListRegistries(ctx)
+		reg, err := hc.FindRegistryByName(ctx, rn)
 		if err != nil {
 			return harborclient.CreateProjectRequest{}, err
 		}
-		for _, reg := range regs {
-			if strings.EqualFold(reg.Name, rn) {
-				registryID = &reg.ID
-				break
-			}
-		}
-		if registryID == nil {
+		if reg == nil {
 			return harborclient.CreateProjectRequest{},
 				fmt.Errorf("registry %q not found in Harbor", rn)
 		}
+		registryID = &reg.ID
 	}
 
 	return harborclient.CreateProjectRequest{

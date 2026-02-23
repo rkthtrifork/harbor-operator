@@ -8,6 +8,11 @@ import (
 type RegistrySpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing registry in Harbor with the same name.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Type of the registry, e.g., "github-ghcr".
 	// +kubebuilder:validation:Enum=github-ghcr;ali-acr;aws-ecr;azure-acr;docker-hub;docker-registry;google-gcr;harbor;huawei-SWR;jfrog-artifactory;tencent-tcr;volcengine-cr
 	Type string `json:"type"`

@@ -43,11 +43,6 @@ spec:
               algorithm:
                 description: Algorithm defines the retention algorithm, e.g. "or".
                 type: string
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing object in Harbor with the same name/ID.
-                type: boolean
               driftDetectionInterval:
                 description: |-
                   DriftDetectionInterval is the interval at which the operator will check
@@ -195,7 +190,6 @@ spec:
                         observedGeneration represents the .metadata.generation that the condition was set based upon.
                         For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
                         with respect to the current state of the instance.
-                      format: int64
                       minimum: 0
                       type: integer
                     reason:
@@ -236,7 +230,6 @@ spec:
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   by the controller.
-                format: int64
                 type: integer
             type: object
         type: object

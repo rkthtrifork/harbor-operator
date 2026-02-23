@@ -88,7 +88,7 @@ type RetentionRule struct {
 	Disabled       bool                           `json:"disabled,omitempty"`
 	Action         string                         `json:"action,omitempty"`
 	Template       string                         `json:"template,omitempty"`
-	Params         map[string]map[string]any      `json:"params,omitempty"`
+	Params         any                            `json:"params,omitempty"`
 	TagSelectors   []RetentionSelector            `json:"tag_selectors,omitempty"`
 	ScopeSelectors map[string][]RetentionSelector `json:"scope_selectors,omitempty"`
 }

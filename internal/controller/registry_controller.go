@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -47,33 +46,22 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Harbor client
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	// Deletion
 	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			if err := r.deleteRegistry(ctx, hc, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			_ = r.Update(ctx, &cr)
+		if err := r.deleteRegistry(ctx, hc, &cr); err != nil {
+			return ctrl.Result{}, err
 		}
+		_ = removeFinalizer(ctx, r.Client, &cr)
 		return ctrl.Result{}, nil
 	}
 
 	// Finalizer
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		_ = r.Update(ctx, &cr)
-	}
+	_ = ensureFinalizer(ctx, r.Client, &cr)
 
 	// Defaults & adoption
 	if cr.Spec.Name == "" {
@@ -149,15 +137,13 @@ func (r *RegistryReconciler) deleteRegistry(ctx context.Context, hc *harborclien
 }
 
 func (r *RegistryReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Registry) (bool, error) {
-	regs, err := hc.ListRegistries(ctx)
+	reg, err := hc.FindRegistryByName(ctx, cr.Spec.Name)
 	if err != nil {
 		return false, err
 	}
-	for _, rg := range regs {
-		if strings.EqualFold(rg.Name, cr.Spec.Name) {
-			cr.Status.HarborRegistryID = rg.ID
-			return true, r.Status().Update(ctx, cr)
-		}
+	if reg != nil {
+		cr.Status.HarborRegistryID = reg.ID
+		return true, r.Status().Update(ctx, cr)
 	}
 	return false, nil
 }
