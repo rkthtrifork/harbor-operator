@@ -92,7 +92,6 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*h
 
 	// decode
 	if out != nil {
-		defer resp.Body.Close()
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 			return nil, err
 		}

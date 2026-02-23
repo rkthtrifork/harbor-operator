@@ -54,21 +54,19 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Deletion
-	if !cr.DeletionTimestamp.IsZero() {
-		if err := r.deleteUser(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteUser(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Finalizer
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Defaults & adoption
-	if cr.Spec.Username == "" {
-		cr.Spec.Username = cr.Name
-	}
+	cr.Spec.Username = defaultString(cr.Spec.Username, cr.Name)
 
 	if cr.Status.HarborUserID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
@@ -92,8 +90,9 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborUserID = id
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "User created")
-		_ = r.Status().Update(ctx, &cr)
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "User created"); err != nil {
+			return ctrl.Result{}, err
+		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
 
@@ -101,8 +100,9 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborUserID = 0
-			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "User not found in Harbor")
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "User not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -113,10 +113,8 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 	}
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "User reconciled"); changed {
-		if err := r.Status().Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "User reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

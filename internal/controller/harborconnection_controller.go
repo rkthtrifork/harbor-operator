@@ -64,8 +64,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 		}
 		conn.Status.Authenticated = false
-		markReady(&conn.Status.HarborStatusBase, conn.Generation, "Reachable", "Harbor reachable without credentials")
-		if err := r.Status().Update(ctx, &conn); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, "Reachable", "Harbor reachable without credentials"); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Harbor reachable without credentials")
@@ -85,8 +84,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	conn.Status.Authenticated = true
-	markReady(&conn.Status.HarborStatusBase, conn.Generation, "Authenticated", "Successfully authenticated with Harbor API")
-	if err := r.Status().Update(ctx, &conn); err != nil {
+	if err := setReadyStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, "Authenticated", "Successfully authenticated with Harbor API"); err != nil {
 		return ctrl.Result{}, err
 	}
 

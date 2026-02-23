@@ -54,21 +54,19 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Handle deletion
-	if !cr.DeletionTimestamp.IsZero() {
-		if err := r.deleteProject(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteProject(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Ensure finalizer
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Defaults & adoption
-	if cr.Spec.Name == "" {
-		cr.Spec.Name = cr.Name
-	}
+	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
 	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
@@ -93,8 +91,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborProjectID = newID
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Project created")
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Project created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created project", "ID", newID)
@@ -107,8 +104,9 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if harborclient.IsNotFound(err) {
 			// It was deleted out-of-band → clear status and requeue immediately
 			cr.Status.HarborProjectID = 0
-			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Project not found in Harbor")
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Project not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -122,10 +120,8 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		r.logger.Info("Updated project", "ID", current.ProjectID)
 	}
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Project reconciled"); changed {
-		if err := r.Status().Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Project reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

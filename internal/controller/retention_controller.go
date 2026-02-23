@@ -55,17 +55,21 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if !cr.DeletionTimestamp.IsZero() {
-		if cr.Status.HarborRetentionID != 0 {
-			if err := hc.DeleteRetention(ctx, cr.Status.HarborRetentionID); err != nil {
-				return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-			}
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		if cr.Status.HarborRetentionID == 0 {
+			return nil
 		}
-		_ = removeFinalizer(ctx, r.Client, &cr)
+		return hc.DeleteRetention(ctx, cr.Status.HarborRetentionID)
+	}); done {
+		if err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		return ctrl.Result{}, nil
 	}
 
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if cr.Spec.Trigger == nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("spec.trigger is required"))
@@ -106,8 +110,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborRetentionID = newID
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Retention policy created")
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Retention policy created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -117,8 +120,9 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRetentionID = 0
-			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Retention policy not found in Harbor")
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Retention policy not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -131,10 +135,8 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.logger.Info("Updated retention policy", "ID", cr.Status.HarborRetentionID)
 	}
 
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Retention policy reconciled"); changed {
-		if err := r.Status().Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Retention policy reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

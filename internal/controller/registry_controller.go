@@ -52,21 +52,19 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Deletion
-	if !cr.DeletionTimestamp.IsZero() {
-		if err := r.deleteRegistry(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteRegistry(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Finalizer
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Defaults & adoption
-	if cr.Spec.Name == "" {
-		cr.Spec.Name = cr.Name
-	}
+	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
 	if cr.Status.HarborRegistryID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
@@ -93,8 +91,9 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		cr.Status.HarborRegistryID = id
 		cr.Status.CredentialHash = credHash
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Registry created")
-		_ = r.Status().Update(ctx, &cr)
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Registry created"); err != nil {
+			return ctrl.Result{}, err
+		}
 		r.logger.Info("Created registry", "ID", id)
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
@@ -103,21 +102,27 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRegistryID = 0
-			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Registry not found in Harbor")
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Registry not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
+	statusChanged := false
 	if registryNeedsUpdate(cr, *current, credHash, caCert) {
 		if err := hc.UpdateRegistry(ctx, current.ID, updateReq); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
-		cr.Status.CredentialHash = credHash
+		if credHash != "" && credHash != cr.Status.CredentialHash {
+			cr.Status.CredentialHash = credHash
+			statusChanged = true
+		}
 		r.logger.Info("Updated registry", "ID", current.ID)
 	}
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Registry reconciled"); changed {
+	condChanged := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Registry reconciled")
+	if statusChanged || condChanged {
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}

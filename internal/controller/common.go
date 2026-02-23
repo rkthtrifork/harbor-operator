@@ -95,3 +95,25 @@ func returnWithDriftDetection(obj DriftDetectable) (reconcile.Result, error) {
 func hashParts(parts ...string) string {
 	return hashSecret(strings.Join(parts, "\n"))
 }
+
+func defaultString(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object, deleteFn func() error) (bool, error) {
+	if obj.GetDeletionTimestamp().IsZero() {
+		return false, nil
+	}
+	if deleteFn != nil {
+		if err := deleteFn(); err != nil {
+			return true, err
+		}
+	}
+	if err := removeFinalizer(ctx, c, obj); err != nil {
+		return true, err
+	}
+	return true, nil
+}

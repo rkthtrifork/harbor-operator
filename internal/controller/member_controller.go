@@ -59,16 +59,16 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Handle deletion with finalizer pattern
-	if !member.DeletionTimestamp.IsZero() {
-		if err := r.ensureMemberAbsent(ctx, hc, &member); err != nil {
-			return ctrl.Result{}, err
-		}
-		_ = removeFinalizer(ctx, r.Client, &member)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &member, func() error {
+		return r.ensureMemberAbsent(ctx, hc, &member)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Ensure finalizer is present
-	_ = ensureFinalizer(ctx, r.Client, &member)
+	if err := ensureFinalizer(ctx, r.Client, &member); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Convert role name to Harbor role ID.
 	roleID, err := convertRoleNameToID(member.Spec.Role)
@@ -85,10 +85,8 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
-	if changed := markReady(&member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled"); changed {
-		if err := r.Status().Update(ctx, &member); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := setReadyStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return returnWithDriftDetection(&member.Spec.HarborSpecBase)

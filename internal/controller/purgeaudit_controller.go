@@ -49,12 +49,13 @@ func (r *PurgeAuditScheduleReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if !cr.DeletionTimestamp.IsZero() {
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, nil); done {
+		return ctrl.Result{}, err
 	}
 
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	params := map[string]any{}
 	if cr.Spec.Parameters.AuditRetentionHour != 0 {
@@ -90,22 +91,24 @@ func (r *PurgeAuditScheduleReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.LastAppliedScheduleHash = hash
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Purge audit schedule created")
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Purge audit schedule created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
 
+	statusChanged := false
 	if cr.Status.LastAppliedScheduleHash != hash {
 		if err := hc.UpdatePurgeSchedule(ctx, sched); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.LastAppliedScheduleHash = hash
+		statusChanged = true
 		r.logger.Info("Updated purge audit schedule")
 	}
 
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Purge audit schedule reconciled"); changed {
+	condChanged := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Purge audit schedule reconciled")
+	if statusChanged || condChanged {
 		if err := r.Status().Update(ctx, &cr); err != nil {
 			return ctrl.Result{}, err
 		}

@@ -46,19 +46,17 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if !cr.DeletionTimestamp.IsZero() {
-		if err := r.deleteRobot(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteRobot(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
-	_ = ensureFinalizer(ctx, r.Client, &cr)
-
-	if cr.Spec.Name == "" {
-		cr.Spec.Name = cr.Name
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
 	}
+
+	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
 	if cr.Status.ObservedGeneration != cr.Generation {
 		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
@@ -104,8 +102,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			now := metav1.Now()
 			cr.Status.LastRotatedAt = &now
 		}
-		markReady(&cr.Status.HarborStatusBase, cr.Generation, "Created", "Robot created")
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Robot created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created robot", "ID", created.ID)
@@ -116,8 +113,9 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborRobotID = 0
-			markReconciling(&cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Robot not found in Harbor")
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Robot not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)

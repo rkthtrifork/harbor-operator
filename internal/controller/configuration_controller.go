@@ -50,12 +50,13 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if !cr.DeletionTimestamp.IsZero() {
-		_ = removeFinalizer(ctx, r.Client, &cr)
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, nil); done {
+		return ctrl.Result{}, err
 	}
 
-	_ = ensureFinalizer(ctx, r.Client, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	desired, err := r.buildDesiredSettings(ctx, &cr)
 	if err != nil {
@@ -63,10 +64,8 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	if len(desired) == 0 {
 		r.logger.V(1).Info("No configuration settings specified; nothing to apply")
-		if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Noop", "No configuration changes to apply"); changed {
-			if err := r.Status().Update(ctx, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Noop", "No configuration changes to apply"); err != nil {
+			return ctrl.Result{}, err
 		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
@@ -87,10 +86,8 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.logger.Info("Updated Harbor configurations")
 	}
 
-	if changed := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Configuration reconciled"); changed {
-		if err := r.Status().Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Configuration reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
