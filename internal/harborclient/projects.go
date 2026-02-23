@@ -44,8 +44,8 @@ type CreateProjectRequest struct {
 	ProjectName  string          `json:"project_name,omitempty"`
 	Public       bool            `json:"public,omitempty"`
 	Owner        string          `json:"owner,omitempty"`
-	Metadata     ProjectMetadata `json:"metadata,omitempty"`
-	CVEAllowlist CVEAllowlist    `json:"cve_allowlist,omitempty"`
+	Metadata     ProjectMetadata `json:"metadata"`
+	CVEAllowlist CVEAllowlist    `json:"cve_allowlist"`
 	StorageLimit *int            `json:"storage_limit,omitempty"`
 	RegistryID   *int            `json:"registry_id,omitempty"`
 }

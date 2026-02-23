@@ -3,10 +3,11 @@ package harborclient
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type Schedule struct {
-	Schedule   ScheduleObj    `json:"schedule,omitempty"`
+	Schedule   ScheduleObj    `json:"schedule"`
 	Parameters map[string]any `json:"parameters,omitempty"`
 }
 
@@ -68,10 +69,21 @@ func (c *Client) UpdateRetention(ctx context.Context, id int, in RetentionPolicy
 
 func (c *Client) DeleteRetention(ctx context.Context, id int) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/retentions/%d", id), nil, nil)
-	if IsNotFound(err) {
+	if IsNotFound(err) || isRetentionGone(err) {
 		return nil
 	}
 	return err
+}
+
+func isRetentionGone(err error) bool {
+	if err == nil {
+		return false
+	}
+	if he, ok := err.(*HTTPError); ok && he.StatusCode == 400 {
+		// Harbor sometimes returns 400 for missing retention policies.
+		return strings.Contains(he.Message, "no such Retention policy")
+	}
+	return false
 }
 
 type RetentionPolicy struct {
