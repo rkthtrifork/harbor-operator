@@ -230,6 +230,41 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Member")
 		os.Exit(1)
 	}
+	if err = (&controller.RobotReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Robot")
+		os.Exit(1)
+	}
+	if err = (&controller.ConfigurationReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Configuration")
+		os.Exit(1)
+	}
+	if err = (&controller.GCScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "GCSchedule")
+		os.Exit(1)
+	}
+	if err = (&controller.PurgeAuditScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PurgeAuditSchedule")
+		os.Exit(1)
+	}
+	if err = (&controller.RetentionPolicyReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "RetentionPolicy")
+		os.Exit(1)
+	}
 	if err = (&controller.HarborConnectionReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

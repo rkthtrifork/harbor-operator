@@ -18,10 +18,12 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -33,6 +35,9 @@ import (
 var _ = Describe("User Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
+		const adminSecretName = "harbor-admin-user"
+		const connName = "harbor-conn-user"
+		const userSecretName = "user-password-user"
 
 		ctx := context.Background()
 
@@ -41,30 +46,64 @@ var _ = Describe("User Controller", func() {
 			Namespace: "default", // TODO(user):Modify as needed
 		}
 		user := &harborv1alpha1.User{}
+		var server *httptest.Server
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind User")
-			err := k8sClient.Get(ctx, typeNamespacedName, user)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &harborv1alpha1.User{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != "admin" || pass != "password" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/users" {
+					w.Header().Set("Location", "/api/v2.0/users/5")
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, "default", userSecretName, "password", "UserPassword1!")).To(Succeed())
+
+			By("creating the custom resource for the Kind User")
+			resource := &harborv1alpha1.User{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.UserSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: connName,
+					},
+					Email: "user@example.com",
+					PasswordSecretRef: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: userSecretName},
+						Key:                  "password",
+					},
+				},
 			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
+			server.Close()
 			resource := &harborv1alpha1.User{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
 			By("Cleanup the specific resource instance User")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
+			secret = &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: userSecretName, Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -77,8 +116,9 @@ var _ = Describe("User Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, user)).To(Succeed())
+			Expect(user.Status.HarborUserID).To(Equal(5))
 		})
 	})
 })

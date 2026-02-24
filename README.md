@@ -12,6 +12,10 @@
 Instead of clicking around in the Harbor UI, you describe your desired state in YAML.
 The operator then reconciles that state with your Harbor instance via its API.
 
+> [!NOTE]
+> You may see `kubectl` warnings like `unrecognized format "int64"` when applying CRDs.
+> These are client-side validation warnings from `kubectl` and are safe to ignore.
+
 ## Concepts
 
 - **HarborConnection**  
@@ -29,6 +33,12 @@ The operator then reconciles that state with your Harbor instance via its API.
 
 - **Member**  
   Represents membership of a user or group in a Harbor project with a given role.
+
+- **Robot**  
+  Represents a Harbor robot account (system or project level).
+
+- **Configuration**  
+  Represents Harbor system configuration (OIDC, robot defaults, etc.).
 
 ## Getting Started
 

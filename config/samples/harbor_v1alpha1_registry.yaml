@@ -12,3 +12,16 @@ spec:
   # name: registry-sample
   type: github-ghcr
   url: https://ghcr.io
+  # Optional credentials
+  # credential:
+  #   type: basic
+  #   accessKeySecretRef:
+  #     name: ghcr-credentials
+  #     key: access_key
+  #   accessSecretSecretRef:
+  #     name: ghcr-credentials
+  #     key: access_secret
+  # Optional custom CA certificate
+  # caCertificateRef:
+  #   name: ghcr-ca
+  #   key: ca.crt

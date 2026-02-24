@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -42,43 +41,36 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Harbor client
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	// Deletion
-	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			if err := r.deleteUser(ctx, hc, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			_ = r.Update(ctx, &cr)
-		}
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteUser(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Finalizer
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		_ = r.Update(ctx, &cr)
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Defaults & adoption
-	if cr.Spec.Username == "" {
-		cr.Spec.Username = cr.Name
-	}
+	cr.Spec.Username = defaultString(cr.Spec.Username, cr.Name)
 
 	if cr.Status.HarborUserID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
 			r.logger.Info("Adopted user", "ID", cr.Status.HarborUserID)
 		}
@@ -87,7 +79,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Desired payload
 	userPassword, err := r.getUserPassword(ctx, r.Client, cr)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	createReq := r.buildCreateReq(cr, userPassword)
 
@@ -95,10 +87,12 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if cr.Status.HarborUserID == 0 {
 		id, err := hc.CreateUser(ctx, createReq)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborUserID = id
-		_ = r.Status().Update(ctx, &cr)
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "User created"); err != nil {
+			return ctrl.Result{}, err
+		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 	}
 
@@ -106,16 +100,21 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborUserID = 0
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "User not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	if userNeedsUpdate(createReq, current) {
 		if err := hc.UpdateUser(ctx, current.UserID, createReq); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
+	}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "User reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }

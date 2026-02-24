@@ -8,11 +8,6 @@ type HarborSpecBase struct {
 	// +kubebuilder:validation:Required
 	HarborConnectionRef string `json:"harborConnectionRef"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing object in Harbor with the same name/ID.
-	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
-
 	// DriftDetectionInterval is the interval at which the operator will check
 	// for drift. A value of 0 (or omitted) disables periodic drift detection.
 	// +optional
@@ -28,12 +23,24 @@ type HarborSpecBase struct {
 type SecretReference struct {
 	// Name of the Secret.
 	Name string `json:"name"`
-	// Key inside the Secret data. Defaults to "access_secret".
+	// Key inside the Secret data. When omitted, the controller using this
+	// reference will apply a sensible default.
 	// +optional
 	Key string `json:"key,omitempty"`
 	// Namespace of the Secret. Omit to use the HarborConnection namespace.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
+}
+
+// HarborStatusBase holds common status fields for Harbor resources.
+type HarborStatusBase struct {
+	// ObservedGeneration is the most recent generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions represent the latest available observations of the resource's state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // GetDriftDetectionInterval returns the drift detection interval.

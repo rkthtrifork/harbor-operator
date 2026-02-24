@@ -7,10 +7,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -44,54 +45,36 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	if member.Status.ObservedGeneration != member.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Resolve Harbor connection + typed client
-	conn, err := getHarborConnection(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
 		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", member.Spec.HarborConnectionRef)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
-
-	if conn.Spec.Credentials == nil {
-		err := fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
-		r.logger.Error(err, "Cannot manage Harbor members without credentials")
-		return ctrl.Result{}, err
-	}
-
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		r.logger.Error(err, "Failed to get Harbor authentication credentials")
-		return ctrl.Result{}, err
-	}
-
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	// Handle deletion with finalizer pattern
-	if !member.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&member, finalizerName) {
-			if err := r.ensureMemberAbsent(ctx, hc, &member); err != nil {
-				return ctrl.Result{}, err
-			}
-			controllerutil.RemoveFinalizer(&member, finalizerName)
-			if err := r.Update(ctx, &member); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &member, func() error {
+		return r.ensureMemberAbsent(ctx, hc, &member)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Ensure finalizer is present
-	if !controllerutil.ContainsFinalizer(&member, finalizerName) {
-		controllerutil.AddFinalizer(&member, finalizerName)
-		if err := r.Update(ctx, &member); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := ensureFinalizer(ctx, r.Client, &member); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Convert role name to Harbor role ID.
 	roleID, err := convertRoleNameToID(member.Spec.Role)
 	if err != nil {
 		r.logger.Error(err, "Invalid role", "Role", member.Spec.Role)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
 
 	// Ensure desired member state in Harbor (create/update as needed).
@@ -99,6 +82,10 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.logger.Error(err, "Failed to ensure member in Harbor",
 			"ProjectRef", member.Spec.ProjectRef,
 			"RoleID", roleID)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
+	}
+
+	if err := setReadyStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -163,6 +150,14 @@ func (r *MemberReconciler) ensureMemberPresent(
 				"RoleID", roleID)
 		}
 		return nil
+	}
+
+	// Member exists. If takeover is not allowed and this CR was not previously ready, refuse to adopt.
+	if !member.Spec.AllowTakeover {
+		cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
+		if cond == nil || cond.Status != metav1.ConditionTrue {
+			return fmt.Errorf("member already exists in Harbor and allowTakeover is false")
+		}
 	}
 
 	// Member exists → check if role matches; update if needed.

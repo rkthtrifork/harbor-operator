@@ -31,13 +31,21 @@ type Credentials struct {
 
 // HarborConnectionStatus defines the observed state of HarborConnection.
 type HarborConnectionStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	HarborStatusBase `json:",inline"`
+
+	// Authenticated indicates whether the connection was successfully authenticated.
+	Authenticated bool `json:"authenticated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=hc
+// +kubebuilder:printcolumn:name="BaseURL",type=string,JSONPath=`.spec.baseURL`
+// +kubebuilder:printcolumn:name="Auth",type=boolean,JSONPath=`.status.authenticated`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Message",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Ready")].message`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // HarborConnection is the Schema for the harborconnections API.
 type HarborConnection struct {

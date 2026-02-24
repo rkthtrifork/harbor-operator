@@ -1,0 +1,314 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: robots.harbor.harbor-operator.io
+spec:
+  group: harbor.harbor-operator.io
+  names:
+    kind: Robot
+    listKind: RobotList
+    plural: robots
+    singular: robot
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.name
+      name: Name
+      type: string
+    - jsonPath: .spec.level
+      name: Level
+      type: string
+    - jsonPath: .status.lastRotatedAt
+      name: LastRotated
+      type: date
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Message
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Robot is the Schema for the robots API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RobotSpec defines the desired state of Robot.
+            properties:
+              allowTakeover:
+                description: |-
+                  AllowTakeover indicates whether the operator is allowed to adopt an
+                  existing robot in Harbor with the same name.
+                type: boolean
+              description:
+                description: Description of the robot account.
+                type: string
+              disable:
+                description: Disable indicates whether the robot account is disabled.
+                type: boolean
+              driftDetectionInterval:
+                description: |-
+                  DriftDetectionInterval is the interval at which the operator will check
+                  for drift. A value of 0 (or omitted) disables periodic drift detection.
+                type: string
+              duration:
+                default: -1
+                description: |-
+                  Duration is the token duration in days. Use -1 for never expires.
+                  If omitted, it defaults to -1.
+                type: integer
+              harborConnectionRef:
+                description: HarborConnectionRef references the HarborConnection resource
+                  to use.
+                type: string
+              level:
+                description: |-
+                  Level is the scope of the robot account.
+                  Allowed values: "system", "project".
+                enum:
+                - system
+                - project
+                type: string
+              name:
+                description: |-
+                  Name is the robot account name (without Harbor's prefix).
+                  Defaults to metadata.name when omitted.
+                type: string
+              permissions:
+                description: Permissions define the access granted to the robot account.
+                items:
+                  description: RobotPermission defines a permission block for a robot
+                    account.
+                  properties:
+                    access:
+                      description: Access lists the access rules for this permission.
+                      items:
+                        description: RobotAccess defines a single access rule for
+                          a robot account.
+                        properties:
+                          action:
+                            description: Action defines the action to permit.
+                            enum:
+                            - '*'
+                            - pull
+                            - push
+                            - create
+                            - read
+                            - update
+                            - delete
+                            - list
+                            - operate
+                            - scanner-pull
+                            - stop
+                            type: string
+                          effect:
+                            description: Effect defines the effect of the access rule,
+                              typically "allow".
+                            type: string
+                          resource:
+                            description: Resource defines the resource to grant access
+                              to.
+                            enum:
+                            - '*'
+                            - configuration
+                            - label
+                            - log
+                            - ldap-user
+                            - member
+                            - metadata
+                            - quota
+                            - repository
+                            - tag-retention
+                            - immutable-tag
+                            - robot
+                            - notification-policy
+                            - scan
+                            - sbom
+                            - scanner
+                            - artifact
+                            - tag
+                            - accessory
+                            - artifact-addition
+                            - artifact-label
+                            - preheat-policy
+                            - preheat-instance
+                            - audit-log
+                            - catalog
+                            - project
+                            - user
+                            - user-group
+                            - registry
+                            - replication
+                            - distribution
+                            - garbage-collection
+                            - replication-adapter
+                            - replication-policy
+                            - scan-all
+                            - system-volumes
+                            - purge-audit
+                            - export-cve
+                            - jobservice-monitor
+                            - security-hub
+                            type: string
+                        required:
+                        - action
+                        - resource
+                        type: object
+                      minItems: 1
+                      type: array
+                    kind:
+                      description: Kind defines the permission scope, such as "project"
+                        or "system".
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: Namespace is the Harbor project name for project-scoped
+                        permissions.
+                      type: string
+                  required:
+                  - access
+                  - kind
+                  type: object
+                minItems: 1
+                type: array
+              reconcileNonce:
+                description: ReconcileNonce forces an immediate reconcile when updated.
+                type: string
+              secretRef:
+                description: |-
+                  SecretRef references the secret key holding the robot secret.
+                  The operator writes the generated robot secret to this location.
+                  If omitted, the operator will create a Secret named "<metadata.name>-secret"
+                  in the same namespace with key "secret".
+                properties:
+                  key:
+                    description: |-
+                      Key inside the Secret data. When omitted, the controller using this
+                      reference will apply a sensible default.
+                    type: string
+                  name:
+                    description: Name of the Secret.
+                    type: string
+                  namespace:
+                    description: Namespace of the Secret. Omit to use the HarborConnection
+                      namespace.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - harborConnectionRef
+            - level
+            - permissions
+            type: object
+          status:
+            description: RobotStatus defines the observed state of Robot.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the resource's state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              expiresAt:
+                description: ExpiresAt is the expiration time reported by Harbor.
+                format: date-time
+                type: string
+              harborRobotID:
+                description: HarborRobotID is the ID of the robot in Harbor.
+                type: integer
+              lastRotatedAt:
+                description: LastRotatedAt is the time when the robot secret was last
+                  rotated.
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  by the controller.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

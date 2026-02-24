@@ -18,10 +18,12 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -41,30 +43,57 @@ var _ = Describe("Project Controller", func() {
 			Namespace: "default", // TODO(user):Modify as needed
 		}
 		project := &harborv1alpha1.Project{}
+		var server *httptest.Server
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Project")
-			err := k8sClient.Get(ctx, typeNamespacedName, project)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &harborv1alpha1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != "admin" || pass != "password" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects" {
+					w.Header().Set("Location", "/api/v2.0/projects/42")
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "default", "harbor-admin", "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", "harbor-conn", server.URL, "admin", "harbor-admin", "password")).To(Succeed())
+
+			By("creating the custom resource for the Kind Project")
+			resource := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: "harbor-conn",
+					},
+					Name:   resourceName,
+					Public: false,
+				},
 			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
+			server.Close()
 			resource := &harborv1alpha1.Project{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
 			By("Cleanup the specific resource instance Project")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin", Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -77,8 +106,9 @@ var _ = Describe("Project Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			Expect(project.Status.HarborProjectID).To(Equal(42))
 		})
 	})
 })

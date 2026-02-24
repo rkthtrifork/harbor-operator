@@ -18,10 +18,12 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -33,6 +35,8 @@ import (
 var _ = Describe("Member Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
+		const adminSecretName = "harbor-admin-member"
+		const connName = "harbor-conn-member"
 
 		ctx := context.Background()
 
@@ -40,31 +44,65 @@ var _ = Describe("Member Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		member := &harborv1alpha1.Member{}
+		var server *httptest.Server
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Member")
-			err := k8sClient.Get(ctx, typeNamespacedName, member)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &harborv1alpha1.Member{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != "admin" || pass != "password" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects/demo/members" {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte("[]"))
+					return
+				}
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects/demo/members" {
+					w.Header().Set("Location", "/api/v2.0/projects/demo/members/11")
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+
+			By("creating the custom resource for the Kind Member")
+			resource := &harborv1alpha1.Member{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.MemberSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: connName,
+					},
+					ProjectRef: "demo",
+					Role:       "developer",
+					MemberUser: &harborv1alpha1.MemberUser{
+						Username: "alice",
+					},
+				},
 			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
+			server.Close()
 			resource := &harborv1alpha1.Member{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 
 			By("Cleanup the specific resource instance Member")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -79,6 +117,84 @@ var _ = Describe("Member Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
+		})
+	})
+
+	Context("When member already exists and takeover is disabled", func() {
+		const resourceName = "existing-member"
+		const adminSecretName = "harbor-admin-member-existing"
+		const connName = "harbor-conn-member-existing"
+
+		ctx := context.Background()
+
+		typeNamespacedName := types.NamespacedName{
+			Name:      resourceName,
+			Namespace: "default",
+		}
+		var server *httptest.Server
+
+		BeforeEach(func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != "admin" || pass != "password" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects/demo/members" {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`[{"id":9,"entity_name":"alice","entity_type":"u","role_id":2}]`))
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+
+			resource := &harborv1alpha1.Member{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.MemberSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: connName,
+					},
+					AllowTakeover: false,
+					ProjectRef:    "demo",
+					Role:          "developer",
+					MemberUser: &harborv1alpha1.MemberUser{
+						Username: "alice",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			server.Close()
+			resource := &harborv1alpha1.Member{}
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
+		})
+
+		It("should return an error", func() {
+			controllerReconciler := &MemberReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

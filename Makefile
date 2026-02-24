@@ -1,4 +1,5 @@
 IMG_LOCAL ?= harbor-operator:local
+IMG ?= $(IMG_LOCAL)
 HARBOR_API_GROUP ?= harbor.harbor-operator.io
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -86,7 +87,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG_LOCAL} .
+	$(CONTAINER_TOOL) build -t ${IMG} .
 
 .PHONY: build-installer
 build-installer: kustomize ## Generate a consolidated YAML with CRDs and deployment.
@@ -168,7 +169,7 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0
-CONTROLLER_TOOLS_VERSION ?= v0.17.2
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
 ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 GOLANGCI_LINT_VERSION ?= v1.63.4

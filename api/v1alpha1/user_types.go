@@ -9,6 +9,11 @@ import (
 type UserSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing user in Harbor with the same username.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Username is the Harbor username.
 	// It is recommended to leave this field empty so that the operator defaults it
 	// to the custom resource's metadata name.
@@ -33,12 +38,20 @@ type UserSpec struct {
 
 // UserStatus defines the observed state of User.
 type UserStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborUserID is the ID of the user in Harbor.
 	HarborUserID int `json:"harborUserID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.spec.username`
+// +kubebuilder:printcolumn:name="Email",type=string,JSONPath=`.spec.email`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Message",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Ready")].message`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // User is the Schema for the users API.
 type User struct {

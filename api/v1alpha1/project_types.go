@@ -8,6 +8,11 @@ import (
 type ProjectSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// AllowTakeover indicates whether the operator is allowed to adopt an
+	// existing project in Harbor with the same name.
+	// +optional
+	AllowTakeover bool `json:"allowTakeover,omitempty"`
+
 	// Name is the name of the project.
 	// It is recommended to leave this field empty so that the operator defaults it
 	// to the custom resource’s metadata name.
@@ -71,12 +76,21 @@ type CVEAllowlist struct {
 
 // ProjectStatus defines the observed state of Project.
 type ProjectStatus struct {
+	HarborStatusBase `json:",inline"`
+
 	// HarborProjectID is the ID of the project in Harbor.
 	HarborProjectID int `json:"harborProjectID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
+// +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registryName`
+// +kubebuilder:printcolumn:name="Public",type=boolean,JSONPath=`.spec.public`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Message",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Ready")].message`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Project is the Schema for the projects API.
 type Project struct {

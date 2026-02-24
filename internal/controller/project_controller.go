@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -42,47 +41,36 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Resolve Harbor connection + typed client
-	conn, err := getHarborConnection(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	user, pass, err := getHarborAuth(ctx, r.Client, conn)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 
 	// Handle deletion
-	if !cr.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&cr, finalizerName) {
-			if err := r.deleteProject(ctx, hc, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
-			controllerutil.RemoveFinalizer(&cr, finalizerName)
-			if err := r.Update(ctx, &cr); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+		return r.deleteProject(ctx, hc, &cr)
+	}); done {
+		return ctrl.Result{}, err
 	}
 
 	// Ensure finalizer
-	if !controllerutil.ContainsFinalizer(&cr, finalizerName) {
-		controllerutil.AddFinalizer(&cr, finalizerName)
-		if err := r.Update(ctx, &cr); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Defaults & adoption
-	if cr.Spec.Name == "" {
-		cr.Spec.Name = cr.Name
-	}
+	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
 	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if adopted {
 			r.logger.Info("Adopted existing project",
 				"Name", cr.Spec.Name, "ID", cr.Status.HarborProjectID)
@@ -92,7 +80,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Desired payload
 	createReq, err := r.buildCreateReq(ctx, hc, &cr)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	// Create / Update path
@@ -100,10 +88,10 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// create
 		newID, err := hc.CreateProject(ctx, createReq)
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborProjectID = newID
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Project created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created project", "ID", newID)
@@ -116,19 +104,24 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if harborclient.IsNotFound(err) {
 			// It was deleted out-of-band → clear status and requeue immediately
 			cr.Status.HarborProjectID = 0
-			_ = r.Status().Update(ctx, &cr)
+			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Project not found in Harbor"); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	// compare desired vs. current
 	if projectNeedsUpdate(createReq, *current) {
 		// update
 		if err := hc.UpdateProject(ctx, current.ProjectID, createReq); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated project", "ID", current.ProjectID)
+	}
+	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Project reconciled"); err != nil {
+		return ctrl.Result{}, err
 	}
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
@@ -179,6 +172,13 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient
 			ProxySpeedKB:             m.ProxySpeedKB,
 		}
 	}
+	if meta.Public == "" {
+		if cr.Spec.Public {
+			meta.Public = "true"
+		} else {
+			meta.Public = "false"
+		}
+	}
 
 	var allow harborclient.CVEAllowlist
 	if a := cr.Spec.CVEAllowlist; a != nil {
@@ -200,20 +200,15 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient
 
 	var registryID *int
 	if rn := cr.Spec.RegistryName; rn != "" {
-		regs, err := hc.ListRegistries(ctx)
+		reg, err := hc.FindRegistryByName(ctx, rn)
 		if err != nil {
 			return harborclient.CreateProjectRequest{}, err
 		}
-		for _, reg := range regs {
-			if strings.EqualFold(reg.Name, rn) {
-				registryID = &reg.ID
-				break
-			}
-		}
-		if registryID == nil {
+		if reg == nil {
 			return harborclient.CreateProjectRequest{},
 				fmt.Errorf("registry %q not found in Harbor", rn)
 		}
+		registryID = &reg.ID
 	}
 
 	return harborclient.CreateProjectRequest{
