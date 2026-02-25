@@ -176,6 +176,26 @@ kubectl apply -f dist/install.yaml
 
 If you publish this file (e.g. in a GitHub release), users can install via a raw URL.
 
+## Metrics
+
+The operator supports Prometheus metrics via controller-runtime. Metrics are **disabled by default**.
+
+To enable:
+
+1. Uncomment Prometheus sections in `config/default/kustomization.yaml`:
+   - `../prometheus`
+   - `manager_metrics_patch.yaml`
+2. (Optional) enable the cert-manager patch for TLS:
+   - `cert_metrics_manager_patch.yaml`
+3. Deploy:
+
+```sh
+make deploy
+```
+
+If you enable TLS with cert-manager, apply the ServiceMonitor TLS patch in
+`config/prometheus/monitor_tls_patch.yaml`.
+
 ## Uninstalling
 
 If you want to remove Harbor-managed resources, CRDs, and the operator:

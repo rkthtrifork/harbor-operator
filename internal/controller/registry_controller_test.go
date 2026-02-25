@@ -31,7 +31,7 @@ var _ = Describe("Registry Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
 		registry := &harborv1alpha1.Registry{}
 		var server *httptest.Server

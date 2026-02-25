@@ -65,6 +65,30 @@ spec:
                 description: BaseURL is the Harbor API endpoint.
                 format: url
                 type: string
+              caBundle:
+                description: CABundle is a PEM-encoded CA bundle for validating Harbor
+                  TLS certificates.
+                type: string
+              caBundleSecretRef:
+                description: |-
+                  CABundleSecretRef references a Secret containing a PEM-encoded CA bundle.
+                  When set, it is mutually exclusive with caBundle.
+                properties:
+                  key:
+                    description: |-
+                      Key inside the Secret data. When omitted, the controller using this
+                      reference will apply a sensible default.
+                    type: string
+                  name:
+                    description: Name of the Secret.
+                    type: string
+                  namespace:
+                    description: Namespace of the Secret. Omit to use the HarborConnection
+                      namespace.
+                    type: string
+                required:
+                - name
+                type: object
               credentials:
                 description: Credentials holds the default credentials for Harbor
                   API calls.

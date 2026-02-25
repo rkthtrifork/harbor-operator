@@ -22,9 +22,16 @@ spec:
   # Optional credentials for API access.
   credentials:
     type: basic
-    accessKey: "my-username"
-    # Name of a Secret in the same namespace with key "access_secret".
-    accessSecretRef: "my-harbor-secret"
+    username: "my-username"
+    passwordSecretRef:
+      name: my-harbor-secret
+      key: password
+
+  # Optional CA bundle for self-signed Harbor TLS certs.
+  # caBundleSecretRef and caBundle are mutually exclusive.
+  caBundleSecretRef:
+    name: my-harbor-ca
+    key: ca.crt
 ```
 
 ## Key Fields
@@ -35,9 +42,15 @@ spec:
 - **spec.credentials** (object, optional)
 
   - **type** (string) – currently `basic` is supported.
-  - **accessKey** (string) – username for Harbor.
-  - **accessSecretRef** (string) – name of a `Secret` in the same namespace.
-    The secret must contain a key `access_secret` with the password.
+  - **username** (string) – username for Harbor.
+  - **passwordSecretRef** (object) – Secret reference with `name` + `key`.
+
+- **spec.caBundle** (string, optional)
+  PEM-encoded CA bundle.
+
+- **spec.caBundleSecretRef** (object, optional)
+  Secret reference containing a PEM-encoded CA bundle (defaults to `ca.crt`).
+  Mutually exclusive with `spec.caBundle`.
 
 ## Behavior
 
@@ -57,5 +70,5 @@ spec:
 
 - **Secret usage**
 
-  - The secret referenced by `accessSecretRef` is read at reconcile time.
+  - The secret referenced by `passwordSecretRef` is read at reconcile time.
   - Password is passed to Harbor via basic auth on each request.
