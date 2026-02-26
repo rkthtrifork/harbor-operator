@@ -3,7 +3,6 @@ name: Release Helm Chart (OCI)
 on:
   push:
     tags:
-      - "v*"
       - "chart-v*"
 
 permissions:
@@ -14,10 +13,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.1
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v4.3.1
 
       - name: Lint chart
         run: helm lint charts/harbor-operator
@@ -33,6 +32,23 @@ jobs:
             exit 1
           fi
 
+      - name: Classify tag
+        id: classify
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" =~ ^chart-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "is_rc=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$tag" =~ ^chart-v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "is_rc=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "is_release=false" >> "$GITHUB_OUTPUT"
+          echo "is_rc=false" >> "$GITHUB_OUTPUT"
+
       - name: Package chart
         run: helm package charts/harbor-operator --destination dist
 
@@ -40,10 +56,12 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Create GitHub Release
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
             dist/harbor-operator-*.tgz
         env:
