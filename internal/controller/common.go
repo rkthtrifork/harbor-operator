@@ -19,7 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const finalizerName = "harbor.harbor-operator.io/finalizer"
+const (
+	finalizerName = "harbor.harbor-operator.io/finalizer"
+	adminName     = "admin"
+)
 
 // getHarborConnection fetches the HarborConnection referenced in the Registry.
 func getHarborConnection(ctx context.Context, c client.Client, namespace, name string) (*harborv1alpha1.HarborConnection, error) {

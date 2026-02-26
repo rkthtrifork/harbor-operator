@@ -61,9 +61,17 @@ func NewWithHTTPClient(baseURL, user, pass string, httpClient *http.Client) *Cli
 	}
 }
 
-func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (resp *http.Response, err error) {
 	start := time.Now()
 	endpointLabel := normalizeEndpoint(relURL)
+	defer func() {
+		if resp == nil || resp.Body == nil {
+			return
+		}
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	// request body
 	var body io.Reader
@@ -85,12 +93,11 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*h
 	req.Header.Set("Content-Type", "application/json")
 
 	// perform
-	resp, err := c.HTTPClient.Do(req)
+	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
 		metrics.ObserveHarborRequest(method, endpointLabel, 0, time.Since(start).Seconds())
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	// non-2xx → wrap in *HTTPError
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

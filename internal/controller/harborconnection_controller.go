@@ -73,7 +73,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Otherwise, perform an authenticated check.
 	user := conn.Spec.Credentials.Username
-	pass, err := r.getPassword(ctx, r.Client, &conn) // unchanged helper
+	pass, err := r.getPassword(ctx, &conn) // unchanged helper
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
@@ -108,7 +108,7 @@ func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.Harbor
 }
 
 // Retrieve the secret containing the access secret.
-func (r *HarborConnectionReconciler) getPassword(ctx context.Context, client client.Client, conn *harborv1alpha1.HarborConnection) (string, error) {
+func (r *HarborConnectionReconciler) getPassword(ctx context.Context, conn *harborv1alpha1.HarborConnection) (string, error) {
 	secret, err := r.getSecret(ctx, conn)
 	if err != nil {
 		return "", err

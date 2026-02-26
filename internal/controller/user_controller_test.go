@@ -51,7 +51,7 @@ var _ = Describe("User Controller", func() {
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
-				if !ok || user != "admin" || pass != "password" {
+				if !ok || user != testAdminUser || pass != testPassword {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -63,9 +63,9 @@ var _ = Describe("User Controller", func() {
 				http.NotFound(w, r)
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
-			Expect(createPasswordSecret(ctx, k8sClient, "default", userSecretName, "password", "UserPassword1!")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, userSecretName, "UserPassword1!")).To(Succeed())
 
 			By("creating the custom resource for the Kind User")
 			resource := &harborv1alpha1.User{
@@ -80,7 +80,7 @@ var _ = Describe("User Controller", func() {
 					Email: "user@example.com",
 					PasswordSecretRef: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: userSecretName},
-						Key:                  "password",
+						Key:                  testPassword,
 					},
 				},
 			}

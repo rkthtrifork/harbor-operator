@@ -301,10 +301,10 @@ func buildMemberCreateRequest(member *harborv1alpha1.Member, roleID int) harborc
 }
 
 // convertRoleNameToID converts a human-readable role name into the corresponding Harbor role ID.
-// Mapping: "admin": 1, "developer": 2, "guest": 3, "maintainer": 4.
+// Mapping: admin=1, developer=2, guest=3, maintainer=4.
 func convertRoleNameToID(role string) (int, error) {
 	switch strings.ToLower(role) {
-	case "admin":
+	case adminName:
 		return 1, nil
 	case "developer":
 		return 2, nil
