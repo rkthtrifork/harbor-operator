@@ -75,7 +75,6 @@ func getHarborClient(ctx context.Context, c client.Client, namespace, name strin
 		caBundle = value
 	}
 
-	var httpClient *http.Client
 	if caBundle != "" {
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
@@ -83,13 +82,14 @@ func getHarborClient(ctx context.Context, c client.Client, namespace, name strin
 		}
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig = &tls.Config{RootCAs: pool}
-		httpClient = &http.Client{
+		httpClient := &http.Client{
 			Timeout:   30 * time.Second,
 			Transport: transport,
 		}
+		return harborclient.NewWithHTTPClient(conn.Spec.BaseURL, user, pass, httpClient), nil
 	}
 
-	return harborclient.NewWithHTTPClient(conn.Spec.BaseURL, user, pass, httpClient), nil
+	return harborclient.New(conn.Spec.BaseURL, user, pass), nil
 }
 
 func ensureFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
