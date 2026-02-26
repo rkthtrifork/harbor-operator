@@ -1,0 +1,25 @@
+name: Verify Chart CRDs
+
+on:
+  pull_request:
+    paths:
+      - config/crd/bases/**
+      - charts/harbor-operator/crds/**
+      - hack/sync-chart-crds.sh
+  push:
+    branches:
+      - main
+    paths:
+      - config/crd/bases/**
+      - charts/harbor-operator/crds/**
+      - hack/sync-chart-crds.sh
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync chart CRDs
+        run: ./hack/sync-chart-crds.sh
+      - name: Verify no diff
+        run: git diff --exit-code

@@ -75,6 +75,10 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	$(GOLANGCI_LINT) config verify
 
+.PHONY: sync-chart-crds
+sync-chart-crds: ## Sync CRDs into the Helm chart
+	./hack/sync-chart-crds.sh
+
 ##@ Build
 
 .PHONY: build

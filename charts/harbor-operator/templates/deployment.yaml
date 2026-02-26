@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+{{- end }}
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | nindent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: {{ include "harbor-operator.serviceAccountName" . }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | nindent 8 }}
+{{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.image.pullSecrets | nindent 8 }}
+{{- end }}
+{{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+{{- end }}
+{{- $imageTag := default .Chart.AppVersion .Values.image.tag -}}
+{{- $image := printf "%s:%s" .Values.image.repository $imageTag -}}
+{{- if .Values.image.digest -}}
+{{- $image = printf "%s@%s" .Values.image.repository .Values.image.digest -}}
+{{- end }}
+      containers:
+        - name: manager
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - --leader-elect=true
+            - --health-probe-bind-address=:8081
+            {{- if .Values.metrics.enabled }}
+            - --metrics-bind-address={{ .Values.metrics.bindAddress }}
+            - --metrics-secure={{ .Values.metrics.secure }}
+            {{- else }}
+            - --metrics-bind-address=0
+            {{- end }}
+          {{- if .Values.env }}
+          env:
+{{ toYaml .Values.env | nindent 12 }}
+          {{- end }}
+          ports: []
+          securityContext:
+{{ toYaml .Values.containerSecurityContext | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+{{ toYaml .Values.resources | nindent 12 }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+{{ toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+{{ toYaml .Values.affinity | nindent 8 }}
+{{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ toYaml .Values.topologySpreadConstraints | nindent 8 }}
+{{- end }}
+      terminationGracePeriodSeconds: 10
