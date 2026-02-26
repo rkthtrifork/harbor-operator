@@ -9,35 +9,11 @@ rules:
   resources: ["secrets"]
   verbs: ["create","get","list","patch","update","watch"]
 - apiGroups: ["harbor.harbor-operator.io"]
-  resources:
-    - configurations
-    - gcschedules
-    - harborconnections
-    - members
-    - projects
-    - purgeauditschedules
-    - registries
-    - retentionpolicies
-    - robots
-    - users
+  resources: ["configurations","gcschedules","harborconnections","members","projects","purgeauditschedules","registries","retentionpolicies","robots","users"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: ["harbor.harbor-operator.io"]
-  resources:
-    - configurations/status
-    - gcschedules/status
-    - harborconnections/status
-    - members/status
-    - projects/status
-    - purgeauditschedules/status
-    - registries/status
-    - retentionpolicies/status
-    - robots/status
-    - users/status
-  verbs: ["get","patch","update"]
-- apiGroups: ["harbor.harbor-operator.io"]
-  resources:
-    - gcschedules/finalizers
-    - harborconnections/finalizers
-    - purgeauditschedules/finalizers
-    - retentionpolicies/finalizers
+  resources: ["configurations/finalizers","gcschedules/finalizers","harborconnections/finalizers","members/finalizers","projects/finalizers","purgeauditschedules/finalizers","registries/finalizers","retentionpolicies/finalizers","robots/finalizers","users/finalizers"]
   verbs: ["update"]
+- apiGroups: ["harbor.harbor-operator.io"]
+  resources: ["configurations/status","gcschedules/status","harborconnections/status","members/status","projects/status","purgeauditschedules/status","registries/status","retentionpolicies/status","robots/status","users/status"]
+  verbs: ["get","patch","update"]

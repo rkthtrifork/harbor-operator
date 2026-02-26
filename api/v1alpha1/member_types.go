@@ -59,13 +59,11 @@ type MemberStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef`
-// +kubebuilder:printcolumn:name="User",type=string,JSONPath=`.spec.userRef.name`
-// +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.groupRef.name`
+// +kubebuilder:printcolumn:name="User",type=string,JSONPath=`.spec.memberUser.username`
+// +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.memberGroup.group_name`
 // +kubebuilder:printcolumn:name="Role",type=string,JSONPath=`.spec.role`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
-// +kubebuilder:printcolumn:name="Message",type=string,priority=1,JSONPath=`.status.conditions[?(@.type=="Ready")].message`
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Member is the Schema for the members API.
 type Member struct {

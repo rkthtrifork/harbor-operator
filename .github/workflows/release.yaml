@@ -55,11 +55,19 @@ jobs:
           echo "Using image ${IMAGE} for installer"
           IMG="${IMAGE}" make build-installer
 
+      - name: Classify tag
+        id: classify
+        uses: ./.github/actions/classify-tag
+        with:
+          prefix: "v"
+
       - name: Upload installer to GitHub Release
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
             dist/install.yaml
         env:

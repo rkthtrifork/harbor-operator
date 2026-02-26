@@ -39,6 +39,21 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - configurations/finalizers
+  - gcschedules/finalizers
+  - harborconnections/finalizers
+  - members/finalizers
+  - projects/finalizers
+  - purgeauditschedules/finalizers
+  - registries/finalizers
+  - retentionpolicies/finalizers
+  - robots/finalizers
+  - users/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - harbor.harbor-operator.io
+  resources:
   - configurations/status
   - gcschedules/status
   - harborconnections/status
@@ -52,13 +67,4 @@ rules:
   verbs:
   - get
   - patch
-  - update
-- apiGroups:
-  - harbor.harbor-operator.io
-  resources:
-  - gcschedules/finalizers
-  - harborconnections/finalizers
-  - purgeauditschedules/finalizers
-  - retentionpolicies/finalizers
-  verbs:
   - update

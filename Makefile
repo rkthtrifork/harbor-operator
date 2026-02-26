@@ -79,6 +79,10 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 sync-chart-crds: ## Sync CRDs into the Helm chart
 	./hack/sync-chart-crds.sh
 
+.PHONY: sync-chart-rbac
+sync-chart-rbac: ## Sync RBAC into the Helm chart
+	./hack/sync-chart-rbac.sh
+
 ##@ Build
 
 .PHONY: build

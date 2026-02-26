@@ -18,10 +18,10 @@ spec:
     - jsonPath: .spec.projectRef
       name: Project
       type: string
-    - jsonPath: .spec.userRef.name
+    - jsonPath: .spec.memberUser.username
       name: User
       type: string
-    - jsonPath: .spec.groupRef.name
+    - jsonPath: .spec.memberGroup.group_name
       name: Group
       type: string
     - jsonPath: .spec.role
@@ -33,13 +33,6 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Ready")].message
-      name: Message
-      priority: 1
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
