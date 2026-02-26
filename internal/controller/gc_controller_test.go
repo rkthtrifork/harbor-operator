@@ -51,7 +51,7 @@ var _ = Describe("GC Schedule Controller", func() {
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
-				if !ok || user != "admin" || pass != "password" {
+				if !ok || user != testAdminUser || pass != testPassword {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -62,8 +62,8 @@ var _ = Describe("GC Schedule Controller", func() {
 				http.NotFound(w, r)
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
 
 			resource := &harborv1alpha1.GCSchedule{
 				ObjectMeta: metav1.ObjectMeta{

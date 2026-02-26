@@ -47,7 +47,7 @@ var _ = Describe("Robot Controller", func() {
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
-				if !ok || user != "admin" || pass != "password" {
+				if !ok || user != testAdminUser || pass != testPassword {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -69,8 +69,8 @@ var _ = Describe("Robot Controller", func() {
 				http.NotFound(w, r)
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", "harbor-admin", "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", "harbor-conn", server.URL, "admin", "harbor-admin", "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, "harbor-admin", testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "harbor-conn", server.URL, "harbor-admin")).To(Succeed())
 
 			By("creating the custom resource for the Kind Robot")
 			resource := &harborv1alpha1.Robot{

@@ -77,7 +77,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Desired payload
-	userPassword, err := r.getUserPassword(ctx, r.Client, cr)
+	userPassword, err := r.getUserPassword(ctx, cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -119,7 +119,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
 }
 
-func (r *UserReconciler) getUserPassword(ctx context.Context, c client.Client, cr harborv1alpha1.User) (string, error) {
+func (r *UserReconciler) getUserPassword(ctx context.Context, cr harborv1alpha1.User) (string, error) {
 	var passwordSecret corev1.Secret
 	namespacedName := types.NamespacedName{
 		Namespace: cr.Namespace,

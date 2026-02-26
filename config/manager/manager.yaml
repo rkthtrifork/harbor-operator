@@ -30,7 +30,8 @@ spec:
         control-plane: controller-manager
         app.kubernetes.io/name: harbor-operator
     spec:
-      # TODO(user): Uncomment the following code to configure the nodeAffinity expression
+      # Node affinity is intentionally unset by default. If you need scheduling constraints,
+      # uncomment and configure the nodeAffinity block below.
       # according to the platforms which are supported by your solution.
       # It is considered best practice to support multiple architectures. You can
       # build your manager image using the makefile target docker-buildx.
@@ -84,7 +85,13 @@ spec:
               port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
-          # TODO(user): Configure the resources accordingly based on the project requirements.
+          # Conservative defaults; tune for your environment.
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
           # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           resources:
             limits:

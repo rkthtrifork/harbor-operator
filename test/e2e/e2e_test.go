@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -259,16 +260,167 @@ var _ = Describe("Manager", Ordered, func() {
 			))
 		})
 
-		// +kubebuilder:scaffold:e2e-webhooks-checks
+		Context("Harbor Flow", func() {
+			It("should reconcile Harbor resources end-to-end", func() {
+				baseURL := os.Getenv("HARBOR_BASE_URL")
+				adminUser := os.Getenv("HARBOR_ADMIN_USER")
+				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
+				if baseURL == "" || adminUser == "" || adminPass == "" {
+					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
 
-		// TODO: Customize the e2e test suite with scenarios specific to your project.
-		// Consider applying sample/CR(s) and check their status and/or verifying
-		// the reconciliation by using the metrics, i.e.:
-		// metricsOutput := getMetricsOutput()
-		// Expect(metricsOutput).To(ContainSubstring(
-		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
-		// ))
+				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+				registryName := "e2e-registry-" + suffix
+				projectName := "e2e-project-" + suffix
+				retentionName := "e2e-retention-" + suffix
+				userName := "e2e-user-" + suffix
+				secretName := "harbor-e2e-pass-" + suffix
+				connName := "harbor-e2e-conn-" + suffix
+
+				crs := fmt.Sprintf(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "%s"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Registry
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef: %s
+  type: docker-registry
+  name: %s
+  url: https://registry-1.docker.io
+  insecure: false
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Project
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef: %s
+  public: true
+  metadata:
+    public: "true"
+  registryName: %s
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "ChangeMe-123!"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: User
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef: %s
+  username: %s
+  email: %s@example.com
+  realname: e2e user
+  passwordSecretRef:
+    name: %s
+    key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: RetentionPolicy
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef: %s
+  projectRef:
+    name: %s
+  algorithm: or
+  trigger:
+    kind: Schedule
+    settings:
+      cron: 0 0 0 * * *
+  rules:
+    - action: retain
+      template: latestPushedK
+      params:
+        latestPushedK:
+          value: 3
+      tagSelectors:
+        - kind: doublestar
+          decoration: matches
+          pattern: "**"
+      scopeSelectors:
+        repository:
+          - kind: doublestar
+            decoration: repoMatches
+            pattern: "**"
+`, secretName, namespace, adminPass, connName, namespace, baseURL, adminUser, secretName,
+					registryName, namespace, connName, registryName,
+					projectName, namespace, connName, registryName,
+					secretName, namespace, userName, namespace, connName, userName, userName, secretName,
+					retentionName, namespace, connName, projectName)
+
+				applyFile := writeTempFile(crs)
+				DeferCleanup(func() {
+					_ = os.Remove(applyFile)
+				})
+
+				By("applying Harbor CRs")
+				cmd := exec.Command("kubectl", "apply", "-f", applyFile)
+				_, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("waiting for CRs to be Ready")
+				waitReady("harborconnection", connName)
+				waitReady("registry", registryName)
+				waitReady("project", projectName)
+				waitReady("user", userName)
+				waitReady("retentionpolicy", retentionName)
+
+				By("verifying Harbor objects via API")
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`\"name\":\"%s\"`, registryName))).To(BeTrue())
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`\"name\":\"%s\"`, projectName))).To(BeTrue())
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/users", fmt.Sprintf(`\"username\":\"%s\"`, userName))).To(BeTrue())
+
+				By("deleting Harbor CRs in dependency order")
+				deleteCR("retentionpolicy", retentionName)
+				deleteCR("project", projectName)
+				deleteCR("registry", registryName)
+				deleteCR("user", userName)
+				deleteCR("harborconnection", connName)
+				deleteCR("secret", secretName)
+
+				By("verifying Harbor objects are gone")
+				Eventually(func() bool {
+					return !harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`\"name\":\"%s\"`, registryName))
+				}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+			})
+		})
+
+		// +kubebuilder:scaffold:e2e-webhooks-checks
 	})
 })
 
@@ -321,6 +473,37 @@ func getMetricsOutput() string {
 	Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
 	Expect(metricsOutput).To(ContainSubstring("< HTTP/1.1 200 OK"))
 	return metricsOutput
+}
+
+func writeTempFile(contents string) string {
+	file, err := os.CreateTemp("", "harbor-e2e-*.yaml")
+	Expect(err).NotTo(HaveOccurred())
+	_, err = file.WriteString(contents)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(file.Close()).To(Succeed())
+	return file.Name()
+}
+
+func waitReady(kind, name string) {
+	cmd := exec.Command("kubectl", "wait", fmt.Sprintf("%s.harbor.harbor-operator.io/%s", kind, name),
+		"-n", namespace, "--for=condition=Ready", "--timeout=2m")
+	_, err := utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func deleteCR(kind, name string) {
+	cmd := exec.Command("kubectl", "delete", fmt.Sprintf("%s.harbor.harbor-operator.io/%s", kind, name),
+		"-n", namespace, "--wait=true")
+	_, _ = utils.Run(cmd)
+}
+
+func harborHasObject(baseURL, user, pass, path, needle string) bool {
+	cmd := exec.Command("curl", "-sk", "-u", fmt.Sprintf("%s:%s", user, pass), baseURL+path)
+	out, err := utils.Run(cmd)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(out, needle)
 }
 
 // tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,

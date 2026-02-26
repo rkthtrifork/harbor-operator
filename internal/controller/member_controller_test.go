@@ -24,13 +24,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
+
+const projectMembersPath = "/api/v2.0/projects/demo/members"
 
 var _ = Describe("Member Controller", func() {
 	Context("When reconciling a resource", func() {
@@ -42,32 +44,32 @@ var _ = Describe("Member Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
 		var server *httptest.Server
 
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
-				if !ok || user != "admin" || pass != "password" {
+				if !ok || user != testAdminUser || pass != testPassword {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects/demo/members" {
+				if r.Method == http.MethodGet && r.URL.Path == projectMembersPath {
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write([]byte("[]"))
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects/demo/members" {
-					w.Header().Set("Location", "/api/v2.0/projects/demo/members/11")
+				if r.Method == http.MethodPost && r.URL.Path == projectMembersPath {
+					w.Header().Set("Location", projectMembersPath+"/11")
 					w.WriteHeader(http.StatusCreated)
 					return
 				}
 				http.NotFound(w, r)
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
 
 			By("creating the custom resource for the Kind Member")
 			resource := &harborv1alpha1.Member{
@@ -115,7 +117,11 @@ var _ = Describe("Member Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
+			out := &harborv1alpha1.Member{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
+			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
@@ -136,11 +142,11 @@ var _ = Describe("Member Controller", func() {
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
-				if !ok || user != "admin" || pass != "password" {
+				if !ok || user != testAdminUser || pass != testPassword {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects/demo/members" {
+				if r.Method == http.MethodGet && r.URL.Path == projectMembersPath {
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write([]byte(`[{"id":9,"entity_name":"alice","entity_type":"u","role_id":2}]`))
 					return
@@ -148,8 +154,8 @@ var _ = Describe("Member Controller", func() {
 				http.NotFound(w, r)
 			}))
 
-			Expect(createPasswordSecret(ctx, k8sClient, "default", adminSecretName, "password", "password")).To(Succeed())
-			Expect(createHarborConnection(ctx, k8sClient, "default", connName, server.URL, "admin", adminSecretName, "password")).To(Succeed())
+			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
 
 			resource := &harborv1alpha1.Member{
 				ObjectMeta: metav1.ObjectMeta{

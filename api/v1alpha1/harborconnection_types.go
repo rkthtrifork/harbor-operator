@@ -13,6 +13,15 @@ type HarborConnectionSpec struct {
 
 	// Credentials holds the default credentials for Harbor API calls.
 	Credentials *Credentials `json:"credentials,omitempty"`
+
+	// CABundle is a PEM-encoded CA bundle for validating Harbor TLS certificates.
+	// +optional
+	CABundle string `json:"caBundle,omitempty"`
+
+	// CABundleSecretRef references a Secret containing a PEM-encoded CA bundle.
+	// When set, it is mutually exclusive with caBundle.
+	// +optional
+	CABundleSecretRef *SecretReference `json:"caBundleSecretRef,omitempty"`
 }
 
 // Credentials holds default authentication details.

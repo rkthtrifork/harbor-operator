@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
+
+	"github.com/rkthtrifork/harbor-operator/internal/metrics"
 )
 
 // HTTPError wraps a non-2xx response.
@@ -46,15 +49,30 @@ var defaultHTTPClient = &http.Client{
 }
 
 func New(baseURL, user, pass string) *Client {
+	return NewWithHTTPClient(baseURL, user, pass, defaultHTTPClient)
+}
+
+func NewWithHTTPClient(baseURL, user, pass string, httpClient *http.Client) *Client {
 	return &Client{
 		BaseURL:    strings.TrimRight(baseURL, "/"),
-		HTTPClient: defaultHTTPClient,
+		HTTPClient: httpClient,
 		Username:   user,
 		Password:   pass,
 	}
 }
 
-func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (resp *http.Response, err error) {
+	start := time.Now()
+	endpointLabel := normalizeEndpoint(relURL)
+	defer func() {
+		if resp == nil || resp.Body == nil {
+			return
+		}
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
 	// request body
 	var body io.Reader
 	if in != nil {
@@ -75,15 +93,16 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*h
 	req.Header.Set("Content-Type", "application/json")
 
 	// perform
-	resp, err := c.HTTPClient.Do(req)
+	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
+		metrics.ObserveHarborRequest(method, endpointLabel, 0, time.Since(start).Seconds())
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	// non-2xx → wrap in *HTTPError
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		msg, _ := io.ReadAll(resp.Body)
+		metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
 		return nil, &HTTPError{
 			StatusCode: resp.StatusCode,
 			Message:    strings.TrimSpace(string(msg)),
@@ -93,8 +112,21 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (*h
 	// decode
 	if out != nil {
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+			metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
 			return nil, err
 		}
 	}
+	metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
 	return resp, nil
+}
+
+var numberPathSegment = regexp.MustCompile(`/\\d+`)
+
+func normalizeEndpoint(relURL string) string {
+	endpoint := relURL
+	if idx := strings.Index(endpoint, "?"); idx >= 0 {
+		endpoint = endpoint[:idx]
+	}
+	endpoint = numberPathSegment.ReplaceAllString(endpoint, "/:id")
+	return endpoint
 }

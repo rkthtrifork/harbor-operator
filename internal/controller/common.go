@@ -2,8 +2,12 @@ package controller
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
@@ -15,7 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const finalizerName = "harbor.harbor-operator.io/finalizer"
+const (
+	finalizerName = "harbor.harbor-operator.io/finalizer"
+	adminName     = "admin"
+)
 
 // getHarborConnection fetches the HarborConnection referenced in the Registry.
 func getHarborConnection(ctx context.Context, c client.Client, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
@@ -58,6 +65,33 @@ func getHarborClient(ctx context.Context, c client.Client, namespace, name strin
 	if err != nil {
 		return nil, err
 	}
+
+	caBundle := conn.Spec.CABundle
+	if conn.Spec.CABundleSecretRef != nil {
+		if caBundle != "" {
+			return nil, fmt.Errorf("caBundle and caBundleSecretRef are mutually exclusive")
+		}
+		value, err := readSecretValue(ctx, c, *conn.Spec.CABundleSecretRef, conn.Namespace, "ca.crt")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read caBundleSecretRef: %w", err)
+		}
+		caBundle = value
+	}
+
+	if caBundle != "" {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
+			return nil, fmt.Errorf("invalid caBundle: no certificates found")
+		}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+		httpClient := &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: transport,
+		}
+		return harborclient.NewWithHTTPClient(conn.Spec.BaseURL, user, pass, httpClient), nil
+	}
+
 	return harborclient.New(conn.Spec.BaseURL, user, pass), nil
 }
 
