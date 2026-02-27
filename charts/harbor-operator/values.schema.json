@@ -31,7 +31,20 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "secure": { "type": "boolean" },
-        "bindAddress": { "type": "string" }
+        "bindAddress": { "type": "string" },
+        "serviceMonitor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "interval": { "type": "string" },
+            "scrapeTimeout": { "type": "string" },
+            "labels": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "resources": { "type": "object" },
@@ -95,6 +108,47 @@
         },
         "required": ["maxSkew", "topologyKey", "whenUnsatisfiable"],
         "additionalProperties": true
+      }
+    }
+    ,
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "type": {
+          "type": "string",
+          "enum": ["kubernetes", "cilium"]
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "namespaces": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowKubeAPI": { "type": "boolean" },
+            "allowDNS": { "type": "boolean" },
+            "harborSelectors": {
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          }
+        }
       }
     }
   }
