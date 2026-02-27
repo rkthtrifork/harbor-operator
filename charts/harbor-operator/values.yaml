@@ -1,5 +1,6 @@
 image:
   repository: ghcr.io/rkthtrifork/harbor-operator/harbor-operator
+  # If set, digest takes precedence over tag.
   tag: ""
   digest: ""
   pullPolicy: IfNotPresent
@@ -11,6 +12,11 @@ metrics:
   enabled: false
   secure: true
   bindAddress: ":8443"
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
 
 resources:
   requests:
@@ -22,6 +28,7 @@ resources:
 
 serviceAccount:
   create: true
+  # If empty and create=true, the chart fullname is used.
   name: ""
 
 podAnnotations: {}
@@ -53,3 +60,26 @@ tolerations: []
 affinity: {}
 
 topologySpreadConstraints: []
+
+networkPolicy:
+  enabled: false
+  # type controls which policy kind is rendered when enabled.
+  type: kubernetes # kubernetes | cilium
+  ingress:
+    metrics:
+      enabled: true
+      # Namespaces allowed to scrape metrics (ingress).
+      namespaces: []
+      # - monitoring
+  egress:
+    # Egress to kube-apiserver (TCP 443).
+    allowKubeAPI: true
+    # Egress to kube-dns (UDP/TCP 53).
+    allowDNS: true
+    harborSelectors: []
+    # - namespaceSelector:
+    #     matchLabels:
+    #       name: harbor-system
+    #   podSelector:
+    #     matchLabels:
+    #       app: harbor-core

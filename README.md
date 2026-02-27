@@ -120,34 +120,6 @@ To delete only the Kind cluster:
 make kind-down
 ```
 
-## Deploying to Another Cluster
-
-For a non-Kind cluster, you typically:
-
-1. Make sure an image of the operator is available to the cluster
-   (e.g. build+push in CI to `ghcr.io/.../harbor-operator:<tag>`).
-
-2. Install CRDs:
-
-   ```sh
-   make install
-   ```
-
-3. Configure the operator image in `config/manager/kustomization.yaml` or via:
-
-   ```sh
-   cd config/manager
-   kustomize edit set image controller=<your-registry>/harbor-operator:<tag>
-   ```
-
-4. Deploy the operator:
-
-   ```sh
-   make deploy
-   ```
-
-5. Create a `HarborConnection` and any `Registry` / `Project` / `User` / `Member` CRs you need.
-
 ## Helm Chart (OCI)
 
 We publish an OCI Helm chart to GHCR.
@@ -165,47 +137,19 @@ helm template harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator -
 
 Values are documented in `charts/harbor-operator/values.yaml` and validated by `charts/harbor-operator/values.schema.json`.
 
-## Installer Bundle
-
-If you want to ship a single `install.yaml` that contains CRDs plus the operator deployment:
-
-```sh
-make build-installer
-```
-
-This will:
-
-- Set the image in `config/manager` to `harbor-operator:local` (or whatever `IMG_LOCAL` is)
-- Build `config/default` with kustomize
-- Write the result to `dist/install.yaml`
-
-You can then install with:
-
-```sh
-kubectl apply -f dist/install.yaml
-```
-
-If you publish this file (e.g. in a GitHub release), users can install via a raw URL.
+Create a `HarborConnection` and any `Registry` / `Project` / `User` / `Member` CRs you need.
 
 ## Metrics
 
 The operator supports Prometheus metrics via controller-runtime. Metrics are **disabled by default**.
 
-To enable:
-
-1. Uncomment Prometheus sections in `config/default/kustomization.yaml`:
-   - `../prometheus`
-   - `manager_metrics_patch.yaml`
-2. (Optional) enable the cert-manager patch for TLS:
-   - `cert_metrics_manager_patch.yaml`
-3. Deploy:
+To enable via Helm:
 
 ```sh
-make deploy
+helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \
+  --version <chart-version> \
+  --set metrics.enabled=true
 ```
-
-If you enable TLS with cert-manager, apply the ServiceMonitor TLS patch in
-`config/prometheus/monitor_tls_patch.yaml`.
 
 ## Uninstalling
 
@@ -213,13 +157,13 @@ If you want to remove Harbor-managed resources, CRDs, and the operator:
 
 ```sh
 # Remove Harbor CRs (HarborConnection last)
-make clean-samples
+make delete-crs
+
+# Remove the operator
+helm uninstall harbor-operator -n harbor-operator-system
 
 # Remove CRDs for the harbor.harbor-operator.io API group
 make uninstall
-
-# Remove the operator deployment
-make undeploy
 ```
 
 In a Kind dev cluster, a full reset is just:

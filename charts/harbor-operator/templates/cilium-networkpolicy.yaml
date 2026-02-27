@@ -1,0 +1,63 @@
+{{- if and .Values.networkPolicy.enabled (eq .Values.networkPolicy.type "cilium") -}}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}-network
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- if and .Values.metrics.enabled .Values.networkPolicy.ingress.metrics.enabled (gt (len .Values.networkPolicy.ingress.metrics.namespaces) 0) }}
+  ingress:
+    - fromEndpoints:
+{{- range .Values.networkPolicy.ingress.metrics.namespaces }}
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ . | quote }}
+{{- end }}
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+  {{- end }}
+  egress:
+  {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.allowDNS }}
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+  {{- end }}
+  {{- range .Values.networkPolicy.egress.harborSelectors }}
+    - toEndpoints:
+        - matchLabels:
+{{- range $k, $v := .namespaceSelector.matchLabels }}
+            k8s:io.kubernetes.pod.namespace.labels.{{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- if .podSelector }}
+{{- range $k, $v := .podSelector.matchLabels }}
+            k8s:io.kubernetes.pod.labels.{{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- end }}
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+  {{- end }}
+{{- end }}

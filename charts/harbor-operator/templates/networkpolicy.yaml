@@ -1,0 +1,62 @@
+{{- if and .Values.networkPolicy.enabled (eq .Values.networkPolicy.type "kubernetes") -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}-metrics
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Egress
+    - Ingress
+  {{- if and .Values.metrics.enabled .Values.networkPolicy.ingress.metrics.enabled (gt (len .Values.networkPolicy.ingress.metrics.namespaces) 0) }}
+  ingress:
+    - from:
+{{- range .Values.networkPolicy.ingress.metrics.namespaces }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . | quote }}
+{{- end }}
+      ports:
+        - protocol: TCP
+          port: 8443
+  {{- end }}
+  egress:
+  {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.allowDNS }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+  {{- end }}
+  {{- range .Values.networkPolicy.egress.harborSelectors }}
+    - to:
+        - namespaceSelector:
+{{ toYaml .namespaceSelector | nindent 12 }}
+{{- if .podSelector }}
+          podSelector:
+{{ toYaml .podSelector | nindent 12 }}
+{{- end }}
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 443
+  {{- end }}
+{{- end }}

@@ -123,11 +123,6 @@ We treat generated outputs as source-of-truth for releases and keep Helm artifac
 
 CI verifies that chart RBAC/CRDs are synced with these sources.
 
-## Installer Bundle
-
-`make build-installer` produces `dist/install.yaml`. This file is published in releases.
-Do not edit it manually.
-
 ## Helm Chart
 
 We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in mind:
@@ -135,6 +130,7 @@ We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in
 ### Operator vs Chart
 - The **operator code** lives under `api/` and `internal/`.
 - The **chart** is for packaging/deploying the operator.
+- We consider Helm the primary install method; kustomize-based install manifests are no longer maintained.
 
 ### Chart Values & Schema
 - Update `charts/harbor-operator/values.yaml` and `charts/harbor-operator/values.schema.json` together.

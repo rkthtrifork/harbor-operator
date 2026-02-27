@@ -97,30 +97,25 @@ run: manifests generate fmt vet ## Run a controller from your host.
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
 
-.PHONY: build-installer
-build-installer: kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	cd config/manager && $(KUSTOMIZE) edit set image ${IMG}
-	$(KUSTOMIZE) build config/default > dist/install.yaml
-
 ##@ Deployment
-
-.PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
 .PHONY: uninstall
 uninstall: ## Uninstall CRDs for the harbor.harbor-operator.io API group.
-	HARBOR_API_GROUP=$(HARBOR_API_GROUP) hack/delete-crds.sh
+	$(KUBECTL) delete --ignore-not-found -f charts/harbor-operator/crds
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster.
-	cd config/manager && $(KUSTOMIZE) edit set image ${IMG_LOCAL}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+deploy: ## Deploy controller via Helm chart.
+	$(KUBECTL) create namespace harbor-operator-system --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	IMG_REPO=$$(echo $(IMG) | cut -d: -f1); \
+	IMG_TAG=$$(echo $(IMG) | cut -d: -f2); \
+	helm upgrade --install harbor-operator ./charts/harbor-operator \
+		--namespace harbor-operator-system \
+		--set image.repository=$${IMG_REPO} \
+		--set image.tag=$${IMG_TAG}
 
 .PHONY: undeploy
-undeploy: kustomize ## Undeploy controller from the K8s cluster.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found -f -
+undeploy: ## Undeploy controller from the K8s cluster.
+	helm uninstall harbor-operator -n harbor-operator-system --ignore-not-found
 
 ##@ Samples
 
@@ -147,7 +142,7 @@ kind-down: ## Delete the Kind cluster named "kind"
 	kind delete cluster
 
 .PHONY: kind-deploy
-kind-deploy: generate install ## Build the image, load it into Kind, and deploy the operator.
+kind-deploy: generate ## Build the image, load it into Kind, and deploy the operator.
 	@echo "Building local image..."
 	$(MAKE) docker-build
 	@echo "Loading image into Kind cluster..."
@@ -170,22 +165,15 @@ $(LOCALBIN):
 
 ## Tool Binaries
 KUBECTL ?= kubectl
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.5.0
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 GOLANGCI_LINT_VERSION ?= v1.63.4
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.

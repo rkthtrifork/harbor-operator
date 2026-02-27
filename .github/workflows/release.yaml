@@ -19,11 +19,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.9.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -32,14 +32,14 @@ jobs:
             type=ref,event=tag                       # v0.1.0 (original)
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: ./Dockerfile
@@ -54,14 +54,6 @@ jobs:
         with:
           prefix: "v"
 
-      - name: Build installer manifest
-        if: ${{ steps.classify.outputs.is_release == 'true' }}
-        run: |
-          VERSION_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -E ':[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | sed 's/.*://')
-          IMAGE="${REGISTRY}/${IMAGE_NAME}:${VERSION_TAG}"
-          echo "Using image ${IMAGE} for installer"
-          IMG="${IMAGE}" make build-installer
-
       - name: Upload installer to GitHub Release
         if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@v2
@@ -69,7 +61,5 @@ jobs:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
-          files: |
-            dist/install.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
