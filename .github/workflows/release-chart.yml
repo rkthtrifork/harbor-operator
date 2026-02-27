@@ -32,17 +32,22 @@ jobs:
             exit 1
           fi
 
-      - name: Classify tag
-        id: classify
-        uses: ./.github/actions/classify-tag
-        with:
-          prefix: "chart-v"
-
       - name: Package chart
         run: helm package charts/harbor-operator --destination dist
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push chart
+        run: |
+          chart_version="$(grep -E '^version:' charts/harbor-operator/Chart.yaml | awk '{print $2}')"
+          helm push "dist/harbor-operator-${chart_version}.tgz" oci://ghcr.io/rkthtrifork/charts
+
+      - name: Classify tag
+        id: classify
+        uses: ./.github/actions/classify-tag
+        with:
+          prefix: "chart-v"
 
       - name: Create GitHub Release
         if: ${{ steps.classify.outputs.is_release == 'true' }}
@@ -55,8 +60,3 @@ jobs:
             dist/harbor-operator-*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push chart
-        run: |
-          chart_version="$(grep -E '^version:' charts/harbor-operator/Chart.yaml | awk '{print $2}')"
-          helm push "dist/harbor-operator-${chart_version}.tgz" oci://ghcr.io/rkthtrifork/charts

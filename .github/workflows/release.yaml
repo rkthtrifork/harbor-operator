@@ -48,18 +48,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Build installer manifest
-        run: |
-          VERSION_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -E ':[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | sed 's/.*://')
-          IMAGE="${REGISTRY}/${IMAGE_NAME}:${VERSION_TAG}"
-          echo "Using image ${IMAGE} for installer"
-          IMG="${IMAGE}" make build-installer
-
       - name: Classify tag
         id: classify
         uses: ./.github/actions/classify-tag
         with:
           prefix: "v"
+
+      - name: Build installer manifest
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
+        run: |
+          VERSION_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -E ':[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | sed 's/.*://')
+          IMAGE="${REGISTRY}/${IMAGE_NAME}:${VERSION_TAG}"
+          echo "Using image ${IMAGE} for installer"
+          IMG="${IMAGE}" make build-installer
 
       - name: Upload installer to GitHub Release
         if: ${{ steps.classify.outputs.is_release == 'true' }}
