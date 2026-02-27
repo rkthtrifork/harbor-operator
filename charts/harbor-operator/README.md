@@ -28,6 +28,8 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
   --set metrics.enabled=true
 ```
 
+Note: set only one of `pdb.minAvailable` or `pdb.maxUnavailable`. If both are set, the chart will prefer `maxUnavailable`.
+
 ## CRDs
 
 CRDs are packaged in the chart under `crds/`. These are synced from `config/crd/bases`.
