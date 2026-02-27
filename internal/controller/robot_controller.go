@@ -27,6 +27,7 @@ type RobotReconciler struct {
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
 

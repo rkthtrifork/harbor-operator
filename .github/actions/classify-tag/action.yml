@@ -1,0 +1,33 @@
+name: classify-tag
+description: Classify tag for release and rc handling
+inputs:
+  prefix:
+    description: Tag prefix (e.g. v or chart-v)
+    required: true
+outputs:
+  is_release:
+    description: Whether this tag should create a GitHub Release
+    value: ${{ steps.classify.outputs.is_release }}
+  is_rc:
+    description: Whether this tag is an RC release
+    value: ${{ steps.classify.outputs.is_rc }}
+runs:
+  using: "composite"
+  steps:
+    - id: classify
+      shell: bash
+      run: |
+        tag="${GITHUB_REF_NAME}"
+        prefix="${{ inputs.prefix }}"
+        if [[ "$tag" =~ ^${prefix}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "is_release=true" >> "$GITHUB_OUTPUT"
+          echo "is_rc=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [[ "$tag" =~ ^${prefix}[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+          echo "is_release=true" >> "$GITHUB_OUTPUT"
+          echo "is_rc=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        echo "is_release=false" >> "$GITHUB_OUTPUT"
+        echo "is_rc=false" >> "$GITHUB_OUTPUT"

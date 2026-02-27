@@ -48,7 +48,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Classify tag
+        id: classify
+        uses: ./.github/actions/classify-tag
+        with:
+          prefix: "v"
+
       - name: Build installer manifest
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
         run: |
           VERSION_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -E ':[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | sed 's/.*://')
           IMAGE="${REGISTRY}/${IMAGE_NAME}:${VERSION_TAG}"
@@ -56,9 +63,12 @@ jobs:
           IMG="${IMAGE}" make build-installer
 
       - name: Upload installer to GitHub Release
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
             dist/install.yaml
         env:

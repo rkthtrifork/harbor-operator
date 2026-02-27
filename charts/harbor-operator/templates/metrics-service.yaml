@@ -1,0 +1,16 @@
+{{- if .Values.metrics.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}-metrics
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+spec:
+  ports:
+    - name: https
+      port: 8443
+      targetPort: 8443
+  selector:
+    app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

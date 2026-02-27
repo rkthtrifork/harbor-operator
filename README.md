@@ -81,25 +81,19 @@ This will:
 - Install Harbor via Helm
 - Build a local `harbor-operator:local` image, load it into Kind, and deploy it
 
-If you also want sample CRs applied:
-
-```sh
-make kind-up-with-samples
-```
-
 ### 3. Working with Samples
 
 Apply or remove sample CRs (in `config/samples`):
 
 ```sh
 # Apply sample HarborConnection, Registry, Project, etc.
-make samples-apply
+make apply-samples
 
 # Delete all Harbor CRs (HarborConnection last) in all namespaces
-make clean-samples
+make delete-crs
 ```
 
-> `clean-samples` removes **all** custom resources in the
+> `delete-crs` removes **all** custom resources in the
 > `harbor.harbor-operator.io` API group, not just the manifests in `config/samples/`.
 
 ### 4. Rebuilding and Redeploying
@@ -153,6 +147,23 @@ For a non-Kind cluster, you typically:
    ```
 
 5. Create a `HarborConnection` and any `Registry` / `Project` / `User` / `Member` CRs you need.
+
+## Helm Chart (OCI)
+
+We publish an OCI Helm chart to GHCR.
+
+```sh
+helm registry login ghcr.io
+helm install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator --version <chart-version>
+```
+
+To render locally:
+
+```sh
+helm template harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator --version <chart-version>
+```
+
+Values are documented in `charts/harbor-operator/values.yaml` and validated by `charts/harbor-operator/values.schema.json`.
 
 ## Installer Bundle
 
