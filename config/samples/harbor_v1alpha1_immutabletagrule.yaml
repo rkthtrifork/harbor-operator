@@ -1,0 +1,17 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: ImmutableTagRule
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: immutabletagrule-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  projectRef:
+    name: project-sample
+  action: immutable
+  template: repoMatches
+  tagSelectors:
+    - kind: doublestar
+      decoration: matches
+      pattern: "**"

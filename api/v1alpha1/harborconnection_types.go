@@ -52,6 +52,8 @@ type HarborConnectionStatus struct {
 // +kubebuilder:printcolumn:name="BaseURL",type=string,JSONPath=`.spec.baseURL`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,priority=1
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // HarborConnection is the Schema for the harborconnections API.
 type HarborConnection struct {

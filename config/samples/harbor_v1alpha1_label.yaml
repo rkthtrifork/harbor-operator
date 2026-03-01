@@ -1,0 +1,12 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Label
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: label-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  name: team-blue
+  color: "#3366ff"
+  scope: g

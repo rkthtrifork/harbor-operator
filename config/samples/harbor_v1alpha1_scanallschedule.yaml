@@ -1,0 +1,12 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: ScanAllSchedule
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: scanallschedule-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  schedule:
+    type: Daily
+    cron: "0 0 0 * * *"

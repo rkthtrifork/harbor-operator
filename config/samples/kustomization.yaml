@@ -9,6 +9,14 @@ resources:
   - harbor_v1alpha1_gcschedule.yaml
   - harbor_v1alpha1_purgeaudit.yaml
   - harbor_v1alpha1_retentionpolicy.yaml
+  - harbor_v1alpha1_replicationpolicy.yaml
+  - harbor_v1alpha1_webhookpolicy.yaml
+  - harbor_v1alpha1_immutabletagrule.yaml
+  - harbor_v1alpha1_label.yaml
+  - harbor_v1alpha1_usergroup.yaml
+  - harbor_v1alpha1_scannerregistration.yaml
+  - harbor_v1alpha1_scanallschedule.yaml
+  - harbor_v1alpha1_quota.yaml
   # - harbor_v1alpha1_member.yaml
   - harbor_v1alpha1_harborconnection.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

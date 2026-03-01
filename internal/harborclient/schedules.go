@@ -48,6 +48,22 @@ func (c *Client) UpdatePurgeSchedule(ctx context.Context, in Schedule) error {
 	return err
 }
 
+func (c *Client) GetScanAllSchedule(ctx context.Context) (*Schedule, error) {
+	var out Schedule
+	_, err := c.do(ctx, "GET", "/api/v2.0/system/scanAll/schedule", nil, &out)
+	return &out, err
+}
+
+func (c *Client) CreateScanAllSchedule(ctx context.Context, in Schedule) error {
+	_, err := c.do(ctx, "POST", "/api/v2.0/system/scanAll/schedule", &in, nil)
+	return err
+}
+
+func (c *Client) UpdateScanAllSchedule(ctx context.Context, in Schedule) error {
+	_, err := c.do(ctx, "PUT", "/api/v2.0/system/scanAll/schedule", &in, nil)
+	return err
+}
+
 func (c *Client) GetRetentionByID(ctx context.Context, id int) (*RetentionPolicy, error) {
 	var out RetentionPolicy
 	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/retentions/%d", id), nil, &out)

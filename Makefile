@@ -111,7 +111,8 @@ deploy: ## Deploy controller via Helm chart.
 	helm upgrade --install harbor-operator ./charts/harbor-operator \
 		--namespace harbor-operator-system \
 		--set image.repository=$${IMG_REPO} \
-		--set image.tag=$${IMG_TAG}
+		--set image.tag=$${IMG_TAG} \
+		--wait
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster.
@@ -129,13 +130,37 @@ delete-crs: ## Delete all CRs in harbor.harbor-operator.io API group (HarborConn
 
 ##@ Kind
 
-.PHONY: kind-up
-kind-up: ## Create Kind cluster + Traefik + Harbor + harbor-operator
-	kind create cluster --config hack/kind-configuration.yaml
-	helm install --set service.type=NodePort --set ports.web.nodePort=30080 --set ports.websecure.nodePort=30443 traefik oci://ghcr.io/traefik/helm/traefik --wait
-	helm repo add harbor https://helm.goharbor.io
+.PHONY: kind-install-stack
+kind-install-stack: ## Install Traefik + Harbor + harbor-operator into the current cluster
+	helm install traefik oci://ghcr.io/traefik/helm/traefik\
+		--set service.type=NodePort \
+		--set ports.web.nodePort=30080 \
+		--set ports.websecure.nodePort=30443 \
+		--wait
+	helm repo add harbor https://helm.goharbor.io --force-update
 	helm install harbor harbor/harbor --wait
 	$(MAKE) kind-deploy
+
+.PHONY: kind-up
+kind-up: ## Create Kind cluster (default CNI) + Traefik + Harbor + harbor-operator
+	kind create cluster --config hack/kind-configuration.yaml
+	$(MAKE) kind-install-stack
+
+.PHONY: kind-up-cilium
+kind-up-cilium: ## Create Kind cluster with Cilium CNI + Traefik + Harbor + harbor-operator
+	kind create cluster --config hack/kind-configuration-cilium.yaml
+	helm repo add cilium https://helm.cilium.io --force-update
+	helm repo update
+	helm upgrade --install cilium cilium/cilium \
+		--namespace kube-system \
+		--set hubble.enabled=true \
+		--set hubble.relay.enabled=true \
+		--set hubble.ui.enabled=true \
+		--set operator.replicas=1 \
+		--set k8sServiceHost=kind-control-plane \
+		--set k8sServicePort=6443 \
+		--wait
+	$(MAKE) kind-install-stack
 
 .PHONY: kind-down
 kind-down: ## Delete the Kind cluster named "kind"

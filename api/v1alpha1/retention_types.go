@@ -31,15 +31,6 @@ type RetentionPolicySpec struct {
 	Scope *RetentionScope `json:"scope,omitempty"`
 }
 
-// ProjectReference identifies a Project custom resource.
-type ProjectReference struct {
-	// Name of the Project resource.
-	Name string `json:"name"`
-	// Namespace of the Project resource. Defaults to the RetentionPolicy namespace.
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-}
-
 // RetentionRule defines a retention rule.
 type RetentionRule struct {
 	// Disabled indicates whether the rule is disabled.
@@ -125,6 +116,8 @@ type RetentionPolicyStatus struct {
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,priority=1
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RetentionPolicy is the Schema for the retentionpolicies API.
 type RetentionPolicy struct {

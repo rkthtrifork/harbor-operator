@@ -74,6 +74,9 @@ networkPolicy:
   egress:
     # Egress to kube-apiserver (TCP 443).
     allowKubeAPI: true
+    # kube-apiserver ports to allow when allowKubeAPI is true.
+    kubeAPIPorts:
+      - 443
     # Egress to kube-dns (UDP/TCP 53).
     allowDNS: true
     harborSelectors: []
@@ -82,4 +85,10 @@ networkPolicy:
     #       name: harbor-system
     #   podSelector:
     #     matchLabels:
-    #       app: harbor-core
+    #       app.kubernetes.io/component: core
+    #       app.kubernetes.io/instance: harbor
+    # - namespace: default
+    #   podSelector:
+    #     matchLabels:
+    #       app.kubernetes.io/component: core
+    #       app.kubernetes.io/instance: harbor

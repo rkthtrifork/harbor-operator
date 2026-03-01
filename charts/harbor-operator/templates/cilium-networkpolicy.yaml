@@ -23,13 +23,15 @@ spec:
               protocol: TCP
   {{- end }}
   egress:
-  {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+  {{- if and .Values.networkPolicy.egress.allowKubeAPI (gt (len .Values.networkPolicy.egress.kubeAPIPorts) 0) }}
     - toEntities:
         - kube-apiserver
       toPorts:
         - ports:
-            - port: "443"
+{{- range .Values.networkPolicy.egress.kubeAPIPorts }}
+            - port: {{ . | quote }}
               protocol: TCP
+{{- end }}
   {{- end }}
   {{- if .Values.networkPolicy.egress.allowDNS }}
     - toEndpoints:
@@ -45,16 +47,22 @@ spec:
   {{- range .Values.networkPolicy.egress.harborSelectors }}
     - toEndpoints:
         - matchLabels:
+{{- if .namespace }}
+            k8s:io.kubernetes.pod.namespace: {{ .namespace | quote }}
+{{- else if .namespaceSelector.matchLabels }}
 {{- range $k, $v := .namespaceSelector.matchLabels }}
-            k8s:io.kubernetes.pod.namespace.labels.{{ $k }}: {{ $v | quote }}
+            k8s:io.cilium.k8s.namespace.labels.{{ $k }}: {{ $v | quote }}
+{{- end }}
 {{- end }}
 {{- if .podSelector }}
 {{- range $k, $v := .podSelector.matchLabels }}
-            k8s:io.kubernetes.pod.labels.{{ $k }}: {{ $v | quote }}
+            k8s:{{ $k }}: {{ $v | quote }}
 {{- end }}
 {{- end }}
       toPorts:
         - ports:
+            - port: "80"
+              protocol: TCP
             - port: "8080"
               protocol: TCP
             - port: "443"

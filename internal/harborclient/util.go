@@ -18,3 +18,11 @@ func extractLocationID(resp *http.Response) (int, error) {
 	}
 	return id, nil
 }
+
+func extractLocationIDString(resp *http.Response) (string, error) {
+	loc := resp.Header.Get("Location")
+	if loc == "" {
+		return "", fmt.Errorf("no Location header")
+	}
+	return path.Base(loc), nil
+}

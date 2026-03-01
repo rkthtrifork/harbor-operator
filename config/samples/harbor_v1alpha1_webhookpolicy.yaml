@@ -1,0 +1,16 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: WebhookPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: webhookpolicy-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  projectRef:
+    name: project-sample
+  eventTypes:
+    - PUSH_ARTIFACT
+  targets:
+    - type: http
+      address: https://example.com/harbor/webhook

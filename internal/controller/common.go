@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -150,4 +151,74 @@ func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object,
 		return true, err
 	}
 	return true, nil
+}
+
+func resolveRegistryID(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference, id *int) (int, error) {
+	if ref != nil && id != nil {
+		return 0, fmt.Errorf("registryRef and registryID are mutually exclusive")
+	}
+	if ref != nil {
+		if ref.Name == "" {
+			return 0, fmt.Errorf("registryRef.name must not be empty")
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = namespace
+		}
+		var registry harborv1alpha1.Registry
+		if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &registry); err != nil {
+			return 0, err
+		}
+		if registry.Status.HarborRegistryID == 0 {
+			return 0, fmt.Errorf("referenced Registry %s/%s does not have harborRegistryID yet", ns, ref.Name)
+		}
+		return registry.Status.HarborRegistryID, nil
+	}
+	if id != nil {
+		if *id <= 0 {
+			return 0, fmt.Errorf("registryID must be greater than 0")
+		}
+		return *id, nil
+	}
+	return 0, fmt.Errorf("registryRef or registryID must be set")
+}
+
+func resolveProject(ctx context.Context, c client.Client, hc *harborclient.Client, namespace string, ref *harborv1alpha1.ProjectReference, nameOrID string) (string, int, error) {
+	if ref != nil && nameOrID != "" {
+		return "", 0, fmt.Errorf("projectRef and projectNameOrID are mutually exclusive")
+	}
+	if ref != nil {
+		if ref.Name == "" {
+			return "", 0, fmt.Errorf("projectRef.name must not be empty")
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = namespace
+		}
+		var project harborv1alpha1.Project
+		if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &project); err != nil {
+			return "", 0, err
+		}
+		if project.Status.HarborProjectID == 0 {
+			return "", 0, fmt.Errorf("referenced Project %s/%s does not have harborProjectID yet", ns, ref.Name)
+		}
+		return strconv.Itoa(project.Status.HarborProjectID), project.Status.HarborProjectID, nil
+	}
+	if nameOrID == "" {
+		return "", 0, fmt.Errorf("projectRef or projectNameOrID must be set")
+	}
+	if id, err := strconv.Atoi(nameOrID); err == nil && id > 0 {
+		return nameOrID, id, nil
+	}
+	if hc == nil {
+		return nameOrID, 0, nil
+	}
+	project, err := hc.FindProjectByName(ctx, nameOrID)
+	if err != nil {
+		return "", 0, err
+	}
+	if project == nil || project.ProjectID == 0 {
+		return "", 0, fmt.Errorf("project %q not found in Harbor", nameOrID)
+	}
+	return nameOrID, project.ProjectID, nil
 }

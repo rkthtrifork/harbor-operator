@@ -263,6 +263,62 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "RetentionPolicy")
 		os.Exit(1)
 	}
+	if err = (&controller.ReplicationPolicyReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ReplicationPolicy")
+		os.Exit(1)
+	}
+	if err = (&controller.WebhookPolicyReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "WebhookPolicy")
+		os.Exit(1)
+	}
+	if err = (&controller.ImmutableTagRuleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ImmutableTagRule")
+		os.Exit(1)
+	}
+	if err = (&controller.LabelReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Label")
+		os.Exit(1)
+	}
+	if err = (&controller.UserGroupReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UserGroup")
+		os.Exit(1)
+	}
+	if err = (&controller.ScannerRegistrationReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ScannerRegistration")
+		os.Exit(1)
+	}
+	if err = (&controller.ScanAllScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ScanAllSchedule")
+		os.Exit(1)
+	}
+	if err = (&controller.QuotaReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Quota")
+		os.Exit(1)
+	}
 	if err = (&controller.HarborConnectionReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
