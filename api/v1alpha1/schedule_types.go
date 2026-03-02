@@ -1,5 +1,15 @@
 package v1alpha1
 
+const (
+	ScheduleTypeHourly   = "Hourly"
+	ScheduleTypeDaily    = "Daily"
+	ScheduleTypeWeekly   = "Weekly"
+	ScheduleTypeCustom   = "Custom"
+	ScheduleTypeManual   = "Manual"
+	ScheduleTypeNone     = "None"
+	ScheduleTypeSchedule = "Schedule"
+)
+
 // ScheduleSpec defines the schedule configuration.
 type ScheduleSpec struct {
 	// Type defines the schedule type.

@@ -70,6 +70,10 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	return r.reconcileWebhookPolicy(ctx, hc, &cr)
+}
+
+func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.WebhookPolicy) (ctrl.Result, error) {
 	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 	if cr.Spec.Enabled == nil {
 		defaultEnabled := true
@@ -78,12 +82,12 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	projectKey, projectID, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
 	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	targets, targetsHash, err := r.buildTargets(ctx, &cr)
+	targets, targetsHash, err := r.buildTargets(ctx, cr)
 	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	policy := harborclient.WebhookPolicy{
@@ -98,9 +102,9 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if cr.Status.HarborWebhookPolicyID == 0 && cr.Spec.AllowTakeover {
-		adopted, err := r.adoptExisting(ctx, hc, projectKey, &cr)
+		adopted, err := r.adoptExisting(ctx, hc, projectKey, cr)
 		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		if adopted {
 			r.logger.Info("Adopted existing webhook policy", "ID", cr.Status.HarborWebhookPolicyID)
@@ -111,11 +115,11 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if cr.Status.HarborWebhookPolicyID == 0 {
 		id, err := hc.CreateWebhookPolicy(ctx, projectKey, policy)
 		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborWebhookPolicyID = id
 		cr.Status.TargetsHash = targetsHash
-		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Webhook policy created"); err != nil {
+		if err := setReadyStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Webhook policy created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -125,18 +129,18 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborWebhookPolicyID = 0
-			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Webhook policy not found in Harbor"); err != nil {
+			if err := setReconcilingStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Webhook policy not found in Harbor"); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	statusChanged := false
 	if webhookPolicyNeedsUpdate(policy, current) || (targetsHash != "" && targetsHash != cr.Status.TargetsHash) {
 		if err := hc.UpdateWebhookPolicy(ctx, projectKey, cr.Status.HarborWebhookPolicyID, policy); err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated webhook policy", "ID", cr.Status.HarborWebhookPolicyID)
 		if targetsHash != "" && targetsHash != cr.Status.TargetsHash {
@@ -147,7 +151,7 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	condChanged := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Webhook policy reconciled")
 	if statusChanged || condChanged {
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := r.Status().Update(ctx, cr); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

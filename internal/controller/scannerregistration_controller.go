@@ -63,11 +63,15 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
+	return r.reconcileScannerRegistration(ctx, hc, &cr)
+}
+
+func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.ScannerRegistration) (ctrl.Result, error) {
 	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
-	credential, credentialHash, err := r.resolveCredential(ctx, &cr)
+	credential, credentialHash, err := r.resolveCredential(ctx, cr)
 	if err != nil {
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	reqBody := harborclient.ScannerRegistrationReq{
@@ -82,9 +86,9 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	if cr.Status.HarborScannerID == "" && cr.Spec.AllowTakeover {
-		adopted, err := r.adoptExisting(ctx, hc, &cr)
+		adopted, err := r.adoptExisting(ctx, hc, cr)
 		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		if adopted {
 			r.logger.Info("Adopted existing scanner registration", "ID", cr.Status.HarborScannerID)
@@ -95,11 +99,11 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 	if cr.Status.HarborScannerID == "" {
 		id, err := hc.CreateScanner(ctx, reqBody)
 		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		cr.Status.HarborScannerID = id
 		cr.Status.CredentialHash = credentialHash
-		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Scanner registration created"); err != nil {
+		if err := setReadyStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Scanner registration created"); err != nil {
 			return ctrl.Result{}, err
 		}
 		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
@@ -109,18 +113,18 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 	if err != nil {
 		if harborclient.IsNotFound(err) {
 			cr.Status.HarborScannerID = ""
-			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Scanner registration not found in Harbor"); err != nil {
+			if err := setReconcilingStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Scanner registration not found in Harbor"); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	statusChanged := false
 	if scannerNeedsUpdate(reqBody, current) || (credentialHash != "" && credentialHash != cr.Status.CredentialHash) {
 		if err := hc.UpdateScanner(ctx, cr.Status.HarborScannerID, reqBody); err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Updated scanner registration", "ID", cr.Status.HarborScannerID)
 		if credentialHash != "" && credentialHash != cr.Status.CredentialHash {
@@ -131,14 +135,14 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	if cr.Spec.Default && !current.IsDefault {
 		if err := hc.SetDefaultScanner(ctx, cr.Status.HarborScannerID, true); err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		r.logger.Info("Set scanner registration as default", "ID", cr.Status.HarborScannerID)
 	}
 
 	condChanged := markReady(&cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Scanner registration reconciled")
 	if statusChanged || condChanged {
-		if err := r.Status().Update(ctx, &cr); err != nil {
+		if err := r.Status().Update(ctx, cr); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

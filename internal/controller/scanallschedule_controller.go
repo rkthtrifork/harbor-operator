@@ -72,12 +72,10 @@ func (r *ScanAllScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		},
 		Parameters: params,
 	}
-	if sched.Schedule.Type != "Manual" && sched.Schedule.Type != "None" && sched.Schedule.Cron == "" {
+	if sched.Schedule.Type != harborv1alpha1.ScheduleTypeManual && sched.Schedule.Type != harborv1alpha1.ScheduleTypeNone && sched.Schedule.Cron == "" {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("schedule.cron is required for schedule type %q", sched.Schedule.Type))
 	}
-	if sched.Schedule.Type == "Manual" {
-		// Harbor treats Manual as a trigger. Ensure we still send parameters/hash.
-	}
+	// Harbor treats Manual as a trigger. We still send parameters/hash.
 	hash := hashParts(
 		fmt.Sprintf("type=%s", cr.Spec.Schedule.Type),
 		fmt.Sprintf("cron=%s", cr.Spec.Schedule.Cron),
