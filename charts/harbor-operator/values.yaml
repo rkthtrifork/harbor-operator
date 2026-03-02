@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/rkthtrifork/harbor-operator/harbor-operator
+  repository: ghcr.io/rkthtrifork/harbor-operator
   # If set, digest takes precedence over tag.
   tag: ""
   digest: ""
