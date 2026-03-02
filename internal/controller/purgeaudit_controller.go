@@ -75,7 +75,7 @@ func (r *PurgeAuditScheduleReconciler) Reconcile(ctx context.Context, req ctrl.R
 		},
 		Parameters: params,
 	}
-	if sched.Schedule.Type != "Manual" && sched.Schedule.Type != "None" && sched.Schedule.Cron == "" {
+	if sched.Schedule.Type != harborv1alpha1.ScheduleTypeManual && sched.Schedule.Type != harborv1alpha1.ScheduleTypeNone && sched.Schedule.Cron == "" {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("schedule.cron is required for schedule type %q", sched.Schedule.Type))
 	}
 	hash := hashParts(

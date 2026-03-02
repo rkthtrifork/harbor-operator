@@ -21,13 +21,21 @@ rules:
   - configurations
   - gcschedules
   - harborconnections
+  - immutabletagrules
+  - labels
   - members
   - projects
   - purgeauditschedules
+  - quotas
   - registries
+  - replicationpolicies
   - retentionpolicies
   - robots
+  - scanallschedules
+  - scannerregistrations
+  - usergroups
   - users
+  - webhookpolicies
   verbs:
   - create
   - delete
@@ -42,13 +50,21 @@ rules:
   - configurations/finalizers
   - gcschedules/finalizers
   - harborconnections/finalizers
+  - immutabletagrules/finalizers
+  - labels/finalizers
   - members/finalizers
   - projects/finalizers
   - purgeauditschedules/finalizers
+  - quotas/finalizers
   - registries/finalizers
+  - replicationpolicies/finalizers
   - retentionpolicies/finalizers
   - robots/finalizers
+  - scanallschedules/finalizers
+  - scannerregistrations/finalizers
+  - usergroups/finalizers
   - users/finalizers
+  - webhookpolicies/finalizers
   verbs:
   - update
 - apiGroups:
@@ -57,13 +73,21 @@ rules:
   - configurations/status
   - gcschedules/status
   - harborconnections/status
+  - immutabletagrules/status
+  - labels/status
   - members/status
   - projects/status
   - purgeauditschedules/status
+  - quotas/status
   - registries/status
+  - replicationpolicies/status
   - retentionpolicies/status
   - robots/status
+  - scanallschedules/status
+  - scannerregistrations/status
+  - usergroups/status
   - users/status
+  - webhookpolicies/status
   verbs:
   - get
   - patch

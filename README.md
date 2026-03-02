@@ -40,6 +40,30 @@ The operator then reconciles that state with your Harbor instance via its API.
 - **Configuration**  
   Represents Harbor system configuration (OIDC, robot defaults, etc.).
 
+- **ReplicationPolicy**  
+  Represents Harbor replication policies between registries.
+
+- **WebhookPolicy**  
+  Represents project-level Harbor webhook policies.
+
+- **ImmutableTagRule**  
+  Represents project-level immutable tag rules.
+
+- **Label**  
+  Represents Harbor labels (global or project-scoped).
+
+- **UserGroup**  
+  Represents Harbor user groups (LDAP/HTTP/OIDC).
+
+- **ScannerRegistration**  
+  Represents Harbor scanner registrations.
+
+- **ScanAllSchedule**  
+  Represents Harbor scan-all scheduling configuration.
+
+- **Quota**  
+  Represents Harbor project quota configuration.
+
 ## Getting Started
 
 ### Prerequisites
@@ -80,6 +104,15 @@ This will:
 - Install Traefik (NodePorts 30080/30443 by default)
 - Install Harbor via Helm
 - Build a local `harbor-operator:local` image, load it into Kind, and deploy it
+
+### Optional: Start Kind with Cilium + Hubble
+
+If you want Cilium to be the CNI (so Hubble can observe pod traffic), create
+the cluster with Cilium from the start:
+
+```sh
+make kind-up-cilium
+```
 
 ### 3. Working with Samples
 

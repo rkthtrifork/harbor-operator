@@ -24,6 +24,13 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Message
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -72,7 +79,7 @@ spec:
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the
-                      RetentionPolicy namespace.
+                      referencing resource namespace.
                     type: string
                 required:
                 - name

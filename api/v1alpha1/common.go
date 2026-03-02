@@ -32,6 +32,24 @@ type SecretReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// ProjectReference identifies a Project custom resource.
+type ProjectReference struct {
+	// Name of the Project resource.
+	Name string `json:"name"`
+	// Namespace of the Project resource. Defaults to the referencing resource namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// RegistryReference identifies a Registry custom resource.
+type RegistryReference struct {
+	// Name of the Registry resource.
+	Name string `json:"name"`
+	// Namespace of the Registry resource. Defaults to the referencing resource namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // HarborStatusBase holds common status fields for Harbor resources.
 type HarborStatusBase struct {
 	// ObservedGeneration is the most recent generation observed by the controller.

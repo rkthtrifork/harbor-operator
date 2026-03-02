@@ -1,0 +1,13 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Quota
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: quota-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  projectRef:
+    name: project-sample
+  hard:
+    storage: 1073741824

@@ -59,8 +59,18 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
 ```
 
 Egress defaults:
-- kube‑api server (TCP 443)
+- kube‑api server (`networkPolicy.egress.kubeAPIPorts`, default `443`)
 - kube‑dns (UDP/TCP 53)
+
+For kind, the kube‑api server listens on `6443` by default:
+
+```sh
+helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \\
+  --version <chart-version> \\
+  --set networkPolicy.enabled=true \\
+  --set networkPolicy.type=cilium \\
+  --set networkPolicy.egress.kubeAPIPorts[0]=6443
+```
 
 To allow Harbor traffic, add one or more selectors:
 
@@ -69,12 +79,11 @@ networkPolicy:
   enabled: true
   egress:
     harborSelectors:
-      - namespaceSelector:
-          matchLabels:
-            name: harbor-system
+      - namespace: harbor-system
         podSelector:
           matchLabels:
-            app: harbor-core
+            app.kubernetes.io/component: core
+            app.kubernetes.io/instance: harbor
 ```
 
 ## CRDs

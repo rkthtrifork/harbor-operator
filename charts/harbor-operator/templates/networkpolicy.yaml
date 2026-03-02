@@ -26,13 +26,15 @@ spec:
           port: 8443
   {{- end }}
   egress:
-  {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+  {{- if and .Values.networkPolicy.egress.allowKubeAPI (gt (len .Values.networkPolicy.egress.kubeAPIPorts) 0) }}
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
       ports:
+{{- range .Values.networkPolicy.egress.kubeAPIPorts }}
         - protocol: TCP
-          port: 443
+          port: {{ . }}
+{{- end }}
   {{- end }}
   {{- if .Values.networkPolicy.egress.allowDNS }}
     - to:
@@ -48,12 +50,19 @@ spec:
   {{- range .Values.networkPolicy.egress.harborSelectors }}
     - to:
         - namespaceSelector:
+{{- if .namespace }}
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .namespace | quote }}
+{{- else }}
 {{ toYaml .namespaceSelector | nindent 12 }}
+{{- end }}
 {{- if .podSelector }}
           podSelector:
 {{ toYaml .podSelector | nindent 12 }}
 {{- end }}
       ports:
+        - protocol: TCP
+          port: 80
         - protocol: TCP
           port: 8080
         - protocol: TCP

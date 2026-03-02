@@ -1,0 +1,11 @@
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: UserGroup
+metadata:
+  labels:
+    app.kubernetes.io/name: harbor-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: usergroup-sample
+spec:
+  harborConnectionRef: harborconnection-sample
+  groupName: developers
+  groupType: 2

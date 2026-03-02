@@ -56,6 +56,22 @@ func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
 	return ps, err
 }
 
+func (c *Client) FindProjectByName(ctx context.Context, name string) (*Project, error) {
+	if name == "" {
+		return nil, nil
+	}
+	projects, err := c.ListProjects(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range projects {
+		if projects[i].Name == name {
+			return &projects[i], nil
+		}
+	}
+	return nil, nil
+}
+
 func (c *Client) GetProjectByID(ctx context.Context, id int) (*Project, error) {
 	var p Project
 	_, err := c.do(ctx, "GET",
