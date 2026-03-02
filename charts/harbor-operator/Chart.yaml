@@ -2,5 +2,5 @@ apiVersion: v2
 name: harbor-operator
 description: Kubernetes operator for managing Harbor resources
 type: application
-version: 0.3.0-test2
-appVersion: "0.5.0-test2"
+version: 0.3.0
+appVersion: "0.5.0"
