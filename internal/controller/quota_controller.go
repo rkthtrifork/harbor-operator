@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,27 +27,27 @@ type QuotaReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=quotas/finalizers,verbs=update
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[Quota:%s]", req.NamespacedName))
 
 	var cr harborv1alpha1.Quota
-	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &cr, r.logger); err != nil {
 		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
 	}
 
-	if cr.Status.ObservedGeneration != cr.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := markReconcilingIfNeeded(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), false, err); done {
+			return ctrl.Result{}, finalErr
+		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
@@ -82,11 +81,9 @@ func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	current, err := hc.GetQuota(ctx, cr.Status.HarborQuotaID)
 	if err != nil {
 		if harborclient.IsNotFound(err) {
-			cr.Status.HarborQuotaID = 0
-			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Quota not found in Harbor"); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
+			return requeueOnRemoteNotFound(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, func() {
+				cr.Status.HarborQuotaID = 0
+			}, "Quota not found in Harbor")
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -105,10 +102,19 @@ func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (r *QuotaReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.Quota{}).
-		Named("quota").
-		Complete(r)
+	builder, err := setupHarborBackedController(
+		mgr,
+		&harborv1alpha1.Quota{},
+		func() client.ObjectList { return &harborv1alpha1.QuotaList{} },
+		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+			return obj.(*harborv1alpha1.Quota).Spec.HarborConnectionRef
+		},
+		"quota",
+	)
+	if err != nil {
+		return err
+	}
+	return builder.Complete(r)
 }
 
 func (r *QuotaReconciler) findQuotaID(ctx context.Context, hc *harborclient.Client, projectID int) (int, error) {

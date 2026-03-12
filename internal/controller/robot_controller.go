@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,21 +28,27 @@ type RobotReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[Robot:%s]", req.NamespacedName))
 
 	var cr harborv1alpha1.Robot
-	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &cr, r.logger); err != nil {
+		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
+	}
+
+	if err := markReconcilingIfNeeded(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
+			return ctrl.Result{}, finalErr
+		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
@@ -59,17 +64,11 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
 
-	if cr.Status.ObservedGeneration != cr.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	if err := validateRobotSpec(&cr); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	secretRef, manageSecret, err := resolveRobotSecretRef(&cr)
+	secretRef, err := resolveRobotSecretRef(&cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -83,10 +82,10 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if cr.Status.HarborRobotID == 0 {
-		return r.createRobot(ctx, hc, &cr, secretRef, manageSecret)
+		return r.createRobot(ctx, hc, &cr, secretRef)
 	}
 
-	return r.reconcileExisting(ctx, hc, &cr, secretRef, manageSecret)
+	return r.reconcileExisting(ctx, hc, &cr, secretRef)
 }
 
 func (r *RobotReconciler) createRobot(
@@ -94,7 +93,6 @@ func (r *RobotReconciler) createRobot(
 	hc *harborclient.Client,
 	cr *harborv1alpha1.Robot,
 	secretRef harborv1alpha1.SecretReference,
-	manageSecret bool,
 ) (ctrl.Result, error) {
 	createReq := buildRobotCreateRequest(cr)
 	created, err := hc.CreateRobot(ctx, createReq)
@@ -102,20 +100,18 @@ func (r *RobotReconciler) createRobot(
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	cr.Status.HarborRobotID = created.ID
-	if manageSecret {
-		storedSecret := created.Secret
-		if storedSecret == "" {
-			storedSecret, err = rotateRobotSecret(ctx, hc, cr.Status.HarborRobotID)
-			if err != nil {
-				return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-			}
-		}
-		if err := upsertSecretValue(ctx, r.Client, secretRef.Namespace, secretRef.Name, secretRef.Key, storedSecret); err != nil {
+	storedSecret := created.Secret
+	if storedSecret == "" {
+		storedSecret, err = rotateRobotSecret(ctx, hc, cr.Status.HarborRobotID)
+		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
-		now := metav1.Now()
-		cr.Status.LastRotatedAt = &now
 	}
+	if err := upsertOwnedSecretValue(ctx, r.Client, cr, "Robot", secretRef.Namespace, secretRef.Name, secretRef.Key, storedSecret); err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
+	now := metav1.Now()
+	cr.Status.LastRotatedAt = &now
 	if err := setReadyStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Robot created"); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -128,16 +124,13 @@ func (r *RobotReconciler) reconcileExisting(
 	hc *harborclient.Client,
 	cr *harborv1alpha1.Robot,
 	secretRef harborv1alpha1.SecretReference,
-	manageSecret bool,
 ) (ctrl.Result, error) {
 	current, err := hc.GetRobotByID(ctx, cr.Status.HarborRobotID)
 	if err != nil {
 		if harborclient.IsNotFound(err) {
-			cr.Status.HarborRobotID = 0
-			if err := setReconcilingStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Robot not found in Harbor"); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
+			return requeueOnRemoteNotFound(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, func() {
+				cr.Status.HarborRobotID = 0
+			}, "Robot not found in Harbor")
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -156,12 +149,12 @@ func (r *RobotReconciler) reconcileExisting(
 
 	statusChanged := updateRobotExpiryStatus(cr, current.ExpiresAt)
 
-	if manageSecret && shouldRotateRobot(cr) {
+	if shouldRotateRobot(cr) {
 		rotatedSecret, err := rotateRobotSecret(ctx, hc, current.ID)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
-		if err := upsertSecretValue(ctx, r.Client, secretRef.Namespace, secretRef.Name, secretRef.Key, rotatedSecret); err != nil {
+		if err := upsertOwnedSecretValue(ctx, r.Client, cr, "Robot", secretRef.Namespace, secretRef.Name, secretRef.Key, rotatedSecret); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		now := metav1.Now()
@@ -230,16 +223,16 @@ func validateRobotSpec(cr *harborv1alpha1.Robot) error {
 	return nil
 }
 
-func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretReference, bool, error) {
+func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretReference, error) {
 	if cr.Spec.SecretRef == nil {
 		return harborv1alpha1.SecretReference{
 			Name:      fmt.Sprintf("%s-secret", cr.Name),
 			Key:       "secret",
 			Namespace: cr.Namespace,
-		}, true, nil
+		}, nil
 	}
 	if cr.Spec.SecretRef.Name == "" {
-		return harborv1alpha1.SecretReference{}, false, fmt.Errorf("spec.secretRef.name is required when secretRef is set")
+		return harborv1alpha1.SecretReference{}, fmt.Errorf("spec.secretRef.name is required when secretRef is set")
 	}
 	ref := *cr.Spec.SecretRef
 	if ref.Namespace == "" {
@@ -248,7 +241,7 @@ func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretRefer
 	if ref.Key == "" {
 		ref.Key = "secret"
 	}
-	return ref, true, nil
+	return ref, nil
 }
 
 func buildRobotCreateRequest(cr *harborv1alpha1.Robot) harborclient.RobotCreateRequest {
@@ -433,8 +426,17 @@ func updateRobotExpiryStatus(cr *harborv1alpha1.Robot, expiresAt int) bool {
 }
 
 func (r *RobotReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.Robot{}).
-		Named("robot").
-		Complete(r)
+	builder, err := setupHarborBackedController(
+		mgr,
+		&harborv1alpha1.Robot{},
+		func() client.ObjectList { return &harborv1alpha1.RobotList{} },
+		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+			return obj.(*harborv1alpha1.Robot).Spec.HarborConnectionRef
+		},
+		"robot",
+	)
+	if err != nil {
+		return err
+	}
+	return builder.Complete(r)
 }

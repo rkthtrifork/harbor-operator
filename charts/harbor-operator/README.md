@@ -28,6 +28,8 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
   --set metrics.enabled=true
 ```
 
+When `metrics.enabled=true` and `metrics.secure=true`, the chart also installs the delegated authentication RBAC needed for authenticated access to `/metrics` (`tokenreviews`, `subjectaccessreviews`, `system:auth-delegator`, and `extension-apiserver-authentication-reader`).
+
 Note: set only one of `pdb.minAvailable` or `pdb.maxUnavailable`. If both are set, the chart will prefer `maxUnavailable`.
 
 ### Prometheus ServiceMonitor

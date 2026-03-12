@@ -15,7 +15,9 @@ kind: Member
 metadata:
   name: my-project-alice
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   allowTakeover: false
 
   # Project reference in Harbor (name or ID, depending on your usage).
@@ -39,7 +41,9 @@ kind: Member
 metadata:
   name: my-project-dev-group
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   projectRef: "my-project"
   role: "maintainer"
 
@@ -56,8 +60,9 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind`
+  (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.projectRef** (string, required)
   Project identifier in Harbor:
@@ -94,6 +99,11 @@ Exactly one of `memberUser` or `memberGroup` should be set.
 - **spec.allowTakeover** (bool, optional)
   If `true`, the operator will adopt an existing Harbor membership for the same
   identity (user/group + project).
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

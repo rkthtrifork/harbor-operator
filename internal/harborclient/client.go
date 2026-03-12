@@ -111,13 +111,70 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (re
 
 	// decode
 	if out != nil {
+		if resp.ContentLength == 0 {
+			metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
+			return resp, nil
+		}
 		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+			if err == io.EOF {
+				metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
+				return resp, nil
+			}
 			metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
 			return nil, err
 		}
 	}
 	metrics.ObserveHarborRequest(method, endpointLabel, resp.StatusCode, time.Since(start).Seconds())
 	return resp, nil
+}
+
+func (c *Client) get(ctx context.Context, relURL string, out any) error {
+	_, err := c.do(ctx, http.MethodGet, relURL, nil, out)
+	return err
+}
+
+func (c *Client) post(ctx context.Context, relURL string, in, out any) error {
+	_, err := c.do(ctx, http.MethodPost, relURL, in, out)
+	return err
+}
+
+func (c *Client) put(ctx context.Context, relURL string, in any) error {
+	_, err := c.do(ctx, http.MethodPut, relURL, in, nil)
+	return err
+}
+
+func (c *Client) patch(ctx context.Context, relURL string, in, out any) error {
+	_, err := c.do(ctx, http.MethodPatch, relURL, in, out)
+	return err
+}
+
+func (c *Client) createWithNumericLocationID(ctx context.Context, relURL string, in any) (int, error) {
+	resp, err := c.do(ctx, http.MethodPost, relURL, in, nil)
+	if err != nil {
+		return 0, err
+	}
+	return extractLocationID(resp)
+}
+
+func (c *Client) createWithStringLocationID(ctx context.Context, relURL string, in any) (string, error) {
+	resp, err := c.do(ctx, http.MethodPost, relURL, in, nil)
+	if err != nil {
+		return "", err
+	}
+	return extractLocationIDString(resp)
+}
+
+func (c *Client) deleteIgnoringNotFound(ctx context.Context, relURL string, ignoreFns ...func(error) bool) error {
+	_, err := c.do(ctx, http.MethodDelete, relURL, nil, nil)
+	if IsNotFound(err) {
+		return nil
+	}
+	for _, ignoreFn := range ignoreFns {
+		if ignoreFn != nil && ignoreFn(err) {
+			return nil
+		}
+	}
+	return err
 }
 
 var numberPathSegment = regexp.MustCompile(`/\\d+`)

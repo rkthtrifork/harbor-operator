@@ -14,7 +14,9 @@ kind: User
 metadata:
   name: alice
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
 
   # Harbor username (defaults to metadata.name if omitted).
   username: "alice"
@@ -42,8 +44,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.username** (string, optional)
   Username in Harbor.
@@ -62,6 +64,11 @@ spec:
 
 - **spec.allowTakeover** (bool, optional)
   If `true`, the operator will adopt an existing Harbor user with the same username.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

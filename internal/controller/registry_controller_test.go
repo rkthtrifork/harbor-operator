@@ -62,7 +62,7 @@ var _ = Describe("Registry Controller", func() {
 				},
 				Spec: harborv1alpha1.RegistrySpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: "harbor-conn",
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
 					Name:        resourceName,
 					URL:         "https://registry.example.com",

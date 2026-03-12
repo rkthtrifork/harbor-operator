@@ -79,7 +79,7 @@ var _ = Describe("Member Controller", func() {
 				},
 				Spec: harborv1alpha1.MemberSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: connName,
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					ProjectRef: "demo",
 					Role:       "developer",
@@ -164,7 +164,7 @@ var _ = Describe("Member Controller", func() {
 				},
 				Spec: harborv1alpha1.MemberSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: connName,
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					AllowTakeover: false,
 					ProjectRef:    "demo",

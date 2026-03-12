@@ -59,37 +59,28 @@ func (c *Client) ListReplicationPolicies(ctx context.Context, name string) ([]Re
 		rel += "?" + values.Encode()
 	}
 	var out []ReplicationPolicy
-	_, err := c.do(ctx, "GET", rel, nil, &out)
+	err := c.get(ctx, rel, &out)
 	return out, err
 }
 
 // GetReplicationPolicy retrieves a replication policy by ID.
 func (c *Client) GetReplicationPolicy(ctx context.Context, id int) (*ReplicationPolicy, error) {
 	var out ReplicationPolicy
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/replication/policies/%d", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/replication/policies/%d", id), &out)
 	return &out, err
 }
 
 // CreateReplicationPolicy creates a new replication policy.
 func (c *Client) CreateReplicationPolicy(ctx context.Context, in ReplicationPolicy) (int, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/replication/policies", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/replication/policies", &in)
 }
 
 // UpdateReplicationPolicy updates an existing replication policy.
 func (c *Client) UpdateReplicationPolicy(ctx context.Context, id int, in ReplicationPolicy) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/replication/policies/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/replication/policies/%d", id), &in)
 }
 
 // DeleteReplicationPolicy deletes a replication policy.
 func (c *Client) DeleteReplicationPolicy(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/replication/policies/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/replication/policies/%d", id))
 }

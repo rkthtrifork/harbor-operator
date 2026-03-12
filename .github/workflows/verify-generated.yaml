@@ -1,4 +1,4 @@
-name: Verify generated CRDs
+name: Verify Generated Assets
 
 on:
   pull_request:
@@ -22,14 +22,14 @@ jobs:
         with:
           go-version-file: "go.mod"
 
-      - name: Regenerate code and CRDs
-        run: make generate manifests
+      - name: Regenerate code and synced chart assets
+        run: make manifests generate sync-chart
 
       - name: Check for uncommitted changes
         run: |
           git status --short
           if ! git diff --quiet; then
-            echo "ERROR: Running 'make generate manifests' produced changes."
-            echo "Please run 'make generate manifests' locally and commit the results."
+            echo "ERROR: Running 'make manifests generate sync-chart' produced changes."
+            echo "Please run 'make manifests generate sync-chart' locally and commit the results."
             exit 1
           fi

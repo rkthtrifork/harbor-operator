@@ -6,6 +6,8 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: usergroup-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   groupName: developers
   groupType: 2

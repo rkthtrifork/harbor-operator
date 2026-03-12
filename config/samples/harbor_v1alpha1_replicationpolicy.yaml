@@ -6,7 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: replicationpolicy-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   name: sample-replication
   sourceRegistryRef:
     name: registry-sample

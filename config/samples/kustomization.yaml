@@ -19,4 +19,5 @@ resources:
   - harbor_v1alpha1_quota.yaml
   # - harbor_v1alpha1_member.yaml
   - harbor_v1alpha1_harborconnection.yaml
+  - harbor_v1alpha1_clusterharborconnection.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

@@ -6,10 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,29 +25,29 @@ type UserReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=users/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=users/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[User:%s]", req.NamespacedName))
 
 	// Load CR
 	var cr harborv1alpha1.User
-	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &cr, r.logger); err != nil {
 		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
 	}
 
-	if cr.Status.ObservedGeneration != cr.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := markReconcilingIfNeeded(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Harbor client
 	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
+			return ctrl.Result{}, finalErr
+		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
@@ -100,11 +97,9 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	current, err := hc.GetUserByID(ctx, cr.Status.HarborUserID)
 	if err != nil {
 		if harborclient.IsNotFound(err) {
-			cr.Status.HarborUserID = 0
-			if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "User not found in Harbor"); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
+			return requeueOnRemoteNotFound(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, func() {
+				cr.Status.HarborUserID = 0
+			}, "User not found in Harbor")
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -121,20 +116,14 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *UserReconciler) getUserPassword(ctx context.Context, cr harborv1alpha1.User) (string, error) {
-	var passwordSecret corev1.Secret
-	namespacedName := types.NamespacedName{
-		Namespace: cr.Namespace,
-		Name:      cr.Spec.PasswordSecretRef.Name,
+	password, err := readSecretValue(ctx, r.Client, harborv1alpha1.SecretReference{
+		Name: cr.Spec.PasswordSecretRef.Name,
+		Key:  cr.Spec.PasswordSecretRef.Key,
+	}, cr.Namespace, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to read user password secret: %w", err)
 	}
-	if err := r.Get(ctx, namespacedName, &passwordSecret); err != nil {
-		return "", fmt.Errorf("failed to get password secret %s: %w", namespacedName, err)
-	}
-	passwordBytes, ok := passwordSecret.Data[cr.Spec.PasswordSecretRef.Key]
-	if !ok {
-		return "", fmt.Errorf("key %s not found in secret %s", cr.Spec.PasswordSecretRef.Key, namespacedName)
-	}
-
-	return string(passwordBytes), nil
+	return password, nil
 }
 
 func (r *UserReconciler) buildCreateReq(cr harborv1alpha1.User, password string) harborclient.CreateUserRequest {
@@ -179,8 +168,17 @@ func userNeedsUpdate(desired harborclient.CreateUserRequest, current harborclien
 }
 
 func (r *UserReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.User{}).
-		Named("user").
-		Complete(r)
+	builder, err := setupHarborBackedController(
+		mgr,
+		&harborv1alpha1.User{},
+		func() client.ObjectList { return &harborv1alpha1.UserList{} },
+		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+			return obj.(*harborv1alpha1.User).Spec.HarborConnectionRef
+		},
+		"user",
+	)
+	if err != nil {
+		return err
+	}
+	return builder.Complete(r)
 }

@@ -2,11 +2,47 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+type HarborConnectionReferenceKind string
+
+const (
+	HarborConnectionReferenceKindNamespaced HarborConnectionReferenceKind = "HarborConnection"
+	HarborConnectionReferenceKindCluster    HarborConnectionReferenceKind = "ClusterHarborConnection"
+)
+
+type DeletionPolicy string
+
+const (
+	DeletionPolicyDelete DeletionPolicy = "Delete"
+	DeletionPolicyOrphan DeletionPolicy = "Orphan"
+)
+
+// HarborConnectionReference identifies either a namespaced HarborConnection or a
+// cluster-scoped ClusterHarborConnection.
+type HarborConnectionReference struct {
+	// Name of the referenced Harbor connection object.
+	Name string `json:"name"`
+
+	// Kind selects the Harbor connection object kind.
+	// Defaults to HarborConnection.
+	// +kubebuilder:default=HarborConnection
+	// +kubebuilder:validation:Enum=HarborConnection;ClusterHarborConnection
+	// +optional
+	Kind HarborConnectionReferenceKind `json:"kind,omitempty"`
+}
+
 // HarborSpecBase holds the fields that appear in every Harbor CR.
 type HarborSpecBase struct {
-	// HarborConnectionRef references the HarborConnection resource to use.
+	// HarborConnectionRef references the Harbor connection object to use.
 	// +kubebuilder:validation:Required
-	HarborConnectionRef string `json:"harborConnectionRef"`
+	HarborConnectionRef HarborConnectionReference `json:"harborConnectionRef"`
+
+	// DeletionPolicy controls what happens when the Kubernetes object is deleted.
+	// Delete removes the corresponding Harbor resource before removing the finalizer.
+	// Orphan removes the finalizer even if Harbor cleanup cannot be completed.
+	// +kubebuilder:default=Delete
+	// +kubebuilder:validation:Enum=Delete;Orphan
+	// +optional
+	DeletionPolicy DeletionPolicy `json:"deletionPolicy,omitempty"`
 
 	// DriftDetectionInterval is the interval at which the operator will check
 	// for drift. A value of 0 (or omitted) disables periodic drift detection.
@@ -64,4 +100,11 @@ type HarborStatusBase struct {
 // GetDriftDetectionInterval returns the drift detection interval.
 func (base *HarborSpecBase) GetDriftDetectionInterval() *metav1.Duration {
 	return base.DriftDetectionInterval
+}
+
+func (base *HarborSpecBase) GetDeletionPolicy() DeletionPolicy {
+	if base.DeletionPolicy == "" {
+		return DeletionPolicyDelete
+	}
+	return base.DeletionPolicy
 }

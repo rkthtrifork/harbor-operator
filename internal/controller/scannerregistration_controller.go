@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,27 +25,27 @@ type ScannerRegistrationReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=scannerregistrations/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=scannerregistrations/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[ScannerRegistration:%s]", req.NamespacedName))
 
 	var cr harborv1alpha1.ScannerRegistration
-	if err := r.Get(ctx, req.NamespacedName, &cr); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &cr, r.logger); err != nil {
 		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
 	}
 
-	if cr.Status.ObservedGeneration != cr.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := markReconcilingIfNeeded(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
+		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
+			return ctrl.Result{}, finalErr
+		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
@@ -112,11 +111,9 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 	current, err := hc.GetScanner(ctx, cr.Status.HarborScannerID)
 	if err != nil {
 		if harborclient.IsNotFound(err) {
-			cr.Status.HarborScannerID = ""
-			if err := setReconcilingStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "NotFound", "Scanner registration not found in Harbor"); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
+			return requeueOnRemoteNotFound(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, func() {
+				cr.Status.HarborScannerID = ""
+			}, "Scanner registration not found in Harbor")
 		}
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -182,10 +179,19 @@ func (r *ScannerRegistrationReconciler) adoptExisting(ctx context.Context, hc *h
 }
 
 func (r *ScannerRegistrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.ScannerRegistration{}).
-		Named("scannerregistration").
-		Complete(r)
+	builder, err := setupHarborBackedController(
+		mgr,
+		&harborv1alpha1.ScannerRegistration{},
+		func() client.ObjectList { return &harborv1alpha1.ScannerRegistrationList{} },
+		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+			return obj.(*harborv1alpha1.ScannerRegistration).Spec.HarborConnectionRef
+		},
+		"scannerregistration",
+	)
+	if err != nil {
+		return err
+	}
+	return builder.Complete(r)
 }
 
 func scannerNeedsUpdate(desired harborclient.ScannerRegistrationReq, current *harborclient.ScannerRegistration) bool {

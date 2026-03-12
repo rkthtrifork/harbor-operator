@@ -3,7 +3,9 @@ kind: PurgeAuditSchedule
 metadata:
   name: harbor-purge-audit
 spec:
-  harborConnectionRef: "harbor-conn"
+  harborConnectionRef:
+    name: harbor-conn
+    kind: HarborConnection
   schedule:
     type: Custom
     cron: "0 30 2 * * *"

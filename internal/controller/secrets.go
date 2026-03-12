@@ -15,6 +15,14 @@ import (
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
+const (
+	managedByLabelKey      = "harbor.harbor-operator.io/managed-by"
+	managedByLabelValue    = "harbor-operator"
+	ownerKindAnnotationKey = "harbor.harbor-operator.io/owner-kind"
+	ownerNameAnnotationKey = "harbor.harbor-operator.io/owner-name"
+	ownerNamespaceAnnKey   = "harbor.harbor-operator.io/owner-namespace"
+)
+
 func readSecretValue(ctx context.Context, c client.Client, ref harborv1alpha1.SecretReference, defaultNamespace, defaultKey string) (string, error) {
 	namespace := ref.Namespace
 	if namespace == "" {
@@ -44,7 +52,7 @@ func hashSecret(value string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func upsertSecretValue(ctx context.Context, c client.Client, namespace, name, key, value string) error {
+func upsertOwnedSecretValue(ctx context.Context, c client.Client, owner client.Object, ownerKind, namespace, name, key, value string) error {
 	if key == "" {
 		return fmt.Errorf("secret key must be set for %s/%s", namespace, name)
 	}
@@ -64,11 +72,58 @@ func upsertSecretValue(ctx context.Context, c client.Client, namespace, name, ke
 				key: []byte(value),
 			},
 		}
+		ensureSecretOwnershipMetadata(&secret, owner, ownerKind)
 		return c.Create(ctx, &secret)
 	}
+	if !secretOwnedBy(&secret, owner, ownerKind) {
+		return fmt.Errorf("secret %s/%s already exists and is not managed by %s %s/%s", namespace, name, ownerKind, owner.GetNamespace(), owner.GetName())
+	}
+
+	changed := ensureSecretOwnershipMetadata(&secret, owner, ownerKind)
 	if secret.Data == nil {
 		secret.Data = map[string][]byte{}
+		changed = true
 	}
-	secret.Data[key] = []byte(value)
+	if existing, ok := secret.Data[key]; !ok || string(existing) != value {
+		secret.Data[key] = []byte(value)
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
 	return c.Update(ctx, &secret)
+}
+
+func secretOwnedBy(secret *corev1.Secret, owner client.Object, ownerKind string) bool {
+	return secret.Labels[managedByLabelKey] == managedByLabelValue &&
+		secret.Annotations[ownerKindAnnotationKey] == ownerKind &&
+		secret.Annotations[ownerNamespaceAnnKey] == owner.GetNamespace() &&
+		secret.Annotations[ownerNameAnnotationKey] == owner.GetName()
+}
+
+func ensureSecretOwnershipMetadata(secret *corev1.Secret, owner client.Object, ownerKind string) bool {
+	changed := false
+	if secret.Labels == nil {
+		secret.Labels = map[string]string{}
+	}
+	if secret.Annotations == nil {
+		secret.Annotations = map[string]string{}
+	}
+	if secret.Labels[managedByLabelKey] != managedByLabelValue {
+		secret.Labels[managedByLabelKey] = managedByLabelValue
+		changed = true
+	}
+	if secret.Annotations[ownerKindAnnotationKey] != ownerKind {
+		secret.Annotations[ownerKindAnnotationKey] = ownerKind
+		changed = true
+	}
+	if secret.Annotations[ownerNamespaceAnnKey] != owner.GetNamespace() {
+		secret.Annotations[ownerNamespaceAnnKey] = owner.GetNamespace()
+		changed = true
+	}
+	if secret.Annotations[ownerNameAnnotationKey] != owner.GetName() {
+		secret.Annotations[ownerNameAnnotationKey] = owner.GetName()
+		changed = true
+	}
+	return changed
 }

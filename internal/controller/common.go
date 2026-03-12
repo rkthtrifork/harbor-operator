@@ -10,75 +10,210 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
-	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
 	finalizerName = "harbor.harbor-operator.io/finalizer"
 	adminName     = "admin"
+
+	harborConnectionRefNamespacedIndex = "harbor.harbor-operator.io/harborConnectionRefNamespaced"
+	harborConnectionRefClusterIndex    = "harbor.harbor-operator.io/harborConnectionRefCluster"
 )
 
-// getHarborConnection fetches the HarborConnection referenced in the Registry.
-func getHarborConnection(ctx context.Context, c client.Client, namespace, name string) (*harborv1alpha1.HarborConnection, error) {
-	var harborConn harborv1alpha1.HarborConnection
-	key := types.NamespacedName{Namespace: namespace, Name: name}
-	if err := c.Get(ctx, key, &harborConn); err != nil {
-		return nil, err
-	}
-	return &harborConn, nil
+type connectionConfig struct {
+	baseURL           string
+	namespace         string
+	credentials       *harborv1alpha1.Credentials
+	caBundle          string
+	caBundleSecretRef *harborv1alpha1.SecretReference
+	displayName       string
 }
 
-// getHarborAuth is a helper function that retrieves Harbor authentication credentials.
-// It can be called from any reconciler that has access to a client.Client.
-func getHarborAuth(ctx context.Context, c client.Client, harborConn *harborv1alpha1.HarborConnection) (string, string, error) {
-	secretKey := types.NamespacedName{
-		Namespace: harborConn.Namespace,
-		Name:      harborConn.Spec.Credentials.PasswordSecretRef.Name,
+type harborConnectionRefAccessor func(client.Object) harborv1alpha1.HarborConnectionReference
+
+func setupHarborBackedController(
+	mgr ctrl.Manager,
+	obj client.Object,
+	newList func() client.ObjectList,
+	getRef harborConnectionRefAccessor,
+	name string,
+) (*builder.TypedBuilder[reconcile.Request], error) {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), obj, harborConnectionRefNamespacedIndex, func(raw client.Object) []string {
+		ref := normalizedHarborConnectionRef(getRef(raw))
+		if ref.Name == "" || ref.Kind != harborv1alpha1.HarborConnectionReferenceKindNamespaced {
+			return nil
+		}
+		return []string{types.NamespacedName{Namespace: raw.GetNamespace(), Name: ref.Name}.String()}
+	}); err != nil {
+		return nil, err
 	}
-	var secret corev1.Secret
-	if err := c.Get(ctx, secretKey, &secret); err != nil {
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), obj, harborConnectionRefClusterIndex, func(raw client.Object) []string {
+		ref := normalizedHarborConnectionRef(getRef(raw))
+		if ref.Name == "" || ref.Kind != harborv1alpha1.HarborConnectionReferenceKindCluster {
+			return nil
+		}
+		return []string{ref.Name}
+	}); err != nil {
+		return nil, err
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(obj).
+		Watches(
+			&harborv1alpha1.HarborConnection{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+				return requestsForIndexedHarborConnection(ctx, mgr, newList, harborConnectionRefNamespacedIndex, client.ObjectKeyFromObject(object).String())
+			}),
+		).
+		Watches(
+			&harborv1alpha1.ClusterHarborConnection{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+				return requestsForIndexedHarborConnection(ctx, mgr, newList, harborConnectionRefClusterIndex, object.GetName())
+			}),
+		).
+		Named(name), nil
+}
+
+func requestsForIndexedHarborConnection(
+	ctx context.Context,
+	mgr ctrl.Manager,
+	newList func() client.ObjectList,
+	indexName, indexValue string,
+) []reconcile.Request {
+	list := newList()
+	if err := mgr.GetClient().List(ctx, list, client.MatchingFields{indexName: indexValue}); err != nil {
+		ctrl.Log.WithName("harbor-connection-watch").Error(err, "Failed to list Harbor dependents", "index", indexName, "value", indexValue)
+		return nil
+	}
+
+	requests := []reconcile.Request{}
+	if err := apimeta.EachListItem(list, func(item runtime.Object) error {
+		obj, ok := item.(client.Object)
+		if !ok {
+			return nil
+		}
+		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(obj)})
+		return nil
+	}); err != nil {
+		ctrl.Log.WithName("harbor-connection-watch").Error(err, "Failed to walk Harbor dependents", "index", indexName, "value", indexValue)
+		return nil
+	}
+	return requests
+}
+
+func resolveHarborConnection(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.HarborConnectionReference) (*connectionConfig, error) {
+	kind := ref.Kind
+	if kind == "" {
+		kind = harborv1alpha1.HarborConnectionReferenceKindNamespaced
+	}
+
+	switch kind {
+	case harborv1alpha1.HarborConnectionReferenceKindNamespaced:
+		var harborConn harborv1alpha1.HarborConnection
+		key := types.NamespacedName{Namespace: namespace, Name: ref.Name}
+		if err := c.Get(ctx, key, &harborConn); err != nil {
+			return nil, err
+		}
+		return &connectionConfig{
+			baseURL:           harborConn.Spec.BaseURL,
+			namespace:         harborConn.Namespace,
+			credentials:       harborConn.Spec.Credentials,
+			caBundle:          harborConn.Spec.CABundle,
+			caBundleSecretRef: harborConn.Spec.CABundleSecretRef,
+			displayName:       fmt.Sprintf("HarborConnection %s/%s", harborConn.Namespace, harborConn.Name),
+		}, nil
+	case harborv1alpha1.HarborConnectionReferenceKindCluster:
+		var harborConn harborv1alpha1.ClusterHarborConnection
+		key := types.NamespacedName{Name: ref.Name}
+		if err := c.Get(ctx, key, &harborConn); err != nil {
+			return nil, err
+		}
+		return &connectionConfig{
+			baseURL:           harborConn.Spec.BaseURL,
+			namespace:         "",
+			credentials:       harborConn.Spec.Credentials,
+			caBundle:          harborConn.Spec.CABundle,
+			caBundleSecretRef: harborConn.Spec.CABundleSecretRef,
+			displayName:       fmt.Sprintf("ClusterHarborConnection %s", harborConn.Name),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported harborConnectionRef.kind %q", ref.Kind)
+	}
+}
+
+func getHarborAuth(ctx context.Context, c client.Client, conn *connectionConfig) (string, string, error) {
+	if conn.credentials == nil {
+		return "", "", fmt.Errorf("%s has no credentials configured", conn.displayName)
+	}
+	pass, err := readSecretValue(ctx, c, harborv1alpha1.SecretReference{
+		Name:      conn.credentials.PasswordSecretRef.Name,
+		Key:       conn.credentials.PasswordSecretRef.Key,
+		Namespace: conn.credentials.PasswordSecretRef.Namespace,
+	}, conn.namespace, "access_secret")
+	if err != nil {
 		return "", "", err
 	}
-
-	accessSecretBytes, ok := secret.Data[harborConn.Spec.Credentials.PasswordSecretRef.Key]
-	if !ok {
-		return "", "", fmt.Errorf("access_secret not found in secret %s/%s", secretKey.Namespace, secretKey.Name)
-	}
-	return harborConn.Spec.Credentials.Username, string(accessSecretBytes), nil
+	return conn.credentials.Username, pass, nil
 }
 
-func getHarborClient(ctx context.Context, c client.Client, namespace, name string) (*harborclient.Client, error) {
-	conn, err := getHarborConnection(ctx, c, namespace, name)
+func getHarborClient(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
+	conn, err := resolveHarborConnection(ctx, c, namespace, ref)
 	if err != nil {
 		return nil, err
 	}
-	if conn.Spec.Credentials == nil {
-		return nil, fmt.Errorf("HarborConnection %s/%s has no credentials configured", conn.Namespace, conn.Name)
-	}
-	user, pass, err := getHarborAuth(ctx, c, conn)
-	if err != nil {
-		return nil, err
+	return buildHarborClient(ctx, c, conn, true)
+}
+
+func buildHarborClient(ctx context.Context, c client.Client, conn *connectionConfig, requireCredentials bool) (*harborclient.Client, error) {
+	user, pass := "", ""
+	if conn.credentials != nil {
+		var err error
+		user, pass, err = getHarborAuth(ctx, c, conn)
+		if err != nil {
+			return nil, err
+		}
+	} else if requireCredentials {
+		return nil, fmt.Errorf("%s has no credentials configured", conn.displayName)
 	}
 
-	caBundle := conn.Spec.CABundle
-	if conn.Spec.CABundleSecretRef != nil {
+	caBundle, err := resolveConnectionCABundle(ctx, c, conn)
+	if err != nil {
+		return nil, err
+	}
+	return newHarborClient(conn.baseURL, user, pass, caBundle)
+}
+
+func resolveConnectionCABundle(ctx context.Context, c client.Client, conn *connectionConfig) (string, error) {
+	caBundle := conn.caBundle
+	if conn.caBundleSecretRef != nil {
 		if caBundle != "" {
-			return nil, fmt.Errorf("caBundle and caBundleSecretRef are mutually exclusive")
+			return "", fmt.Errorf("caBundle and caBundleSecretRef are mutually exclusive")
 		}
-		value, err := readSecretValue(ctx, c, *conn.Spec.CABundleSecretRef, conn.Namespace, "ca.crt")
+		value, err := readSecretValue(ctx, c, *conn.caBundleSecretRef, conn.namespace, "ca.crt")
 		if err != nil {
-			return nil, fmt.Errorf("failed to read caBundleSecretRef: %w", err)
+			return "", fmt.Errorf("failed to read caBundleSecretRef: %w", err)
 		}
 		caBundle = value
 	}
+	return caBundle, nil
+}
 
+func newHarborClient(baseURL, user, pass, caBundle string) (*harborclient.Client, error) {
 	if caBundle != "" {
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
@@ -90,10 +225,10 @@ func getHarborClient(ctx context.Context, c client.Client, namespace, name strin
 			Timeout:   30 * time.Second,
 			Transport: transport,
 		}
-		return harborclient.NewWithHTTPClient(conn.Spec.BaseURL, user, pass, httpClient), nil
+		return harborclient.NewWithHTTPClient(baseURL, user, pass, httpClient), nil
 	}
 
-	return harborclient.New(conn.Spec.BaseURL, user, pass), nil
+	return harborclient.New(baseURL, user, pass), nil
 }
 
 func ensureFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
@@ -127,6 +262,10 @@ func returnWithDriftDetection(obj DriftDetectable) (reconcile.Result, error) {
 	return reconcile.Result{RequeueAfter: obj.GetDriftDetectionInterval().Duration}, nil
 }
 
+type HarborDeletionPolicyAware interface {
+	GetDeletionPolicy() harborv1alpha1.DeletionPolicy
+}
+
 func hashParts(parts ...string) string {
 	return hashSecret(strings.Join(parts, "\n"))
 }
@@ -151,6 +290,44 @@ func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object,
 		return true, err
 	}
 	return true, nil
+}
+
+func loadResource(ctx context.Context, c client.Client, key types.NamespacedName, obj client.Object, logger logr.Logger) (bool, error) {
+	if err := c.Get(ctx, key, obj); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			logger.V(1).Info("Resource disappeared")
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func markReconcilingIfNeeded(ctx context.Context, c client.Client, obj client.Object, base *harborv1alpha1.HarborStatusBase, generation int64) error {
+	if base.ObservedGeneration == generation {
+		return nil
+	}
+	return setReconcilingStatus(ctx, c, obj, base, generation, "", "")
+}
+
+func requeueOnRemoteNotFound(ctx context.Context, c client.Client, obj client.Object, base *harborv1alpha1.HarborStatusBase, generation int64, reset func(), message string) (reconcile.Result, error) {
+	if reset != nil {
+		reset()
+	}
+	if err := setReconcilingStatus(ctx, c, obj, base, generation, "NotFound", message); err != nil {
+		return reconcile.Result{}, err
+	}
+	return reconcile.Result{Requeue: true}, nil
+}
+
+func finalizeWithoutHarborConnection(ctx context.Context, c client.Client, obj client.Object, deletionPolicy harborv1alpha1.DeletionPolicy, requiresRemoteCleanup bool, err error) (bool, error) {
+	if obj.GetDeletionTimestamp().IsZero() || !apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if !requiresRemoteCleanup || deletionPolicy == harborv1alpha1.DeletionPolicyOrphan {
+		return true, removeFinalizer(ctx, c, obj)
+	}
+	return false, nil
 }
 
 func resolveRegistryID(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference, id *int) (int, error) {

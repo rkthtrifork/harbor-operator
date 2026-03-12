@@ -39,30 +39,20 @@ type ProjectMember struct {
 // projectNameOrID can be either the project name or numeric ID.
 func (c *Client) ListProjectMembers(ctx context.Context, projectNameOrID string) ([]ProjectMember, error) {
 	var ms []ProjectMember
-	_, err := c.do(ctx, "GET",
-		fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID),
-		nil, &ms)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID), &ms)
 	return ms, err
 }
 
 // CreateProjectMember creates a new project member.
 // Returns the numeric member ID parsed from the Location header, if present.
 func (c *Client) CreateProjectMember(ctx context.Context, projectNameOrID string, in CreateMemberRequest) (int, error) {
-	resp, err := c.do(ctx, "POST",
-		fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID),
-		&in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID), &in)
 }
 
 // GetProjectMember retrieves a specific project member by ID.
 func (c *Client) GetProjectMember(ctx context.Context, projectNameOrID string, memberID int) (*ProjectMember, error) {
 	var m ProjectMember
-	_, err := c.do(ctx, "GET",
-		fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID),
-		nil, &m)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID), &m)
 	return &m, err
 }
 
@@ -74,20 +64,11 @@ func (c *Client) UpdateProjectMemberRole(ctx context.Context, projectNameOrID st
 		RoleID: roleID,
 	}
 
-	_, err := c.do(ctx, "PUT",
-		fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID),
-		&body, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID), &body)
 }
 
 // DeleteProjectMember deletes a project member.
 // 404 is treated as success (already gone).
 func (c *Client) DeleteProjectMember(ctx context.Context, projectNameOrID string, memberID int) error {
-	_, err := c.do(ctx, "DELETE",
-		fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID),
-		nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID))
 }

@@ -12,7 +12,9 @@ kind: Configuration
 metadata:
   name: harbor-configuration
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   settings:
     auth_mode: "oidc_auth"
     oidc_name: "ExampleOIDC"
@@ -34,8 +36,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.settings** (map, optional)
   Map of Harbor configuration keys to values. Keys must match the
@@ -47,10 +49,16 @@ spec:
   read and injected into the update payload. If `key` is omitted, the operator
   defaults to `value`.
 
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
+
 ## Behavior
 
 - **Create/Update**
-
+  - Sends only the specified keys to Harbor (partial update).
+  - Only one `Configuration` may manage a given Harbor instance. If multiple CRs target the same Harbor instance, the oldest CR remains the owner and later CRs report a conflict.
   - Sends only the specified keys to Harbor (partial update).
   - Skips reconciliation when no settings are provided.
 

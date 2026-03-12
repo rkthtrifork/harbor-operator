@@ -11,7 +11,9 @@ kind: ImmutableTagRule
 metadata:
   name: immutable-tags
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   projectRef:
     name: my-project
 
@@ -36,6 +38,11 @@ spec:
 
 - **spec.disabled** (bool, optional)
   Disable the rule without deleting it.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

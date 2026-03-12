@@ -14,7 +14,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: user-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   email: example@email.com
   # I recommend not specifying this field in which case the metadata.name will be used
   username: project-sample

@@ -6,7 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: label-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   name: team-blue
   color: "#3366ff"
   scope: g

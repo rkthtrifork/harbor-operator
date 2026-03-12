@@ -63,7 +63,7 @@ var _ = Describe("Label Controller", func() {
 			resource := &harborv1alpha1.Label{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.LabelSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: connName},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Name:           "team-a",
 					Color:          "#3366ff",
 					Scope:          "g",

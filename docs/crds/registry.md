@@ -21,7 +21,9 @@ metadata:
   name: my-registry
 spec:
   # Reference to the HarborConnection resource.
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
 
   # The registry type, e.g. "github-ghcr".
   type: github-ghcr
@@ -68,8 +70,9 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  The name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind`
+  (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.type** (string, required)
   The Harbor registry type (e.g. `github-ghcr`). Must be one of the supported types.
@@ -110,6 +113,11 @@ spec:
 - **spec.reconcileNonce** (string, optional)
   Changing this value forces an immediate reconcile, even if nothing else changed.
 
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
+
 ## Behavior
 
 - **Create**
@@ -136,5 +144,4 @@ spec:
     - fetch the current registry configuration from Harbor
     - compare against the CR
     - update Harbor if drift is detected.
-
 

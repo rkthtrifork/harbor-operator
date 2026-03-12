@@ -6,7 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: quota-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   projectRef:
     name: project-sample
   hard:

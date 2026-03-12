@@ -41,9 +41,9 @@ func createHarborConnection(ctx context.Context, c client.Client, name, baseURL,
 			Credentials: &harborv1alpha1.Credentials{
 				Type:     "basic",
 				Username: testAdminUser,
-				PasswordSecretRef: corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-					Key:                  testPassword,
+				PasswordSecretRef: harborv1alpha1.SecretReference{
+					Name: secretName,
+					Key:  testPassword,
 				},
 			},
 		},

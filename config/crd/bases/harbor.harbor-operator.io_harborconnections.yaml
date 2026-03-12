@@ -95,26 +95,20 @@ spec:
                       that stores the password / token.
                     properties:
                       key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
+                        description: |-
+                          Key inside the Secret data. When omitted, the controller using this
+                          reference will apply a sensible default.
                         type: string
                       name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        description: Name of the Secret.
                         type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
+                      namespace:
+                        description: Namespace of the Secret. Omit to use the HarborConnection
+                          namespace.
+                        type: string
                     required:
-                    - key
+                    - name
                     type: object
-                    x-kubernetes-map-type: atomic
                   type:
                     description: Type of the credential, e.g., "basic".
                     enum:

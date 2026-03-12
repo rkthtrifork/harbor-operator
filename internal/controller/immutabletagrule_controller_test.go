@@ -75,7 +75,7 @@ var _ = Describe("ImmutableTagRule Controller", func() {
 			project := &harborv1alpha1.Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
 				Spec: harborv1alpha1.ProjectSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: connName},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Name:           "demo",
 					Public:         true,
 				},
@@ -87,7 +87,7 @@ var _ = Describe("ImmutableTagRule Controller", func() {
 			resource := &harborv1alpha1.ImmutableTagRule{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.ImmutableTagRuleSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: connName},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
 					ProjectRef:     &harborv1alpha1.ProjectReference{Name: "demo"},
 					Action:         "immutable",
 					Template:       "repoMatches",

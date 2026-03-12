@@ -24,7 +24,7 @@ type UserGroupSearchItem struct {
 // ListUserGroups lists all user groups.
 func (c *Client) ListUserGroups(ctx context.Context) ([]UserGroup, error) {
 	var out []UserGroup
-	_, err := c.do(ctx, "GET", "/api/v2.0/usergroups", nil, &out)
+	err := c.get(ctx, "/api/v2.0/usergroups", &out)
 	return out, err
 }
 
@@ -36,37 +36,28 @@ func (c *Client) SearchUserGroups(ctx context.Context, groupName string) ([]User
 	values.Set("page_size", "100")
 	rel := "/api/v2.0/usergroups/search?" + values.Encode()
 	var out []UserGroupSearchItem
-	_, err := c.do(ctx, "GET", rel, nil, &out)
+	err := c.get(ctx, rel, &out)
 	return out, err
 }
 
 // GetUserGroup retrieves a user group by ID.
 func (c *Client) GetUserGroup(ctx context.Context, id int) (*UserGroup, error) {
 	var out UserGroup
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/usergroups/%d", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/usergroups/%d", id), &out)
 	return &out, err
 }
 
 // CreateUserGroup creates a user group.
 func (c *Client) CreateUserGroup(ctx context.Context, in UserGroup) (int, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/usergroups", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/usergroups", &in)
 }
 
 // UpdateUserGroup updates a user group.
 func (c *Client) UpdateUserGroup(ctx context.Context, id int, in UserGroup) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/usergroups/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/usergroups/%d", id), &in)
 }
 
 // DeleteUserGroup deletes a user group.
 func (c *Client) DeleteUserGroup(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/usergroups/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/usergroups/%d", id))
 }

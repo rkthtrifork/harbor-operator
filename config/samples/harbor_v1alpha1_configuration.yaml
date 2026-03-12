@@ -3,7 +3,9 @@ kind: Configuration
 metadata:
   name: harbor-configuration
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   settings:
     auth_mode: "oidc_auth"
     oidc_name: "ExampleOIDC"

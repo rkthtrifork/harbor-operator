@@ -14,7 +14,9 @@ kind: ReplicationPolicy
 metadata:
   name: sample-replication
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
 
   # Optional explicit name (defaults to metadata.name)
   name: "sample-replication"
@@ -43,8 +45,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.sourceRegistryRef** / **spec.sourceRegistryID** (one required)
   Select the source registry for replication.
@@ -60,6 +62,11 @@ spec:
 
 - **spec.replicateDeletion** (bool, optional)
   Whether to replicate deletions.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

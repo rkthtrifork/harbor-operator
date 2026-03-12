@@ -73,45 +73,40 @@ func (c *Client) ListRobots(ctx context.Context, query string) ([]Robot, error) 
 		rel = rel + "?" + values.Encode()
 	}
 	var robots []Robot
-	_, err := c.do(ctx, "GET", rel, nil, &robots)
+	err := c.get(ctx, rel, &robots)
 	return robots, err
 }
 
 // GetRobotByID retrieves a robot account by ID.
 func (c *Client) GetRobotByID(ctx context.Context, id int) (*Robot, error) {
 	var robot Robot
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/robots/%d", id), nil, &robot)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/robots/%d", id), &robot)
 	return &robot, err
 }
 
 // CreateRobot creates a new robot account.
 func (c *Client) CreateRobot(ctx context.Context, in RobotCreateRequest) (*RobotCreated, error) {
 	var created RobotCreated
-	_, err := c.do(ctx, "POST", "/api/v2.0/robots", &in, &created)
+	err := c.post(ctx, "/api/v2.0/robots", &in, &created)
 	return &created, err
 }
 
 // UpdateRobot updates an existing robot account.
 func (c *Client) UpdateRobot(ctx context.Context, id int, in Robot) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/robots/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/robots/%d", id), &in)
 }
 
 // RefreshRobotSecret refreshes or sets a robot account secret.
 func (c *Client) RefreshRobotSecret(ctx context.Context, id int, secret string) (*RobotSec, error) {
 	var sec RobotSec
 	body := RobotSec{Secret: secret}
-	_, err := c.do(ctx, "PATCH", fmt.Sprintf("/api/v2.0/robots/%d", id), &body, &sec)
+	err := c.patch(ctx, fmt.Sprintf("/api/v2.0/robots/%d", id), &body, &sec)
 	return &sec, err
 }
 
 // DeleteRobot deletes a robot account.
 func (c *Client) DeleteRobot(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/robots/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/robots/%d", id))
 }
 
 // ParseRobotID converts string robot IDs to int.

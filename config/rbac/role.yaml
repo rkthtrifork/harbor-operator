@@ -18,6 +18,7 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - clusterharborconnections
   - configurations
   - gcschedules
   - harborconnections
@@ -47,6 +48,7 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - clusterharborconnections/finalizers
   - configurations/finalizers
   - gcschedules/finalizers
   - harborconnections/finalizers
@@ -70,6 +72,7 @@ rules:
 - apiGroups:
   - harbor.harbor-operator.io
   resources:
+  - clusterharborconnections/status
   - configurations/status
   - gcschedules/status
   - harborconnections/status

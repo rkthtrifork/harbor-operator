@@ -18,77 +18,62 @@ type ScheduleObj struct {
 
 func (c *Client) GetGCSchedule(ctx context.Context) (*Schedule, error) {
 	var out Schedule
-	_, err := c.do(ctx, "GET", "/api/v2.0/system/gc/schedule", nil, &out)
+	err := c.get(ctx, "/api/v2.0/system/gc/schedule", &out)
 	return &out, err
 }
 
 func (c *Client) CreateGCSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "POST", "/api/v2.0/system/gc/schedule", &in, nil)
-	return err
+	return c.post(ctx, "/api/v2.0/system/gc/schedule", &in, nil)
 }
 
 func (c *Client) UpdateGCSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "PUT", "/api/v2.0/system/gc/schedule", &in, nil)
-	return err
+	return c.put(ctx, "/api/v2.0/system/gc/schedule", &in)
 }
 
 func (c *Client) GetPurgeSchedule(ctx context.Context) (*Schedule, error) {
 	var out Schedule
-	_, err := c.do(ctx, "GET", "/api/v2.0/system/purgeaudit/schedule", nil, &out)
+	err := c.get(ctx, "/api/v2.0/system/purgeaudit/schedule", &out)
 	return &out, err
 }
 
 func (c *Client) CreatePurgeSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "POST", "/api/v2.0/system/purgeaudit/schedule", &in, nil)
-	return err
+	return c.post(ctx, "/api/v2.0/system/purgeaudit/schedule", &in, nil)
 }
 
 func (c *Client) UpdatePurgeSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "PUT", "/api/v2.0/system/purgeaudit/schedule", &in, nil)
-	return err
+	return c.put(ctx, "/api/v2.0/system/purgeaudit/schedule", &in)
 }
 
 func (c *Client) GetScanAllSchedule(ctx context.Context) (*Schedule, error) {
 	var out Schedule
-	_, err := c.do(ctx, "GET", "/api/v2.0/system/scanAll/schedule", nil, &out)
+	err := c.get(ctx, "/api/v2.0/system/scanAll/schedule", &out)
 	return &out, err
 }
 
 func (c *Client) CreateScanAllSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "POST", "/api/v2.0/system/scanAll/schedule", &in, nil)
-	return err
+	return c.post(ctx, "/api/v2.0/system/scanAll/schedule", &in, nil)
 }
 
 func (c *Client) UpdateScanAllSchedule(ctx context.Context, in Schedule) error {
-	_, err := c.do(ctx, "PUT", "/api/v2.0/system/scanAll/schedule", &in, nil)
-	return err
+	return c.put(ctx, "/api/v2.0/system/scanAll/schedule", &in)
 }
 
 func (c *Client) GetRetentionByID(ctx context.Context, id int) (*RetentionPolicy, error) {
 	var out RetentionPolicy
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/retentions/%d", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/retentions/%d", id), &out)
 	return &out, err
 }
 
 func (c *Client) CreateRetention(ctx context.Context, in RetentionPolicy) (int, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/retentions", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/retentions", &in)
 }
 
 func (c *Client) UpdateRetention(ctx context.Context, id int, in RetentionPolicy) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/retentions/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/retentions/%d", id), &in)
 }
 
 func (c *Client) DeleteRetention(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/retentions/%d", id), nil, nil)
-	if IsNotFound(err) || isRetentionGone(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/retentions/%d", id), isRetentionGone)
 }
 
 func isRetentionGone(err error) bool {

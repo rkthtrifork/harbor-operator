@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,13 +39,14 @@ import (
 const namespace = "harbor-operator-system"
 
 // serviceAccountName created for the project
-const serviceAccountName = "harbor-operator-controller-manager"
+const serviceAccountName = "harbor-operator"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "harbor-operator-controller-manager-metrics-service"
+const metricsServiceName = "harbor-operator-metrics"
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "harbor-operator-metrics-binding"
+const metricsRoleName = "harbor-operator-metrics-reader"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -54,7 +56,7 @@ var _ = Describe("Manager", Ordered, func() {
 	// and deploying the controller.
 	BeforeAll(func() {
 		By("creating manager namespace")
-		cmd := exec.Command("kubectl", "create", "ns", namespace)
+		cmd := exec.Command("bash", "-lc", fmt.Sprintf("kubectl create namespace %s --dry-run=client -o yaml | kubectl apply -f -", namespace))
 		_, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to create namespace")
 
@@ -64,15 +66,21 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to label namespace with restricted policy")
 
-		By("installing CRDs")
-		cmd = exec.Command("make", "install")
-		_, err = utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
-
 		By("deploying the controller-manager")
 		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
+
+		By("enabling metrics for the Helm deployment")
+		cmd = exec.Command("helm", "upgrade", "--install", "harbor-operator", "./charts/harbor-operator",
+			"--namespace", namespace,
+			"--set", fmt.Sprintf("image.repository=%s", strings.Split(projectImage, ":")[0]),
+			"--set", fmt.Sprintf("image.tag=%s", strings.Split(projectImage, ":")[1]),
+			"--set", "metrics.enabled=true",
+			"--wait",
+		)
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Failed to enable metrics on the controller-manager deployment")
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
@@ -80,6 +88,10 @@ var _ = Describe("Manager", Ordered, func() {
 	AfterAll(func() {
 		By("cleaning up the curl pod for metrics")
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
+		_, _ = utils.Run(cmd)
+		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", metricsRoleBindingName)
+		_, _ = utils.Run(cmd)
+		cmd = exec.Command("kubectl", "delete", "clusterrole", metricsRoleName)
 		_, _ = utils.Run(cmd)
 
 		By("undeploying the controller-manager")
@@ -100,13 +112,16 @@ var _ = Describe("Manager", Ordered, func() {
 	AfterEach(func() {
 		specReport := CurrentSpecReport()
 		if specReport.Failed() {
-			By("Fetching controller manager pod logs")
-			cmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace)
-			controllerLogs, err := utils.Run(cmd)
-			if err == nil {
-				_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs:\n %s", controllerLogs)
-			} else {
-				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+			var cmd *exec.Cmd
+			if controllerPodName != "" {
+				By("Fetching controller manager pod logs")
+				cmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace)
+				controllerLogs, err := utils.Run(cmd)
+				if err == nil {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Controller logs:\n %s", controllerLogs)
+				} else {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+				}
 			}
 
 			By("Fetching Kubernetes events")
@@ -127,13 +142,15 @@ var _ = Describe("Manager", Ordered, func() {
 				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get curl-metrics logs: %s", err)
 			}
 
-			By("Fetching controller manager pod description")
-			cmd = exec.Command("kubectl", "describe", "pod", controllerPodName, "-n", namespace)
-			podDescription, err := utils.Run(cmd)
-			if err == nil {
-				fmt.Println("Pod description:\n", podDescription)
-			} else {
-				fmt.Println("Failed to describe controller pod")
+			if controllerPodName != "" {
+				By("Fetching controller manager pod description")
+				cmd = exec.Command("kubectl", "describe", "pod", controllerPodName, "-n", namespace)
+				podDescription, err := utils.Run(cmd)
+				if err == nil {
+					fmt.Println("Pod description:\n", podDescription)
+				} else {
+					fmt.Println("Failed to describe controller pod")
+				}
 			}
 		}
 	})
@@ -147,7 +164,7 @@ var _ = Describe("Manager", Ordered, func() {
 			verifyControllerUp := func(g Gomega) {
 				// Get the name of the controller-manager pod
 				cmd := exec.Command("kubectl", "get",
-					"pods", "-l", "control-plane=controller-manager",
+					"pods", "-l", "app.kubernetes.io/name=harbor-operator,app.kubernetes.io/instance=harbor-operator",
 					"-o", "go-template={{ range .items }}"+
 						"{{ if not .metadata.deletionTimestamp }}"+
 						"{{ .metadata.name }}"+
@@ -160,7 +177,7 @@ var _ = Describe("Manager", Ordered, func() {
 				podNames := utils.GetNonEmptyLines(podOutput)
 				g.Expect(podNames).To(HaveLen(1), "expected 1 controller pod running")
 				controllerPodName = podNames[0]
-				g.Expect(controllerPodName).To(ContainSubstring("controller-manager"))
+				g.Expect(controllerPodName).To(ContainSubstring("harbor-operator"))
 
 				// Validate the pod's status
 				cmd = exec.Command("kubectl", "get",
@@ -176,10 +193,31 @@ var _ = Describe("Manager", Ordered, func() {
 
 		It("should ensure the metrics endpoint is serving metrics", func() {
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
-			cmd := exec.Command("kubectl", "create", "clusterrolebinding", metricsRoleBindingName,
-				"--clusterrole=harbor-operator-metrics-reader",
-				fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
-			)
+			roleFile := writeTempFile(fmt.Sprintf(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: %s
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: %s
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: %s
+subjects:
+- kind: ServiceAccount
+  name: %s
+  namespace: %s
+`, metricsRoleName, metricsRoleBindingName, metricsRoleName, serviceAccountName, namespace))
+			defer os.Remove(roleFile)
+			cmd := exec.Command("kubectl", "apply", "-f", roleFile)
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to create ClusterRoleBinding")
 
@@ -255,18 +293,20 @@ var _ = Describe("Manager", Ordered, func() {
 
 			By("getting the metrics by checking curl-metrics logs")
 			metricsOutput := getMetricsOutput()
-			Expect(metricsOutput).To(ContainSubstring(
-				"controller_runtime_reconcile_total",
-			))
+			Expect(metricsOutput).To(ContainSubstring("process_cpu_seconds_total"))
 		})
 
 		Context("Harbor Flow", func() {
 			It("should reconcile Harbor resources end-to-end", func() {
 				baseURL := os.Getenv("HARBOR_BASE_URL")
+				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
 				adminUser := os.Getenv("HARBOR_ADMIN_USER")
 				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
 				if baseURL == "" || adminUser == "" || adminPass == "" {
 					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
+				if inClusterBaseURL == "" {
+					inClusterBaseURL = baseURL
 				}
 
 				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
@@ -274,7 +314,8 @@ var _ = Describe("Manager", Ordered, func() {
 				projectName := "e2e-project-" + suffix
 				retentionName := "e2e-retention-" + suffix
 				userName := "e2e-user-" + suffix
-				secretName := "harbor-e2e-pass-" + suffix
+				adminSecretName := "harbor-e2e-admin-pass-" + suffix
+				userSecretName := "harbor-e2e-user-pass-" + suffix
 				connName := "harbor-e2e-conn-" + suffix
 
 				crs := fmt.Sprintf(`---
@@ -307,7 +348,9 @@ metadata:
   name: %s
   namespace: %s
 spec:
-  harborConnectionRef: %s
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
   type: docker-registry
   name: %s
   url: https://registry-1.docker.io
@@ -319,7 +362,9 @@ metadata:
   name: %s
   namespace: %s
 spec:
-  harborConnectionRef: %s
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
   public: true
   metadata:
     public: "true"
@@ -340,7 +385,9 @@ metadata:
   name: %s
   namespace: %s
 spec:
-  harborConnectionRef: %s
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
   username: %s
   email: %s@example.com
   realname: e2e user
@@ -354,7 +401,9 @@ metadata:
   name: %s
   namespace: %s
 spec:
-  harborConnectionRef: %s
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
   projectRef:
     name: %s
   algorithm: or
@@ -377,10 +426,10 @@ spec:
           - kind: doublestar
             decoration: repoMatches
             pattern: "**"
-`, secretName, namespace, adminPass, connName, namespace, baseURL, adminUser, secretName,
+`, adminSecretName, namespace, adminPass, connName, namespace, inClusterBaseURL, adminUser, adminSecretName,
 					registryName, namespace, connName, registryName,
 					projectName, namespace, connName, registryName,
-					secretName, namespace, userName, namespace, connName, userName, userName, secretName,
+					userSecretName, namespace, userName, namespace, connName, userName, userName, userSecretName,
 					retentionName, namespace, connName, projectName)
 
 				applyFile := writeTempFile(crs)
@@ -401,9 +450,9 @@ spec:
 				waitReady("retentionpolicy", retentionName)
 
 				By("verifying Harbor objects via API")
-				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`\"name\":\"%s\"`, registryName))).To(BeTrue())
-				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`\"name\":\"%s\"`, projectName))).To(BeTrue())
-				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/users", fmt.Sprintf(`\"username\":\"%s\"`, userName))).To(BeTrue())
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`"name":"%s"`, registryName))).To(BeTrue())
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`"name":"%s"`, projectName))).To(BeTrue())
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/users", fmt.Sprintf(`"username":"%s"`, userName))).To(BeTrue())
 
 				By("deleting Harbor CRs in dependency order")
 				deleteCR("retentionpolicy", retentionName)
@@ -411,12 +460,358 @@ spec:
 				deleteCR("registry", registryName)
 				deleteCR("user", userName)
 				deleteCR("harborconnection", connName)
-				deleteCR("secret", secretName)
+				deleteCR("secret", userSecretName)
+				deleteCR("secret", adminSecretName)
 
 				By("verifying Harbor objects are gone")
 				Eventually(func() bool {
-					return !harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`\"name\":\"%s\"`, registryName))
+					return !harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/registries", fmt.Sprintf(`"name":"%s"`, registryName))
 				}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+			})
+
+			It("should reconcile resources through a ClusterHarborConnection", func() {
+				baseURL := os.Getenv("HARBOR_BASE_URL")
+				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
+				adminUser := os.Getenv("HARBOR_ADMIN_USER")
+				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
+				if baseURL == "" || adminUser == "" || adminPass == "" {
+					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
+				if inClusterBaseURL == "" {
+					inClusterBaseURL = baseURL
+				}
+
+				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+				secretName := "harbor-e2e-cluster-pass-" + suffix
+				connName := "harbor-e2e-cluster-conn-" + suffix
+				projectName := "e2e-cluster-project-" + suffix
+
+				crs := fmt.Sprintf(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "%s"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: ClusterHarborConnection
+metadata:
+  name: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      namespace: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Project
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef:
+    name: %s
+    kind: ClusterHarborConnection
+  public: false
+`, secretName, namespace, adminPass, connName, inClusterBaseURL, adminUser, secretName, namespace, projectName, namespace, connName)
+
+				applyFile := writeTempFile(crs)
+				DeferCleanup(func() {
+					_ = os.Remove(applyFile)
+				})
+
+				By("applying cluster-scoped Harbor connection resources")
+				cmd := exec.Command("kubectl", "apply", "-f", applyFile)
+				_, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitReady("clusterharborconnection", connName)
+				waitReady("project", projectName)
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`"name":"%s"`, projectName))).To(BeTrue())
+
+				deleteCR("project", projectName)
+				cmd = exec.Command("kubectl", "delete", "clusterharborconnection.harbor.harbor-operator.io/"+connName, "--wait=true")
+				_, _ = utils.Run(cmd)
+				cmd = exec.Command("kubectl", "delete", "secret", secretName, "-n", namespace, "--wait=true")
+				_, _ = utils.Run(cmd)
+			})
+
+			It("should honor deletionPolicy Orphan when the Harbor connection is deleted first", func() {
+				baseURL := os.Getenv("HARBOR_BASE_URL")
+				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
+				adminUser := os.Getenv("HARBOR_ADMIN_USER")
+				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
+				if baseURL == "" || adminUser == "" || adminPass == "" {
+					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
+				if inClusterBaseURL == "" {
+					inClusterBaseURL = baseURL
+				}
+
+				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+				secretName := "harbor-e2e-orphan-pass-" + suffix
+				connName := "harbor-e2e-orphan-conn-" + suffix
+				projectName := "e2e-orphan-project-" + suffix
+
+				crs := fmt.Sprintf(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "%s"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Project
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
+  deletionPolicy: Orphan
+  public: false
+`, secretName, namespace, adminPass, connName, namespace, inClusterBaseURL, adminUser, secretName, projectName, namespace, connName)
+
+				applyFile := writeTempFile(crs)
+				DeferCleanup(func() {
+					_ = os.Remove(applyFile)
+				})
+
+				cmd := exec.Command("kubectl", "apply", "-f", applyFile)
+				_, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitReady("harborconnection", connName)
+				waitReady("project", projectName)
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`"name":"%s"`, projectName))).To(BeTrue())
+
+				deleteCR("harborconnection", connName)
+				deleteCR("project", projectName)
+				waitDeleted("project", projectName)
+
+				Expect(harborHasObject(baseURL, adminUser, adminPass, "/api/v2.0/projects", fmt.Sprintf(`"name":"%s"`, projectName))).To(BeTrue())
+
+				deleteHarborProjectByName(baseURL, adminUser, adminPass, projectName)
+				cmd = exec.Command("kubectl", "delete", "secret", secretName, "-n", namespace, "--wait=true")
+				_, _ = utils.Run(cmd)
+			})
+
+			It("should report a conflict for singleton resources targeting the same Harbor instance", func() {
+				baseURL := os.Getenv("HARBOR_BASE_URL")
+				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
+				adminUser := os.Getenv("HARBOR_ADMIN_USER")
+				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
+				if baseURL == "" || adminUser == "" || adminPass == "" {
+					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
+				if inClusterBaseURL == "" {
+					inClusterBaseURL = baseURL
+				}
+
+				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+				secretName := "harbor-e2e-singleton-pass-" + suffix
+				connA := "harbor-e2e-singleton-conn-a-" + suffix
+				connB := "harbor-e2e-singleton-conn-b-" + suffix
+				cfgA := "e2e-config-a-" + suffix
+				cfgB := "e2e-config-b-" + suffix
+
+				crs := fmt.Sprintf(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "%s"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Configuration
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
+  settings:
+    robot_token_duration: 44
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Configuration
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
+  settings:
+    robot_token_duration: 66
+`, secretName, namespace, adminPass,
+					connA, namespace, inClusterBaseURL, adminUser, secretName,
+					connB, namespace, inClusterBaseURL, adminUser, secretName,
+					cfgA, namespace, connA,
+					cfgB, namespace, connB)
+
+				applyFile := writeTempFile(crs)
+				DeferCleanup(func() {
+					_ = os.Remove(applyFile)
+				})
+
+				cmd := exec.Command("kubectl", "apply", "-f", applyFile)
+				_, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitReady("harborconnection", connA)
+				waitReady("harborconnection", connB)
+				waitReady("configuration", cfgA)
+				waitConditionReason("configuration", cfgB, "Ready", "ReconcileError")
+
+				message := getConditionMessage("configuration", cfgB, "Ready")
+				Expect(message).To(ContainSubstring("conflicts with existing owner"))
+
+				deleteCR("configuration", cfgB)
+				deleteCR("configuration", cfgA)
+				deleteCR("harborconnection", connB)
+				deleteCR("harborconnection", connA)
+				cmd = exec.Command("kubectl", "delete", "secret", secretName, "-n", namespace, "--wait=true")
+				_, _ = utils.Run(cmd)
+			})
+
+			It("should reconcile dependents when the backing HarborConnection changes", func() {
+				baseURL := os.Getenv("HARBOR_BASE_URL")
+				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
+				adminUser := os.Getenv("HARBOR_ADMIN_USER")
+				adminPass := os.Getenv("HARBOR_ADMIN_PASSWORD")
+				if baseURL == "" || adminUser == "" || adminPass == "" {
+					Skip("HARBOR_BASE_URL, HARBOR_ADMIN_USER, and HARBOR_ADMIN_PASSWORD must be set to run Harbor flow")
+				}
+				if inClusterBaseURL == "" {
+					inClusterBaseURL = baseURL
+				}
+
+				suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+				secretName := "harbor-e2e-connwatch-pass-" + suffix
+				connName := "harbor-e2e-connwatch-conn-" + suffix
+				projectName := "e2e-connwatch-project-" + suffix
+
+				crs := fmt.Sprintf(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+stringData:
+  password: "%s"
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: HarborConnection
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  baseURL: %s
+  credentials:
+    type: basic
+    username: %s
+    passwordSecretRef:
+      name: %s
+      key: password
+---
+apiVersion: harbor.harbor-operator.io/v1alpha1
+kind: Project
+metadata:
+  name: %s
+  namespace: %s
+spec:
+  harborConnectionRef:
+    name: %s
+    kind: HarborConnection
+  public: false
+`, secretName, namespace, adminPass, connName, namespace, inClusterBaseURL, adminUser, secretName, projectName, namespace, connName)
+
+				applyFile := writeTempFile(crs)
+				DeferCleanup(func() { _ = os.Remove(applyFile) })
+				cmd := exec.Command("kubectl", "apply", "-f", applyFile)
+				_, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitReady("harborconnection", connName)
+				waitReady("project", projectName)
+
+				cmd = exec.Command("kubectl", "patch", "harborconnection.harbor.harbor-operator.io/"+connName,
+					"-n", namespace, "--type=merge", "-p", `{"spec":{"baseURL":"http://does-not-resolve.invalid"}}`)
+				_, err = utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitConditionReason("project", projectName, "Ready", "ReconcileError")
+
+				cmd = exec.Command("kubectl", "patch", "harborconnection.harbor.harbor-operator.io/"+connName,
+					"-n", namespace, "--type=merge", "-p", fmt.Sprintf(`{"spec":{"baseURL":%q}}`, inClusterBaseURL))
+				_, err = utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred())
+
+				waitReady("project", projectName)
+
+				deleteCR("project", projectName)
+				deleteCR("harborconnection", connName)
+				cmd = exec.Command("kubectl", "delete", "secret", secretName, "-n", namespace, "--wait=true")
+				_, _ = utils.Run(cmd)
 			})
 		})
 
@@ -497,13 +892,77 @@ func deleteCR(kind, name string) {
 	_, _ = utils.Run(cmd)
 }
 
+func waitDeleted(kind, name string) {
+	Eventually(func() bool {
+		cmd := exec.Command("kubectl", "get", fmt.Sprintf("%s.harbor.harbor-operator.io/%s", kind, name), "-n", namespace)
+		_, err := utils.Run(cmd)
+		return err != nil
+	}, 2*time.Minute, 2*time.Second).Should(BeTrue())
+}
+
+func waitConditionReason(kind, name, conditionType, reason string) {
+	Eventually(func() string {
+		return getConditionReason(kind, name, conditionType)
+	}, 2*time.Minute, 2*time.Second).Should(Equal(reason))
+}
+
+func getConditionReason(kind, name, conditionType string) string {
+	cmd := exec.Command("kubectl", "get", fmt.Sprintf("%s.harbor.harbor-operator.io/%s", kind, name),
+		"-n", namespace, "-o", fmt.Sprintf("jsonpath={.status.conditions[?(@.type==\"%s\")].reason}", conditionType))
+	out, err := utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred())
+	return strings.TrimSpace(out)
+}
+
+func getConditionMessage(kind, name, conditionType string) string {
+	cmd := exec.Command("kubectl", "get", fmt.Sprintf("%s.harbor.harbor-operator.io/%s", kind, name),
+		"-n", namespace, "-o", fmt.Sprintf("jsonpath={.status.conditions[?(@.type==\"%s\")].message}", conditionType))
+	out, err := utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred())
+	return strings.TrimSpace(out)
+}
+
 func harborHasObject(baseURL, user, pass, path, needle string) bool {
 	cmd := exec.Command("curl", "-sk", "-u", fmt.Sprintf("%s:%s", user, pass), baseURL+path)
 	out, err := utils.Run(cmd)
 	if err != nil {
 		return false
 	}
+
+	var items []map[string]any
+	if err := json.Unmarshal([]byte(out), &items); err == nil {
+		parts := strings.SplitN(needle, ":", 2)
+		if len(parts) == 2 {
+			key := strings.Trim(parts[0], "\" ")
+			want := strings.Trim(parts[1], "\" ")
+			for _, item := range items {
+				if got, ok := item[key]; ok && fmt.Sprint(got) == want {
+					return true
+				}
+			}
+		}
+	}
+
 	return strings.Contains(out, needle)
+}
+
+func deleteHarborProjectByName(baseURL, user, pass, projectName string) {
+	cmd := exec.Command("curl", "-sk", "-u", fmt.Sprintf("%s:%s", user, pass), baseURL+"/api/v2.0/projects?name="+projectName)
+	out, err := utils.Run(cmd)
+	if err != nil {
+		return
+	}
+
+	var projects []struct {
+		ProjectID int `json:"project_id"`
+	}
+	if err := json.Unmarshal([]byte(out), &projects); err != nil {
+		return
+	}
+	for _, project := range projects {
+		cmd = exec.Command("curl", "-sk", "-u", fmt.Sprintf("%s:%s", user, pass), "-X", "DELETE", baseURL+"/api/v2.0/projects/"+strconv.Itoa(project.ProjectID))
+		_, _ = utils.Run(cmd)
+	}
 }
 
 // tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,

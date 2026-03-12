@@ -11,7 +11,9 @@ kind: UserGroup
 metadata:
   name: developers
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   groupName: developers
   groupType: 2
 ```
@@ -26,6 +28,11 @@ spec:
 
 - **spec.ldapGroupDN** (string, optional)
   LDAP DN for LDAP groups.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

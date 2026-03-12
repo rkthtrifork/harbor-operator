@@ -52,7 +52,7 @@ type CreateProjectRequest struct {
 
 func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
 	var ps []Project
-	_, err := c.do(ctx, "GET", "/api/v2.0/projects", nil, &ps)
+	err := c.get(ctx, "/api/v2.0/projects", &ps)
 	return ps, err
 }
 
@@ -74,32 +74,18 @@ func (c *Client) FindProjectByName(ctx context.Context, name string) (*Project, 
 
 func (c *Client) GetProjectByID(ctx context.Context, id int) (*Project, error) {
 	var p Project
-	_, err := c.do(ctx, "GET",
-		fmt.Sprintf("/api/v2.0/projects/%d", id), nil, &p)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%d", id), &p)
 	return &p, err
 }
 
 func (c *Client) CreateProject(ctx context.Context, in CreateProjectRequest) (int, error) {
-
-	resp, err := c.do(ctx, "POST", "/api/v2.0/projects", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/projects", &in)
 }
 
 func (c *Client) UpdateProject(ctx context.Context, id int, in CreateProjectRequest) error {
-
-	_, err := c.do(ctx, "PUT",
-		fmt.Sprintf("/api/v2.0/projects/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%d", id), &in)
 }
 
 func (c *Client) DeleteProject(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE",
-		fmt.Sprintf("/api/v2.0/projects/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%d", id))
 }

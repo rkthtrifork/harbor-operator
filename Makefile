@@ -20,9 +20,6 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-.PHONY: all
-all: build
-
 ##@ General
 
 .PHONY: help
@@ -61,7 +58,7 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 		echo "No Kind cluster is running. Please start a Kind cluster before running the e2e tests."; \
 		exit 1; \
 	}
-	go test ./test/e2e/ -v -ginkgo.v
+	go test -tags=e2e ./test/e2e/ -v -ginkgo.v
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
@@ -82,6 +79,16 @@ sync-chart-crds: ## Sync CRDs into the Helm chart
 .PHONY: sync-chart-rbac
 sync-chart-rbac: ## Sync RBAC into the Helm chart
 	./hack/sync-chart-rbac.sh
+
+.PHONY: sync-chart
+sync-chart: sync-chart-crds sync-chart-rbac ## Sync generated CRDs and RBAC into the Helm chart
+
+.PHONY: apply-crds
+apply-crds: ## Apply the latest CRDs to the current cluster
+	$(KUBECTL) apply -f charts/harbor-operator/crds
+
+.PHONY: prepare-deploy
+prepare-deploy: manifests generate sync-chart apply-crds ## Generate code/manifests, sync chart assets, and apply CRDs
 
 ##@ Build
 
@@ -104,7 +111,7 @@ uninstall: ## Uninstall CRDs for the harbor.harbor-operator.io API group.
 	$(KUBECTL) delete --ignore-not-found -f charts/harbor-operator/crds
 
 .PHONY: deploy
-deploy: ## Deploy controller via Helm chart.
+deploy: prepare-deploy ## Deploy controller via Helm chart with synced CRDs and RBAC.
 	$(KUBECTL) create namespace harbor-operator-system --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	IMG_REPO=$$(echo $(IMG) | cut -d: -f1); \
 	IMG_TAG=$$(echo $(IMG) | cut -d: -f2); \
@@ -113,6 +120,8 @@ deploy: ## Deploy controller via Helm chart.
 		--set image.repository=$${IMG_REPO} \
 		--set image.tag=$${IMG_TAG} \
 		--wait
+	$(KUBECTL) rollout restart deployment/harbor-operator -n harbor-operator-system
+	$(KUBECTL) rollout status deployment/harbor-operator -n harbor-operator-system --timeout=180s
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster.
@@ -132,13 +141,13 @@ delete-crs: ## Delete all CRs in harbor.harbor-operator.io API group (HarborConn
 
 .PHONY: kind-install-stack
 kind-install-stack: ## Install Traefik + Harbor + harbor-operator into the current cluster
-	helm install traefik oci://ghcr.io/traefik/helm/traefik\
+	helm upgrade --install traefik oci://ghcr.io/traefik/helm/traefik\
 		--set service.type=NodePort \
 		--set ports.web.nodePort=30080 \
 		--set ports.websecure.nodePort=30443 \
 		--wait
 	helm repo add harbor https://helm.goharbor.io --force-update
-	helm install harbor harbor/harbor --wait
+	helm upgrade --install harbor harbor/harbor --wait
 	$(MAKE) kind-deploy
 
 .PHONY: kind-up
@@ -166,14 +175,22 @@ kind-up-cilium: ## Create Kind cluster with Cilium CNI + Traefik + Harbor + harb
 kind-down: ## Delete the Kind cluster named "kind"
 	kind delete cluster
 
+.PHONY: kind-load-image
+kind-load-image: ## Load the local operator image into the Kind cluster
+	kind load docker-image $(IMG_LOCAL) --name kind
+
 .PHONY: kind-deploy
-kind-deploy: generate ## Build the image, load it into Kind, and deploy the operator.
+kind-deploy: ## Build the image, sync/apply manifests, load it into Kind, and deploy the operator to the current Kind cluster.
 	@echo "Building local image..."
 	$(MAKE) docker-build
 	@echo "Loading image into Kind cluster..."
-	kind load docker-image $(IMG_LOCAL) --name kind
+	$(MAKE) kind-load-image
 	@echo "Deploying harbor-operator to the cluster..."
 	$(MAKE) deploy
+
+.PHONY: kind-refresh
+kind-refresh: ## Iterative operator refresh for the current Kind cluster.
+	$(MAKE) kind-deploy
 
 .PHONY: kind-reset
 kind-reset: delete-crs undeploy uninstall ## Remove operator deployment, CRDs and samples

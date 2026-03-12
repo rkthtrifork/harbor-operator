@@ -5,17 +5,13 @@ import (
 	"fmt"
 	"net/url"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
-	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
 // HarborConnectionReconciler reconciles a HarborConnection object.
@@ -37,19 +33,15 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Fetch the HarborConnection instance.
 	var conn harborv1alpha1.HarborConnection
-	if err := r.Get(ctx, req.NamespacedName, &conn); err != nil {
-		if errors.IsNotFound(err) {
-			r.logger.Info("HarborConnection resource not found; it may have been deleted")
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &conn, r.logger); err != nil {
 		r.logger.Error(err, "Failed to get HarborConnection")
 		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
 	}
 
-	if conn.Status.ObservedGeneration != conn.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := markReconcilingIfNeeded(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Validate the BaseURL.
@@ -59,7 +51,17 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// If no credentials are provided, perform a non-authenticated connectivity check.
 	if conn.Spec.Credentials == nil {
-		hc := harborclient.New(conn.Spec.BaseURL, "", "") // no creds
+		hc, err := buildHarborClient(ctx, r.Client, &connectionConfig{
+			baseURL:           conn.Spec.BaseURL,
+			namespace:         conn.Namespace,
+			credentials:       conn.Spec.Credentials,
+			caBundle:          conn.Spec.CABundle,
+			caBundleSecretRef: conn.Spec.CABundleSecretRef,
+			displayName:       fmt.Sprintf("HarborConnection %s/%s", conn.Namespace, conn.Name),
+		}, false)
+		if err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
+		}
 		if err := hc.Ping(ctx); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 		}
@@ -72,13 +74,18 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Otherwise, perform an authenticated check.
-	user := conn.Spec.Credentials.Username
-	pass, err := r.getPassword(ctx, &conn) // unchanged helper
+	hc, err := buildHarborClient(ctx, r.Client, &connectionConfig{
+		baseURL:           conn.Spec.BaseURL,
+		namespace:         conn.Namespace,
+		credentials:       conn.Spec.Credentials,
+		caBundle:          conn.Spec.CABundle,
+		caBundleSecretRef: conn.Spec.CABundleSecretRef,
+		displayName:       fmt.Sprintf("HarborConnection %s/%s", conn.Namespace, conn.Name),
+	}, true)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
 
-	hc := harborclient.New(conn.Spec.BaseURL, user, pass)
 	if _, err := hc.GetCurrentUser(ctx); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
@@ -105,37 +112,6 @@ func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.Harbor
 		return err
 	}
 	return nil
-}
-
-// Retrieve the secret containing the access secret.
-func (r *HarborConnectionReconciler) getPassword(ctx context.Context, conn *harborv1alpha1.HarborConnection) (string, error) {
-	secret, err := r.getSecret(ctx, conn)
-	if err != nil {
-		return "", err
-	}
-
-	secretKey := conn.Spec.Credentials.PasswordSecretRef.Key
-	if secretKey == "" {
-		secretKey = "access_secret"
-	}
-	accessSecretBytes, ok := secret.Data[secretKey]
-	if !ok {
-		return "", fmt.Errorf("key %q not found in secret %s/%s", secretKey, secret.Namespace, secret.Name)
-	}
-	return string(accessSecretBytes), nil
-}
-
-// getSecret fetches the secret specified in the HarborConnection credentials.
-func (r *HarborConnectionReconciler) getSecret(ctx context.Context, conn *harborv1alpha1.HarborConnection) (*corev1.Secret, error) {
-	secretKey := types.NamespacedName{
-		Namespace: conn.Namespace,
-		Name:      conn.Spec.Credentials.PasswordSecretRef.Name,
-	}
-	var secret corev1.Secret
-	if err := r.Get(ctx, secretKey, &secret); err != nil {
-		return nil, err
-	}
-	return &secret, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

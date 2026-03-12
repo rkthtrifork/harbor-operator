@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,31 +29,30 @@ type MemberReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[Member:%s]", req.NamespacedName))
 
 	// Load CR
 	var member harborv1alpha1.Member
-	if err := r.Get(ctx, req.NamespacedName, &member); err != nil {
-		if errors.IsNotFound(err) {
-			r.logger.V(1).Info("Member resource disappeared")
-			return ctrl.Result{}, nil
-		}
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &member, r.logger); err != nil {
 		r.logger.Error(err, "Failed to get Member")
 		return ctrl.Result{}, err
+	} else if !found {
+		return ctrl.Result{}, nil
 	}
 
-	if member.Status.ObservedGeneration != member.Generation {
-		if err := setReconcilingStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "", ""); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := markReconcilingIfNeeded(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Resolve Harbor connection + typed client
 	hc, err := getHarborClient(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
+		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &member, member.Spec.GetDeletionPolicy(), true, err); done {
+			return ctrl.Result{}, finalErr
+		}
 		r.logger.Error(err, "Failed to get HarborConnection", "HarborConnectionRef", member.Spec.HarborConnectionRef)
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
@@ -320,8 +318,17 @@ func convertRoleNameToID(role string) (int, error) {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *MemberReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&harborv1alpha1.Member{}).
-		Named("member").
-		Complete(r)
+	builder, err := setupHarborBackedController(
+		mgr,
+		&harborv1alpha1.Member{},
+		func() client.ObjectList { return &harborv1alpha1.MemberList{} },
+		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+			return obj.(*harborv1alpha1.Member).Spec.HarborConnectionRef
+		},
+		"member",
+	)
+	if err != nil {
+		return err
+	}
+	return builder.Complete(r)
 }

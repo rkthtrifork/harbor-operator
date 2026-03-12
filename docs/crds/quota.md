@@ -10,7 +10,9 @@ kind: Quota
 metadata:
   name: project-quota
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   projectRef:
     name: my-project
   hard:
@@ -24,6 +26,11 @@ spec:
 
 - **spec.hard** (map, optional)
   Hard limits for quota resources.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

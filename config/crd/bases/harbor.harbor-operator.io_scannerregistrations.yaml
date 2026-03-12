@@ -96,6 +96,16 @@ spec:
                 description: Default indicates whether this scanner should be set
                   as system default.
                 type: boolean
+              deletionPolicy:
+                default: Delete
+                description: |-
+                  DeletionPolicy controls what happens when the Kubernetes object is deleted.
+                  Delete removes the corresponding Harbor resource before removing the finalizer.
+                  Orphan removes the finalizer even if Harbor cleanup cannot be completed.
+                enum:
+                - Delete
+                - Orphan
+                type: string
               description:
                 description: Description is an optional description.
                 type: string
@@ -108,9 +118,24 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the HarborConnection resource
-                  to use.
-                type: string
+                description: HarborConnectionRef references the Harbor connection
+                  object to use.
+                properties:
+                  kind:
+                    default: HarborConnection
+                    description: |-
+                      Kind selects the Harbor connection object kind.
+                      Defaults to HarborConnection.
+                    enum:
+                    - HarborConnection
+                    - ClusterHarborConnection
+                    type: string
+                  name:
+                    description: Name of the referenced Harbor connection object.
+                    type: string
+                required:
+                - name
+                type: object
               name:
                 description: |-
                   Name is the registration name.

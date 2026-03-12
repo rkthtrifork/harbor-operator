@@ -11,7 +11,9 @@ kind: Robot
 metadata:
   name: ci
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   allowTakeover: false
   level: project
   permissions:
@@ -31,8 +33,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.level** (string, required)
   Robot scope. Must be `system` or `project`.
@@ -46,8 +48,9 @@ spec:
   Duration in days. Use `-1` for never expires. If omitted, it defaults to `-1`.
 
 - **spec.secretRef** (object, optional)
-  Reference to a secret where the operator writes the generated robot secret.
+  Reference to the operator-managed secret where the generated robot secret is written.
   If omitted, the operator creates `<metadata.name>-secret` with key `secret`.
+  If the Secret already exists, it must already be managed by the same `Robot`.
 
 - **spec.allowTakeover** (bool, optional)
   If `true`, the operator will adopt an existing Harbor robot with the same name.
@@ -55,6 +58,11 @@ spec:
 Robot secrets are rotated automatically once Harbor reports that the robot
 credential has expired (based on `expires_at`). The operator then refreshes the
 secret and stores it in the referenced Secret.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 
@@ -67,8 +75,14 @@ secret and stores it in the referenced Secret.
 - **Update**
 
   - Updates description, permissions, disabled state, and duration.
-  - Refreshes the robot secret when the referenced secret changes.
+  - Rotates the Harbor credential when Harbor reports the current secret as expired.
+  - Writes the rotated value back to the operator-managed Secret.
 
 - **Delete**
 
   - Deletes the robot account in Harbor.
+
+## Notes
+
+- `spec.secretRef` is a destination for operator-managed output, not an input source.
+- The controller does not adopt or overwrite unrelated existing Secrets.

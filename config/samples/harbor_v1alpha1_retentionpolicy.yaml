@@ -3,7 +3,9 @@ kind: RetentionPolicy
 metadata:
   name: harbor-retention
 spec:
-  harborConnectionRef: "harbor-conn"
+  harborConnectionRef:
+    name: harbor-conn
+    kind: HarborConnection
   algorithm: or
   projectRef:
     name: project-sample

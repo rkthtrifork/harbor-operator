@@ -11,7 +11,9 @@ kind: RetentionPolicy
 metadata:
   name: harbor-retention
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   algorithm: or
   projectRef:
     name: project-sample
@@ -38,8 +40,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.algorithm** (string, optional)
   Retention algorithm, e.g. `or`.
@@ -58,6 +60,11 @@ spec:
 - **spec.trigger** (object, required)
   Defines when the policy runs. Harbor requires a trigger for creation (for
   scheduled execution, supply `kind: Schedule` and `settings.cron`).
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

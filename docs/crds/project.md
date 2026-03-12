@@ -13,7 +13,9 @@ kind: Project
 metadata:
   name: my-project
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
 
   # Optional explicit name for the Harbor project.
   # If empty, defaults to metadata.name.
@@ -40,8 +42,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.name** (string, optional)
   Name of the Harbor project.
@@ -66,6 +68,11 @@ spec:
 
 - **spec.reconcileNonce** (string, optional)
   Update this to force a reconcile on demand.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

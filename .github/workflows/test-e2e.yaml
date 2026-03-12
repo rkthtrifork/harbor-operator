@@ -24,13 +24,20 @@ jobs:
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+
       - name: Verify kind installation
         run: kind version
 
-      - name: Create kind cluster
-        run: kind create cluster
+      - name: Create local Harbor stack
+        run: make kind-up
 
       - name: Running Test e2e
         run: |
-          go mod tidy
+          kubectl port-forward -n default svc/harbor-core 8088:80 >/tmp/harbor-port-forward.log 2>&1 &
+          echo "HARBOR_BASE_URL=http://127.0.0.1:8088" >> $GITHUB_ENV
+          echo "HARBOR_IN_CLUSTER_BASE_URL=http://harbor-core.default.svc" >> $GITHUB_ENV
+          echo "HARBOR_ADMIN_USER=admin" >> $GITHUB_ENV
+          echo "HARBOR_ADMIN_PASSWORD=$(kubectl get secret -n default harbor-core -o jsonpath='{.data.HARBOR_ADMIN_PASSWORD}' | base64 -d)" >> $GITHUB_ENV
           make test-e2e

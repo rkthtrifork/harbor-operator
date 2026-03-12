@@ -11,7 +11,9 @@ kind: Label
 metadata:
   name: team-blue
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   name: team-blue
   color: "#3366ff"
   scope: g
@@ -27,6 +29,11 @@ spec:
 
 - **spec.name** (string, optional)
   Label name. Defaults to metadata.name.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

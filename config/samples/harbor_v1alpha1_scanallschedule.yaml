@@ -6,7 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: scanallschedule-sample
 spec:
-  harborConnectionRef: harborconnection-sample
+  harborConnectionRef:
+    name: harborconnection-sample
+    kind: HarborConnection
   schedule:
     type: Daily
     cron: "0 0 0 * * *"

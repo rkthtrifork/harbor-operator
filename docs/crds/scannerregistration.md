@@ -11,7 +11,9 @@ kind: ScannerRegistration
 metadata:
   name: trivy
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   name: trivy
   url: http://harbor-scanner-trivy:8080
   auth: Bearer
@@ -32,6 +34,11 @@ spec:
 
 - **spec.default** (bool, optional)
   Sets this registration as the system default scanner.
+
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
 
 ## Behavior
 

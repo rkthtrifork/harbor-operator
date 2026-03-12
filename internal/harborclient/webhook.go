@@ -31,37 +31,28 @@ type WebhookPolicy struct {
 // ListWebhookPolicies lists webhook policies for a project.
 func (c *Client) ListWebhookPolicies(ctx context.Context, projectNameOrID string) ([]WebhookPolicy, error) {
 	var out []WebhookPolicy
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), &out)
 	return out, err
 }
 
 // GetWebhookPolicy retrieves a webhook policy by ID.
 func (c *Client) GetWebhookPolicy(ctx context.Context, projectNameOrID string, id int) (*WebhookPolicy, error) {
 	var out WebhookPolicy
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), &out)
 	return &out, err
 }
 
 // CreateWebhookPolicy creates a webhook policy.
 func (c *Client) CreateWebhookPolicy(ctx context.Context, projectNameOrID string, in WebhookPolicy) (int, error) {
-	resp, err := c.do(ctx, "POST", fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), &in)
 }
 
 // UpdateWebhookPolicy updates a webhook policy.
 func (c *Client) UpdateWebhookPolicy(ctx context.Context, projectNameOrID string, id int, in WebhookPolicy) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), &in)
 }
 
 // DeleteWebhookPolicy deletes a webhook policy.
 func (c *Client) DeleteWebhookPolicy(ctx context.Context, projectNameOrID string, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id))
 }

@@ -80,7 +80,7 @@ var _ = Describe("Robot Controller", func() {
 				},
 				Spec: harborv1alpha1.RobotSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: "harbor-conn",
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
 					Level:    "project",
 					Duration: -1,
@@ -101,11 +101,13 @@ var _ = Describe("Robot Controller", func() {
 		AfterEach(func() {
 			server.Close()
 			resource := &harborv1alpha1.Robot{}
-			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
+			if err := k8sClient.Get(ctx, typeNamespacedName, resource); err == nil {
+				resource.Finalizers = nil
+				_ = k8sClient.Update(ctx, resource)
+				_ = k8sClient.Delete(ctx, resource)
+			}
 
 			By("Cleanup the specific resource instance Robot")
-			_ = k8sClient.Delete(ctx, resource)
-
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
 			_ = k8sClient.Delete(ctx, conn)
@@ -114,6 +116,9 @@ var _ = Describe("Robot Controller", func() {
 			_ = k8sClient.Delete(ctx, secret)
 			secret = &corev1.Secret{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
+			secret = &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "existing-secret", Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
 		})
 
@@ -135,6 +140,10 @@ var _ = Describe("Robot Controller", func() {
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)).To(Succeed())
 			Expect(string(secret.Data["secret"])).To(Equal("RobotSecret123"))
+			Expect(secret.Labels[managedByLabelKey]).To(Equal(managedByLabelValue))
+			Expect(secret.Annotations[ownerKindAnnotationKey]).To(Equal("Robot"))
+			Expect(secret.Annotations[ownerNamespaceAnnKey]).To(Equal("default"))
+			Expect(secret.Annotations[ownerNameAnnotationKey]).To(Equal(resourceName))
 
 			// Reconcile again to observe expiration and rotate.
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -144,6 +153,35 @@ var _ = Describe("Robot Controller", func() {
 
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)).To(Succeed())
 			Expect(string(secret.Data["secret"])).To(Equal("RotatedSecret456"))
+		})
+
+		It("should fail when the destination secret already exists without operator ownership", func() {
+			existing := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-resource-secret",
+					Namespace: "default",
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"secret": []byte("keep-me"),
+				},
+			}
+			Expect(k8sClient.Create(ctx, existing)).To(Succeed())
+
+			controllerReconciler := &RobotReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("already exists and is not managed by Robot default/test-resource"))
+
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)).To(Succeed())
+			Expect(string(secret.Data["secret"])).To(Equal("keep-me"))
 		})
 	})
 })

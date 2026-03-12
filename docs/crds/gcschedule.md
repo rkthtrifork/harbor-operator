@@ -11,7 +11,9 @@ kind: GCSchedule
 metadata:
   name: harbor-gc-schedule
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   schedule:
     type: Custom
     cron: "0 0 2 * * *"
@@ -22,8 +24,8 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (string, required)
-  Name of the HarborConnection to use.
+- **spec.harborConnectionRef** (object, required)
+  Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.schedule.type** (string, required)
   One of: `Hourly`, `Daily`, `Weekly`, `Custom`, `Manual`, `None`, `Schedule`.
@@ -36,9 +38,15 @@ spec:
   GC parameters passed through to Harbor (for example `delete_untagged` and
   `workers`).
 
+## Common Fields
+
+- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
+- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
+
 ## Behavior
 
 - **Create/Update**
+  Only one `GCSchedule` may manage a given Harbor instance. If multiple CRs target the same Harbor instance, the oldest CR remains the owner and later CRs report a conflict.
   Applies the GC schedule to Harbor.
 
 - **Delete**

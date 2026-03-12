@@ -75,7 +75,7 @@ var _ = Describe("User Controller", func() {
 				},
 				Spec: harborv1alpha1.UserSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: connName,
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					Email: "user@example.com",
 					PasswordSecretRef: corev1.SecretKeySelector{

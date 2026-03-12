@@ -25,6 +25,6 @@ type CurrentUser struct {
 // GetCurrentUser does a basic-auth GET /users/current.
 func (c *Client) GetCurrentUser(ctx context.Context) (*CurrentUser, error) {
 	var u CurrentUser
-	_, err := c.do(ctx, "GET", "/api/v2.0/users/current", nil, &u)
+	err := c.get(ctx, "/api/v2.0/users/current", &u)
 	return &u, err
 }

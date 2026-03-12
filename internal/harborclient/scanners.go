@@ -41,39 +41,30 @@ type ScannerRegistrationReq struct {
 // ListScanners lists scanner registrations.
 func (c *Client) ListScanners(ctx context.Context) ([]ScannerRegistration, error) {
 	var out []ScannerRegistration
-	_, err := c.do(ctx, "GET", "/api/v2.0/scanners", nil, &out)
+	err := c.get(ctx, "/api/v2.0/scanners", &out)
 	return out, err
 }
 
 // GetScanner retrieves a scanner registration.
 func (c *Client) GetScanner(ctx context.Context, id string) (*ScannerRegistration, error) {
 	var out ScannerRegistration
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/scanners/%s", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/scanners/%s", id), &out)
 	return &out, err
 }
 
 // CreateScanner creates a scanner registration.
 func (c *Client) CreateScanner(ctx context.Context, in ScannerRegistrationReq) (string, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/scanners", &in, nil)
-	if err != nil {
-		return "", err
-	}
-	return extractLocationIDString(resp)
+	return c.createWithStringLocationID(ctx, "/api/v2.0/scanners", &in)
 }
 
 // UpdateScanner updates a scanner registration.
 func (c *Client) UpdateScanner(ctx context.Context, id string, in ScannerRegistrationReq) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/scanners/%s", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/scanners/%s", id), &in)
 }
 
 // DeleteScanner deletes a scanner registration.
 func (c *Client) DeleteScanner(ctx context.Context, id string) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/scanners/%s", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/scanners/%s", id))
 }
 
 // SetDefaultScanner sets the system default scanner registration.
@@ -83,6 +74,5 @@ func (c *Client) SetDefaultScanner(ctx context.Context, id string, isDefault boo
 	}{
 		IsDefault: isDefault,
 	}
-	_, err := c.do(ctx, "PATCH", fmt.Sprintf("/api/v2.0/scanners/%s", id), &body, nil)
-	return err
+	return c.patch(ctx, fmt.Sprintf("/api/v2.0/scanners/%s", id), &body, nil)
 }

@@ -32,14 +32,14 @@ func (c *Client) ListQuotas(ctx context.Context, reference, referenceID string) 
 		rel += "?" + values.Encode()
 	}
 	var out []Quota
-	_, err := c.do(ctx, "GET", rel, nil, &out)
+	err := c.get(ctx, rel, &out)
 	return out, err
 }
 
 // GetQuota retrieves a quota by ID.
 func (c *Client) GetQuota(ctx context.Context, id int) (*Quota, error) {
 	var out Quota
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/quotas/%d", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/quotas/%d", id), &out)
 	return &out, err
 }
 
@@ -50,6 +50,5 @@ func (c *Client) UpdateQuota(ctx context.Context, id int, hard map[string]int64)
 	}{
 		Hard: hard,
 	}
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/quotas/%d", id), &body, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/quotas/%d", id), &body)
 }

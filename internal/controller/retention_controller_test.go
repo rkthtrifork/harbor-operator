@@ -73,7 +73,7 @@ var _ = Describe("Retention Policy Controller", func() {
 				},
 				Spec: harborv1alpha1.ProjectSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: connName,
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					Name:   "demo",
 					Public: true,
@@ -90,7 +90,7 @@ var _ = Describe("Retention Policy Controller", func() {
 				},
 				Spec: harborv1alpha1.RetentionPolicySpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: connName,
+						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					ProjectRef: &harborv1alpha1.ProjectReference{Name: "demo"},
 					Algorithm:  "or",

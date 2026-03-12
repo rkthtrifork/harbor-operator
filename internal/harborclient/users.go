@@ -34,36 +34,24 @@ func (c *Client) ListUsers(ctx context.Context, query string) ([]User, error) {
 		rel += "?q=" + query
 	}
 	var us []User
-	_, err := c.do(ctx, "GET", rel, nil, &us)
+	err := c.get(ctx, rel, &us)
 	return us, err
 }
 
 func (c *Client) GetUserByID(ctx context.Context, id int) (User, error) {
 	var u User
-	_, err := c.do(ctx, "GET",
-		fmt.Sprintf("/api/v2.0/users/%d", id), nil, &u)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/users/%d", id), &u)
 	return u, err
 }
 
 func (c *Client) CreateUser(ctx context.Context, in CreateUserRequest) (int, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/users", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/users", &in)
 }
 
 func (c *Client) UpdateUser(ctx context.Context, id int, in CreateUserRequest) error {
-	_, err := c.do(ctx, "PUT",
-		fmt.Sprintf("/api/v2.0/users/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/users/%d", id), &in)
 }
 
 func (c *Client) DeleteUser(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE",
-		fmt.Sprintf("/api/v2.0/users/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/users/%d", id))
 }

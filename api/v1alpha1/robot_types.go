@@ -131,8 +131,9 @@ type RobotSpec struct {
 	// +kubebuilder:default=-1
 	Duration int `json:"duration,omitempty"`
 
-	// SecretRef references the secret key holding the robot secret.
-	// The operator writes the generated robot secret to this location.
+	// SecretRef references the operator-managed secret key holding the robot secret.
+	// The operator writes the generated robot secret to this location and expects
+	// the Secret to either not exist yet or already be managed by this Robot.
 	// If omitted, the operator will create a Secret named "<metadata.name>-secret"
 	// in the same namespace with key "secret".
 	// +optional

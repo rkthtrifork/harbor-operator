@@ -3,7 +3,9 @@ kind: Robot
 metadata:
   name: ci
 spec:
-  harborConnectionRef: "my-harbor"
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
   level: project
   permissions:
   - kind: project

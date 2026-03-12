@@ -38,37 +38,28 @@ func (c *Client) ListLabels(ctx context.Context, name, scope string, projectID *
 		rel += "?" + values.Encode()
 	}
 	var out []Label
-	_, err := c.do(ctx, "GET", rel, nil, &out)
+	err := c.get(ctx, rel, &out)
 	return out, err
 }
 
 // GetLabel retrieves a label by ID.
 func (c *Client) GetLabel(ctx context.Context, id int) (*Label, error) {
 	var out Label
-	_, err := c.do(ctx, "GET", fmt.Sprintf("/api/v2.0/labels/%d", id), nil, &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/labels/%d", id), &out)
 	return &out, err
 }
 
 // CreateLabel creates a label.
 func (c *Client) CreateLabel(ctx context.Context, in Label) (int, error) {
-	resp, err := c.do(ctx, "POST", "/api/v2.0/labels", &in, nil)
-	if err != nil {
-		return 0, err
-	}
-	return extractLocationID(resp)
+	return c.createWithNumericLocationID(ctx, "/api/v2.0/labels", &in)
 }
 
 // UpdateLabel updates a label.
 func (c *Client) UpdateLabel(ctx context.Context, id int, in Label) error {
-	_, err := c.do(ctx, "PUT", fmt.Sprintf("/api/v2.0/labels/%d", id), &in, nil)
-	return err
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/labels/%d", id), &in)
 }
 
 // DeleteLabel deletes a label.
 func (c *Client) DeleteLabel(ctx context.Context, id int) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/api/v2.0/labels/%d", id), nil, nil)
-	if IsNotFound(err) {
-		return nil
-	}
-	return err
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/labels/%d", id))
 }
