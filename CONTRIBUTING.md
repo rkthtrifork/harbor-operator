@@ -106,6 +106,27 @@ Every CRD must have a doc file with:
 make generate manifests
 ```
 
+## Harbor OpenAPI Spec
+
+The checked-in Harbor OpenAPI spec lives at:
+
+```text
+hack/harbor-openapi.yaml
+```
+
+Use it as the local reference when changing:
+- `internal/harborclient`
+- controller logic that depends on Harbor request/response behavior
+- tests that verify Harbor API semantics
+
+Refresh it from upstream with:
+
+```sh
+make update-harbor-openapi
+```
+
+This is a manual maintenance task. Update it when the change you are making depends on Harbor API details; it does not need to be refreshed on every contribution.
+
 ## Generated Assets
 
 We treat generated outputs as source-of-truth for releases and keep Helm artifacts in sync:

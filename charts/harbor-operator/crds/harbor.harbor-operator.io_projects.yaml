@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Project
     listKind: ProjectList
     plural: projects
@@ -15,6 +17,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.public
+      name: Public
+      type: boolean
     - jsonPath: .spec.registryName
       name: Registry
       type: string
@@ -118,6 +123,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -157,7 +163,6 @@ spec:
                 description: Owner is an optional field for the project owner.
                 type: string
               public:
-                default: true
                 description: Public indicates whether the project is public.
                 type: boolean
               reconcileNonce:

@@ -20,7 +20,6 @@ type ProjectSpec struct {
 	Name string `json:"name,omitempty"`
 
 	// Public indicates whether the project is public.
-	// +kubebuilder:default:=true
 	Public bool `json:"public"`
 
 	// Owner is an optional field for the project owner.
@@ -84,6 +83,8 @@ type ProjectStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
+// +kubebuilder:printcolumn:name="Public",type=boolean,JSONPath=`.spec.public`
 // +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registryName`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

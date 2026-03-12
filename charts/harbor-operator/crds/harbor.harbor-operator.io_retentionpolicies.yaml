@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: RetentionPolicy
     listKind: RetentionPolicyList
     plural: retentionpolicies
@@ -90,6 +92,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -101,6 +104,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Project resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the
@@ -205,6 +209,13 @@ spec:
             - harborConnectionRef
             - rules
             type: object
+            x-kubernetes-validations:
+            - message: trigger is required
+              rule: has(self.trigger)
+            - message: scope.ref must be empty and scope.level must be empty or 'project'
+                when projectRef is set
+              rule: '!has(self.projectRef) || !has(self.scope) || (self.scope.ref
+                == 0 && (size(self.scope.level) == 0 || self.scope.level == ''project''))'
           status:
             description: RetentionPolicyStatus defines the observed state of RetentionPolicy.
             properties:

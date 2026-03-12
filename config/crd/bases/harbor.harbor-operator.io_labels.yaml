@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Label
     listKind: LabelList
     plural: labels
@@ -100,6 +102,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -115,6 +118,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Project resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the
@@ -129,10 +133,18 @@ spec:
               scope:
                 description: Scope is the label scope. Valid values are g (global)
                   and p (project).
+                enum:
+                - g
+                - p
                 type: string
             required:
             - harborConnectionRef
             type: object
+            x-kubernetes-validations:
+            - message: scope must be 'p' when projectRef is set
+              rule: '!has(self.projectRef) || self.scope == ''p'''
+            - message: projectRef is required when scope is 'p'
+              rule: self.scope != 'p' || has(self.projectRef)
           status:
             description: LabelStatus defines the observed state of Label.
             properties:

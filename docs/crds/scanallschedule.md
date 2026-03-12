@@ -22,7 +22,9 @@ spec:
 ## Key Fields
 
 - **spec.schedule** (object, required)
-  Schedule type and cron expression.
+  Schedule type and cron expression. `Manual` is not supported for
+  `ScanAllSchedule`. For all types except `None`, Harbor expects a cron
+  expression.
 
 - **spec.parameters** (map, optional)
   Additional scan-all parameters.

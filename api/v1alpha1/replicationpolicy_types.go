@@ -15,6 +15,7 @@ type ReplicationTriggerSettings struct {
 // ReplicationTriggerSpec defines when the replication policy runs.
 type ReplicationTriggerSpec struct {
 	// Type defines the trigger type (manual, event_based, scheduled).
+	// +kubebuilder:validation:Enum=manual;event_based;scheduled
 	// +optional
 	Type string `json:"type,omitempty"`
 
@@ -39,6 +40,9 @@ type ReplicationFilterSpec struct {
 }
 
 // ReplicationPolicySpec defines the desired state of ReplicationPolicy.
+// +kubebuilder:validation:XValidation:rule="(has(self.sourceRegistryRef) && !has(self.sourceRegistryID)) || (!has(self.sourceRegistryRef) && has(self.sourceRegistryID))",message="exactly one of sourceRegistryRef or sourceRegistryID must be set"
+// +kubebuilder:validation:XValidation:rule="(has(self.destinationRegistryRef) && !has(self.destinationRegistryID)) || (!has(self.destinationRegistryRef) && has(self.destinationRegistryID))",message="exactly one of destinationRegistryRef or destinationRegistryID must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.trigger) || self.trigger.type != 'scheduled' || (has(self.trigger.settings) && has(self.trigger.settings.cron))",message="trigger.settings.cron must be set when trigger.type is scheduled"
 type ReplicationPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -61,6 +65,7 @@ type ReplicationPolicySpec struct {
 	SourceRegistryRef *RegistryReference `json:"sourceRegistryRef,omitempty"`
 
 	// SourceRegistryID sets the source registry by Harbor registry ID.
+	// +kubebuilder:validation:Minimum=1
 	// +optional
 	SourceRegistryID *int `json:"sourceRegistryID,omitempty"`
 
@@ -69,6 +74,7 @@ type ReplicationPolicySpec struct {
 	DestinationRegistryRef *RegistryReference `json:"destinationRegistryRef,omitempty"`
 
 	// DestinationRegistryID sets the destination registry by Harbor registry ID.
+	// +kubebuilder:validation:Minimum=1
 	// +optional
 	DestinationRegistryID *int `json:"destinationRegistryID,omitempty"`
 
@@ -123,6 +129,7 @@ type ReplicationPolicyStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Source",type=string,JSONPath=`.spec.sourceRegistryRef.name`
 // +kubebuilder:printcolumn:name="Destination",type=string,JSONPath=`.spec.destinationRegistryRef.name`
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.spec.enabled`

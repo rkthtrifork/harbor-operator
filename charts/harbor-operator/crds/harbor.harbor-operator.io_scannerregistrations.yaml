@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: ScannerRegistration
     listKind: ScannerRegistrationList
     plural: scannerregistrations
@@ -75,6 +77,7 @@ spec:
                     type: string
                   name:
                     description: Name of the Secret.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Secret. Omit to use the HarborConnection
@@ -132,6 +135,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -160,6 +164,11 @@ spec:
             - harborConnectionRef
             - url
             type: object
+            x-kubernetes-validations:
+            - message: accessCredential and accessCredentialSecretRef are mutually
+                exclusive
+              rule: '!(has(self.accessCredentialSecretRef) && size(self.accessCredential)
+                > 0)'
           status:
             description: ScannerRegistrationStatus defines the observed state of ScannerRegistration.
             properties:

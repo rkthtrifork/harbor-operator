@@ -8,11 +8,11 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: ClusterHarborConnection
     listKind: ClusterHarborConnectionList
     plural: clusterharborconnections
-    shortNames:
-    - chc
     singular: clusterharborconnection
   scope: Cluster
   versions:
@@ -79,6 +79,7 @@ spec:
                     type: string
                   name:
                     description: Name of the Secret.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Secret. Omit to use the HarborConnection
@@ -102,6 +103,7 @@ spec:
                         type: string
                       name:
                         description: Name of the Secret.
+                        minLength: 1
                         type: string
                       namespace:
                         description: Namespace of the Secret. Omit to use the HarborConnection
@@ -111,6 +113,7 @@ spec:
                     - name
                     type: object
                   type:
+                    default: basic
                     description: Type of the credential, e.g., "basic".
                     enum:
                     - basic
@@ -127,6 +130,9 @@ spec:
             required:
             - baseURL
             type: object
+            x-kubernetes-validations:
+            - message: caBundle and caBundleSecretRef are mutually exclusive
+              rule: '!(has(self.caBundleSecretRef) && size(self.caBundle) > 0)'
           status:
             description: HarborConnectionStatus defines the observed state of HarborConnection.
             properties:

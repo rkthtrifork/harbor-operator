@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Robot
     listKind: RobotList
     plural: robots
@@ -106,6 +108,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -238,6 +241,7 @@ spec:
                     type: string
                   name:
                     description: Name of the Secret.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Secret. Omit to use the HarborConnection
@@ -251,6 +255,9 @@ spec:
             - level
             - permissions
             type: object
+            x-kubernetes-validations:
+            - message: duration must be -1 or a positive integer
+              rule: self.duration == -1 || self.duration > 0
           status:
             description: RobotStatus defines the observed state of Robot.
             properties:

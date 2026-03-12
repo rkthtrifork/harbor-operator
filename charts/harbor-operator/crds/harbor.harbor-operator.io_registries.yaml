@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Registry
     listKind: RegistryList
     plural: registries
@@ -80,6 +82,7 @@ spec:
                     type: string
                   name:
                     description: Name of the Secret.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Secret. Omit to use the HarborConnection
@@ -102,6 +105,7 @@ spec:
                         type: string
                       name:
                         description: Name of the Secret.
+                        minLength: 1
                         type: string
                       namespace:
                         description: Namespace of the Secret. Omit to use the HarborConnection
@@ -121,6 +125,7 @@ spec:
                         type: string
                       name:
                         description: Name of the Secret.
+                        minLength: 1
                         type: string
                       namespace:
                         description: Namespace of the Secret. Omit to use the HarborConnection
@@ -173,6 +178,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -215,6 +221,9 @@ spec:
             - type
             - url
             type: object
+            x-kubernetes-validations:
+            - message: caCertificate and caCertificateRef are mutually exclusive
+              rule: '!(has(self.caCertificateRef) && size(self.caCertificate) > 0)'
           status:
             description: RegistryStatus defines the observed state of Registry.
             properties:

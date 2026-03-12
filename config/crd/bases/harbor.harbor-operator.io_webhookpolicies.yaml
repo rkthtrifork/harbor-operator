@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: WebhookPolicy
     listKind: WebhookPolicyList
     plural: webhookpolicies
@@ -83,6 +85,7 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               enabled:
+                default: true
                 description: Enabled indicates whether the policy is enabled.
                 type: boolean
               eventTypes:
@@ -106,6 +109,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -125,6 +129,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Project resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the
@@ -159,6 +164,7 @@ spec:
                           type: string
                         name:
                           description: Name of the Secret.
+                          minLength: 1
                           type: string
                         namespace:
                           description: Namespace of the Secret. Omit to use the HarborConnection
@@ -178,6 +184,10 @@ spec:
                       description: Type defines the webhook notify type.
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: authHeader and authHeaderSecretRef are mutually exclusive
+                    rule: '!(has(self.authHeaderSecretRef) && size(self.authHeader)
+                      > 0)'
                 minItems: 1
                 type: array
             required:
@@ -185,6 +195,9 @@ spec:
             - harborConnectionRef
             - targets
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of projectRef or projectNameOrID must be set
+              rule: has(self.projectRef) != has(self.projectNameOrID)
           status:
             description: WebhookPolicyStatus defines the observed state of WebhookPolicy.
             properties:

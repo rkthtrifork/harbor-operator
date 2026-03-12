@@ -20,6 +20,7 @@ const (
 // cluster-scoped ClusterHarborConnection.
 type HarborConnectionReference struct {
 	// Name of the referenced Harbor connection object.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Kind selects the Harbor connection object kind.
@@ -58,6 +59,7 @@ type HarborSpecBase struct {
 // cross-namespace references when enabled in the operator RBAC.
 type SecretReference struct {
 	// Name of the Secret.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// Key inside the Secret data. When omitted, the controller using this
 	// reference will apply a sensible default.
@@ -71,6 +73,7 @@ type SecretReference struct {
 // ProjectReference identifies a Project custom resource.
 type ProjectReference struct {
 	// Name of the Project resource.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// Namespace of the Project resource. Defaults to the referencing resource namespace.
 	// +optional
@@ -80,6 +83,7 @@ type ProjectReference struct {
 // RegistryReference identifies a Registry custom resource.
 type RegistryReference struct {
 	// Name of the Registry resource.
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// Namespace of the Registry resource. Defaults to the referencing resource namespace.
 	// +optional

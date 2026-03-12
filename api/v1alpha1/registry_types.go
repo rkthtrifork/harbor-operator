@@ -5,6 +5,7 @@ import (
 )
 
 // RegistrySpec defines the desired state of Registry.
+// +kubebuilder:validation:XValidation:rule="!(has(self.caCertificateRef) && size(self.caCertificate) > 0)",message="caCertificate and caCertificateRef are mutually exclusive"
 type RegistrySpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -75,6 +76,7 @@ type RegistryStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.url`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

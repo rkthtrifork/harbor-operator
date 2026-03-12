@@ -3,6 +3,8 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // LabelSpec defines the desired state of Label.
+// +kubebuilder:validation:XValidation:rule="!has(self.projectRef) || self.scope == 'p'",message="scope must be 'p' when projectRef is set"
+// +kubebuilder:validation:XValidation:rule="self.scope != 'p' || has(self.projectRef)",message="projectRef is required when scope is 'p'"
 type LabelSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -25,6 +27,7 @@ type LabelSpec struct {
 	Color string `json:"color,omitempty"`
 
 	// Scope is the label scope. Valid values are g (global) and p (project).
+	// +kubebuilder:validation:Enum=g;p
 	// +optional
 	Scope string `json:"scope,omitempty"`
 
@@ -43,6 +46,7 @@ type LabelStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Scope",type=string,JSONPath=`.spec.scope`
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

@@ -3,6 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // WebhookTargetSpec defines a single webhook target.
+// +kubebuilder:validation:XValidation:rule="!(has(self.authHeaderSecretRef) && size(self.authHeader) > 0)",message="authHeader and authHeaderSecretRef are mutually exclusive"
 type WebhookTargetSpec struct {
 	// Type defines the webhook notify type.
 	// +optional
@@ -30,6 +31,7 @@ type WebhookTargetSpec struct {
 }
 
 // WebhookPolicySpec defines the desired state of WebhookPolicy.
+// +kubebuilder:validation:XValidation:rule="has(self.projectRef) != has(self.projectNameOrID)",message="exactly one of projectRef or projectNameOrID must be set"
 type WebhookPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -56,6 +58,7 @@ type WebhookPolicySpec struct {
 	Description string `json:"description,omitempty"`
 
 	// Enabled indicates whether the policy is enabled.
+	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 
@@ -82,6 +85,7 @@ type WebhookPolicyStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.spec.enabled`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

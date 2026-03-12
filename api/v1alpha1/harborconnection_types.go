@@ -3,6 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HarborConnectionSpec defines the desired state of HarborConnection.
+// +kubebuilder:validation:XValidation:rule="!(has(self.caBundleSecretRef) && size(self.caBundle) > 0)",message="caBundle and caBundleSecretRef are mutually exclusive"
 type HarborConnectionSpec struct {
 	// BaseURL is the Harbor API endpoint.
 	// +kubebuilder:validation:Format=url
@@ -24,6 +25,7 @@ type HarborConnectionSpec struct {
 // Credentials holds default authentication details.
 type Credentials struct {
 	// Type of the credential, e.g., "basic".
+	// +kubebuilder:default=basic
 	// +kubebuilder:validation:Enum=basic
 	Type string `json:"type"`
 
@@ -45,7 +47,7 @@ type HarborConnectionStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=hc
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="BaseURL",type=string,JSONPath=`.spec.baseURL`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
@@ -76,7 +78,7 @@ func init() {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=chc
+// +kubebuilder:resource:scope=Cluster,categories=harbor
 // +kubebuilder:printcolumn:name="BaseURL",type=string,JSONPath=`.spec.baseURL`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

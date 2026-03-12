@@ -96,6 +96,7 @@ type RobotPermission struct {
 }
 
 // RobotSpec defines the desired state of Robot.
+// +kubebuilder:validation:XValidation:rule="self.duration == -1 || self.duration > 0",message="duration must be -1 or a positive integer"
 type RobotSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -157,6 +158,7 @@ type RobotStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Level",type=string,JSONPath=`.spec.level`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

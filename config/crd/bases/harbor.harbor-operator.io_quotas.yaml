@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Quota
     listKind: QuotaList
     plural: quotas
@@ -86,6 +88,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -107,6 +110,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Project resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the

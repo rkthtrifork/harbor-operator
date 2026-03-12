@@ -40,6 +40,7 @@ type PurgeAuditScheduleStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.schedule.type`
 // +kubebuilder:printcolumn:name="Cron",type=string,JSONPath=`.spec.schedule.cron`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

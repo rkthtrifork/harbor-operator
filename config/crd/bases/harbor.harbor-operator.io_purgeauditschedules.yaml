@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: PurgeAuditSchedule
     listKind: PurgeAuditScheduleList
     plural: purgeauditschedules
@@ -91,6 +93,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -116,8 +119,8 @@ spec:
                 description: Schedule defines when purge runs.
                 properties:
                   cron:
-                    description: Cron is the cron expression when Type is Custom or
-                      Schedule.
+                    description: Cron is the cron expression when Type is not Manual
+                      or None.
                     type: string
                   type:
                     description: |-
@@ -135,6 +138,9 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: cron must be set when type is not Manual or None
+                  rule: self.type in ['Manual', 'None'] || size(self.cron) > 0
             required:
             - harborConnectionRef
             - schedule

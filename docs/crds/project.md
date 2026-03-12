@@ -50,7 +50,7 @@ spec:
 
   - If empty, `metadata.name` is used.
 
-- **spec.public** (bool, optional)
+- **spec.public** (bool, required)
   Controls whether the project is public or private.
 
 - **spec.allowTakeover** (bool, optional)

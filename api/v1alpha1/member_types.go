@@ -25,6 +25,9 @@ type MemberGroup struct {
 }
 
 // MemberSpec defines the desired state of Member.
+// +kubebuilder:validation:XValidation:rule="has(self.memberUser) != has(self.memberGroup)",message="exactly one of memberUser or memberGroup must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.memberUser) || size(self.memberUser.username) > 0",message="memberUser.username must be set when memberUser is provided"
+// +kubebuilder:validation:XValidation:rule="!has(self.memberGroup) || size(self.memberGroup.group_name) > 0 || size(self.memberGroup.ldap_group_dn) > 0",message="memberGroup must specify group_name or ldap_group_dn"
 type MemberSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -39,6 +42,7 @@ type MemberSpec struct {
 
 	// Role is the human‑readable name of the role.
 	// Allowed values: "admin", "maintainer", "developer", "guest"
+	// +kubebuilder:validation:Enum=admin;maintainer;developer;guest
 	// +kubebuilder:validation:Required
 	Role string `json:"role"`
 
@@ -58,6 +62,7 @@ type MemberStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef`
 // +kubebuilder:printcolumn:name="User",type=string,JSONPath=`.spec.memberUser.username`
 // +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.memberGroup.group_name`

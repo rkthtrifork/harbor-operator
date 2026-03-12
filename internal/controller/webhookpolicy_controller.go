@@ -74,10 +74,6 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.WebhookPolicy) (ctrl.Result, error) {
 	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-	if cr.Spec.Enabled == nil {
-		defaultEnabled := true
-		cr.Spec.Enabled = &defaultEnabled
-	}
 
 	projectKey, projectID, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
 	if err != nil {

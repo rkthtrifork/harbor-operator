@@ -1,6 +1,7 @@
 IMG_LOCAL ?= harbor-operator:local
 IMG ?= $(IMG_LOCAL)
 HARBOR_API_GROUP ?= harbor.harbor-operator.io
+HARBOR_OPENAPI_URL ?= https://raw.githubusercontent.com/goharbor/harbor/refs/heads/main/api/v2.0/swagger.yaml
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -82,6 +83,10 @@ sync-chart-rbac: ## Sync RBAC into the Helm chart
 
 .PHONY: sync-chart
 sync-chart: sync-chart-crds sync-chart-rbac ## Sync generated CRDs and RBAC into the Helm chart
+
+.PHONY: update-harbor-openapi
+update-harbor-openapi: ## Download the Harbor OpenAPI spec into hack/harbor-openapi.yaml
+	curl -fsSL $(HARBOR_OPENAPI_URL) -o hack/harbor-openapi.yaml
 
 .PHONY: apply-crds
 apply-crds: ## Apply the latest CRDs to the current cluster

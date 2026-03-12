@@ -25,6 +25,7 @@ type ImmutableSelector struct {
 }
 
 // ImmutableTagRuleSpec defines the desired state of ImmutableTagRule.
+// +kubebuilder:validation:XValidation:rule="has(self.projectRef) != has(self.projectNameOrID)",message="exactly one of projectRef or projectNameOrID must be set"
 type ImmutableTagRuleSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -80,6 +81,7 @@ type ImmutableTagRuleStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.spec.disabled`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

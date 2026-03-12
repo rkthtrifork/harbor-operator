@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: ImmutableTagRule
     listKind: ImmutableTagRuleList
     plural: immutabletagrules
@@ -100,6 +102,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -122,6 +125,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Project resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Project resource. Defaults to the
@@ -179,6 +183,9 @@ spec:
             required:
             - harborConnectionRef
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of projectRef or projectNameOrID must be set
+              rule: has(self.projectRef) != has(self.projectNameOrID)
           status:
             description: ImmutableTagRuleStatus defines the observed state of ImmutableTagRule.
             properties:

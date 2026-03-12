@@ -3,6 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // ScannerRegistrationSpec defines the desired state of ScannerRegistration.
+// +kubebuilder:validation:XValidation:rule="!(has(self.accessCredentialSecretRef) && size(self.accessCredential) > 0)",message="accessCredential and accessCredentialSecretRef are mutually exclusive"
 type ScannerRegistrationSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -67,6 +68,7 @@ type ScannerRegistrationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.url`
 // +kubebuilder:printcolumn:name="Default",type=boolean,JSONPath=`.spec.default`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`

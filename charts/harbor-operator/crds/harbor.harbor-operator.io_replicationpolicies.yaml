@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: ReplicationPolicy
     listKind: ReplicationPolicyList
     plural: replicationpolicies
@@ -93,6 +95,7 @@ spec:
               destinationRegistryID:
                 description: DestinationRegistryID sets the destination registry by
                   Harbor registry ID.
+                minimum: 1
                 type: integer
               destinationRegistryRef:
                 description: DestinationRegistryRef references a Registry CR to use
@@ -100,6 +103,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Registry resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Registry resource. Defaults to the
@@ -147,6 +151,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -172,6 +177,7 @@ spec:
               sourceRegistryID:
                 description: SourceRegistryID sets the source registry by Harbor registry
                   ID.
+                minimum: 1
                 type: integer
               sourceRegistryRef:
                 description: SourceRegistryRef references a Registry CR to use as
@@ -179,6 +185,7 @@ spec:
                 properties:
                   name:
                     description: Name of the Registry resource.
+                    minLength: 1
                     type: string
                   namespace:
                     description: Namespace of the Registry resource. Defaults to the
@@ -203,11 +210,27 @@ spec:
                   type:
                     description: Type defines the trigger type (manual, event_based,
                       scheduled).
+                    enum:
+                    - manual
+                    - event_based
+                    - scheduled
                     type: string
                 type: object
             required:
             - harborConnectionRef
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of sourceRegistryRef or sourceRegistryID must be
+                set
+              rule: (has(self.sourceRegistryRef) && !has(self.sourceRegistryID)) ||
+                (!has(self.sourceRegistryRef) && has(self.sourceRegistryID))
+            - message: exactly one of destinationRegistryRef or destinationRegistryID
+                must be set
+              rule: (has(self.destinationRegistryRef) && !has(self.destinationRegistryID))
+                || (!has(self.destinationRegistryRef) && has(self.destinationRegistryID))
+            - message: trigger.settings.cron must be set when trigger.type is scheduled
+              rule: '!has(self.trigger) || self.trigger.type != ''scheduled'' || (has(self.trigger.settings)
+                && has(self.trigger.settings.cron))'
           status:
             description: ReplicationPolicyStatus defines the observed state of ReplicationPolicy.
             properties:

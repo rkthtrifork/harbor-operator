@@ -10,47 +10,11 @@ repo: github.com/rkthtrifork/harbor-operator
 resources:
 - api:
     crdVersion: v1
-    namespaced: true
+    namespaced: false
   controller: true
   domain: harbor-operator.io
   group: harbor
-  kind: Registry
-  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: harbor-operator.io
-  group: harbor
-  kind: Project
-  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: harbor-operator.io
-  group: harbor
-  kind: User
-  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: harbor-operator.io
-  group: harbor
-  kind: Member
-  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: harbor-operator.io
-  group: harbor
-  kind: Robot
+  kind: ClusterHarborConnection
   path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
   version: v1alpha1
 - api:
@@ -68,7 +32,151 @@ resources:
   controller: true
   domain: harbor-operator.io
   group: harbor
+  kind: GCSchedule
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
   kind: HarborConnection
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: ImmutableTagRule
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Label
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Member
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Project
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: PurgeAuditSchedule
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Quota
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Registry
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: ReplicationPolicy
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: RetentionPolicy
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: Robot
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: ScanAllSchedule
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: ScannerRegistration
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: User
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: UserGroup
+  path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: harbor-operator.io
+  group: harbor
+  kind: WebhookPolicy
   path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

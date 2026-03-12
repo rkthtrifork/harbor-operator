@@ -8,6 +8,8 @@ metadata:
 spec:
   group: harbor.harbor-operator.io
   names:
+    categories:
+    - harbor
     kind: Member
     listKind: MemberList
     plural: members
@@ -100,6 +102,7 @@ spec:
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
+                    minLength: 1
                     type: string
                 required:
                 - name
@@ -136,12 +139,25 @@ spec:
                 description: |-
                   Role is the human‑readable name of the role.
                   Allowed values: "admin", "maintainer", "developer", "guest"
+                enum:
+                - admin
+                - maintainer
+                - developer
+                - guest
                 type: string
             required:
             - harborConnectionRef
             - projectRef
             - role
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of memberUser or memberGroup must be set
+              rule: has(self.memberUser) != has(self.memberGroup)
+            - message: memberUser.username must be set when memberUser is provided
+              rule: '!has(self.memberUser) || size(self.memberUser.username) > 0'
+            - message: memberGroup must specify group_name or ldap_group_dn
+              rule: '!has(self.memberGroup) || size(self.memberGroup.group_name) >
+                0 || size(self.memberGroup.ldap_group_dn) > 0'
           status:
             description: MemberStatus defines the observed state of Member.
             properties:

@@ -6,6 +6,8 @@ import (
 )
 
 // RetentionPolicySpec defines the desired state of a retention policy.
+// +kubebuilder:validation:XValidation:rule="has(self.trigger)",message="trigger is required"
+// +kubebuilder:validation:XValidation:rule="!has(self.projectRef) || !has(self.scope) || (self.scope.ref == 0 && (size(self.scope.level) == 0 || self.scope.level == 'project'))",message="scope.ref must be empty and scope.level must be empty or 'project' when projectRef is set"
 type RetentionPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -113,6 +115,7 @@ type RetentionPolicyStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
