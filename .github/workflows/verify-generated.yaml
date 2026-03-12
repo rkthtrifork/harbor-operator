@@ -22,14 +22,14 @@ jobs:
         with:
           go-version-file: "go.mod"
 
-      - name: Regenerate code and synced chart assets
-        run: make manifests generate sync-chart
+      - name: Regenerate code, synced chart assets, and API reference docs
+        run: make manifests generate sync-chart generate-docs
 
       - name: Check for uncommitted changes
         run: |
           git status --short
           if ! git diff --quiet; then
-            echo "ERROR: Running 'make manifests generate sync-chart' produced changes."
-            echo "Please run 'make manifests generate sync-chart' locally and commit the results."
+            echo "ERROR: Running 'make manifests generate sync-chart generate-docs' produced changes."
+            echo "Please run 'make manifests generate sync-chart generate-docs' locally and commit the results."
             exit 1
           fi

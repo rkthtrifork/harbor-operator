@@ -228,6 +228,34 @@ To delete only the Kind cluster:
 make kind-down
 ```
 
+## Documentation
+
+The repository ships two documentation layers:
+
+- hand-written operator guides under `docs/crds/`
+- generated schema reference under `docs/reference/api.md`
+
+The documentation site is built with MkDocs Material and deployed from `main` to GitHub Pages.
+In the repository settings, GitHub Pages should be configured to deploy from GitHub Actions.
+
+Generate the API reference with:
+
+```sh
+make generate-docs
+```
+
+Build the MkDocs site locally with:
+
+```sh
+make docs-build
+```
+
+Serve it locally with:
+
+```sh
+make docs-serve
+```
+
 ## Helm Chart (OCI)
 
 We publish an OCI Helm chart to GHCR.

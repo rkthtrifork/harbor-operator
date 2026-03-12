@@ -34,6 +34,8 @@ Each CRD requires a doc file with:
 - Example YAML (code block)
 - Field summary/notes
 
+The docs site is built with MkDocs Material. Keep the generated schema reference in `docs/reference/api.md` up to date with `make generate-docs`.
+
 ## Harbor API Reference
 - `hack/harbor-openapi.yaml` is the checked-in Harbor OpenAPI spec.
 - Use it when changing `internal/harborclient`, Harbor-specific controller behavior, or tests that depend on Harbor API semantics.
@@ -42,8 +44,9 @@ Each CRD requires a doc file with:
 ## Generated Assets
 - `config/crd/bases` is canonical for CRDs.
 - `config/rbac/role.yaml` is canonical for RBAC.
+- `docs/reference/api.md` is canonical for the generated API reference.
 - Sync Helm chart assets with `make sync-chart`.
 
 ## Verification
 Run:
-- `make manifests generate sync-chart`
+- `make manifests generate sync-chart generate-docs`

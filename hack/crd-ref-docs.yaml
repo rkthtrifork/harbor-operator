@@ -1,0 +1,10 @@
+processor:
+  ignoreTypes:
+    - ".*List$"
+    - ".*Status$"
+  ignoreFields:
+    - "TypeMeta$"
+    - "ObjectMeta$"
+    - "HarborStatusBase$"
+render:
+  kubernetesVersion: "1.35"

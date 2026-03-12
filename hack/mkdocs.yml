@@ -1,0 +1,108 @@
+site_name: harbor-operator
+site_description: Kubernetes operator for managing Harbor through custom resources.
+site_url: https://rkthtrifork.github.io/harbor-operator/
+docs_dir: ../docs
+site_dir: ../site
+repo_url: https://github.com/rkthtrifork/harbor-operator
+repo_name: rkthtrifork/harbor-operator
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.sections
+    - navigation.tracking
+    - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+    - content.footer
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      type: date
+      fallback_to_build_date: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Introduction:
+      - Overview: index.md
+      - Installation: introduction/installation.md
+      - Getting Started: quickstart.md
+      - Concepts: introduction/concepts.md
+      - FAQ: introduction/faq.md
+  - API:
+      - Overview: reference/index.md
+      - Connection Patterns: reference/connection-patterns.md
+      - Deletion and Ownership: reference/deletion-and-ownership.md
+      - Troubleshooting: reference/troubleshooting.md
+      - Resource Guides:
+          - Overview: crds/index.md
+          - HarborConnection: crds/harbor-connection.md
+          - ClusterHarborConnection: crds/cluster-harbor-connection.md
+          - Project: crds/project.md
+          - Registry: crds/registry.md
+          - User: crds/user.md
+          - UserGroup: crds/usergroup.md
+          - Member: crds/member.md
+          - Robot: crds/robot.md
+          - Configuration: crds/configuration.md
+          - ReplicationPolicy: crds/replicationpolicy.md
+          - WebhookPolicy: crds/webhookpolicy.md
+          - ImmutableTagRule: crds/immutabletagrule.md
+          - Label: crds/label.md
+          - ScannerRegistration: crds/scannerregistration.md
+          - ScanAllSchedule: crds/scanallschedule.md
+          - GCSchedule: crds/gcschedule.md
+          - PurgeAuditSchedule: crds/purgeaudit.md
+          - RetentionPolicy: crds/retentionpolicy.md
+          - Quota: crds/quota.md
+      - API Reference:
+          - Resource Index: reference/resources.md
+          - Full Reference: reference/api.md
+  - Examples:
+      - Overview: examples/index.md
+      - Connection and Project: examples/connection-and-project.md
+      - Robot Credentials: examples/robot.md
+      - Singleton APIs: examples/singletons.md
+  - Contributing:
+      - Overview: contributing/index.md
+      - Local Development: contributing/local-development.md
+      - Documentation: development.md
+      - Testing and Verification: contributing/testing.md

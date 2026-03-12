@@ -2,6 +2,9 @@ IMG_LOCAL ?= harbor-operator:local
 IMG ?= $(IMG_LOCAL)
 HARBOR_API_GROUP ?= harbor.harbor-operator.io
 HARBOR_OPENAPI_URL ?= https://raw.githubusercontent.com/goharbor/harbor/refs/heads/main/api/v2.0/swagger.yaml
+CRD_REF_DOCS_OUTPUT ?= docs/reference/api.md
+DOCS_CONTAINER_IMAGE ?= squidfunk/mkdocs-material:9.7
+MKDOCS_CONFIG ?= hack/mkdocs.yml
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -83,6 +86,23 @@ sync-chart-rbac: ## Sync RBAC into the Helm chart
 
 .PHONY: sync-chart
 sync-chart: sync-chart-crds sync-chart-rbac ## Sync generated CRDs and RBAC into the Helm chart
+
+.PHONY: generate-docs
+generate-docs: crd-ref-docs ## Generate the CRD API reference documentation
+	mkdir -p $(dir $(CRD_REF_DOCS_OUTPUT))
+	$(CRD_REF_DOCS) \
+		--config hack/crd-ref-docs.yaml \
+		--renderer markdown \
+		--source-path ./api \
+		--output-path $(CRD_REF_DOCS_OUTPUT)
+
+.PHONY: docs-build
+docs-build: generate-docs ## Build the MkDocs documentation site
+	$(CONTAINER_TOOL) run --rm -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
+
+.PHONY: docs-serve
+docs-serve: generate-docs ## Serve the MkDocs documentation site locally
+	$(CONTAINER_TOOL) run --rm -p 8000:8000 -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) serve --dev-addr 0.0.0.0:8000 -f $(MKDOCS_CONFIG)
 
 .PHONY: update-harbor-openapi
 update-harbor-openapi: ## Download the Harbor OpenAPI spec into hack/harbor-openapi.yaml
@@ -215,12 +235,14 @@ KUBECTL ?= kubectl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 GOLANGCI_LINT_VERSION ?= v1.63.4
+CRD_REF_DOCS_VERSION ?= v0.3.0
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -239,6 +261,11 @@ setup-envtest: envtest ## Download the binaries required for ENVTEST in the loca
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	$(call go-install-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs,$(CRD_REF_DOCS_VERSION))
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.

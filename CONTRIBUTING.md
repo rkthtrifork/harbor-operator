@@ -100,10 +100,21 @@ Every CRD must have a doc file with:
 - Spec field summary
 - Notes about behavior/constraints
 
+The documentation site is built with MkDocs Material. The hand-written guides live under `docs/crds/`, and the schema reference is generated into `docs/reference/api.md`.
+GitHub Pages deployment is handled by the `docs` workflow on pushes to `main`.
+The published site intentionally tracks `main` only. Historical docs are expected to be read from the repository at the relevant tag or commit.
+
 ## Common Tasks
 
 ```
 make generate manifests
+make generate-docs
+```
+
+To build the documentation site locally:
+
+```sh
+make docs-build
 ```
 
 ## Harbor OpenAPI Spec
@@ -141,8 +152,13 @@ We treat generated outputs as source-of-truth for releases and keep Helm artifac
   ```
   make sync-chart-crds
   ```
+- **Docs reference**: `docs/reference/api.md` is generated from the API types with `crd-ref-docs`.  
+  Regenerate it via:
+  ```
+  make generate-docs
+  ```
 
-CI verifies that chart RBAC/CRDs are synced with these sources.
+CI verifies that chart RBAC, CRDs, and generated API reference docs stay in sync with these sources.
 
 ## Helm Chart
 
