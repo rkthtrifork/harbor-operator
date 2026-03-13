@@ -33,7 +33,7 @@ jobs:
         run: make generate-docs
 
       - name: Build docs site
-        run: docker run --rm -v "$PWD":/docs squidfunk/mkdocs-material:9 build --strict -f hack/mkdocs.yml
+        run: make docs-site-build
 
       - name: Configure Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

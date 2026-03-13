@@ -96,9 +96,12 @@ generate-docs: crd-ref-docs ## Generate the CRD API reference documentation
 		--source-path ./api \
 		--output-path $(CRD_REF_DOCS_OUTPUT)
 
-.PHONY: docs-build
-docs-build: generate-docs ## Build the MkDocs documentation site
+.PHONY: docs-site-build
+docs-site-build: ## Build the MkDocs documentation site
 	$(CONTAINER_TOOL) run --rm -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
+
+.PHONY: docs-build
+docs-build: generate-docs docs-site-build ## Generate API reference docs and build the MkDocs documentation site
 
 .PHONY: docs-serve
 docs-serve: generate-docs ## Serve the MkDocs documentation site locally
