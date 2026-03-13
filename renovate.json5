@@ -5,7 +5,7 @@
   ],
   timezone: "Europe/Copenhagen",
   schedule: [
-    "* 0-5 * * 1",
+    "before 6am on Monday",
   ],
   updateNotScheduled: false,
   labels: [
