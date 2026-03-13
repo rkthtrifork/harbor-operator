@@ -117,6 +117,14 @@ To build the documentation site locally:
 make docs-build
 ```
 
+## Development Environment
+
+Local host-based development is the supported workflow for this repository.
+Use the tools in the `Makefile`, along with local installations of Docker, Go, Helm, `kubectl`, and Kind as needed.
+
+This repository does not currently maintain a devcontainer setup.
+If we later need a containerized development environment, we can add one back.
+
 ## Harbor OpenAPI Spec
 
 The checked-in Harbor OpenAPI spec lives at:

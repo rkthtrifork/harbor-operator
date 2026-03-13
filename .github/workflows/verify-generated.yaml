@@ -3,13 +3,11 @@ name: Verify Generated Assets
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   verify-generated:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
 

@@ -3,12 +3,10 @@ name: Lint
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   lint:
-    name: Run on Ubuntu
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
