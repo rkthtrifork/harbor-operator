@@ -1,0 +1,89 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+  ],
+  timezone: "Europe/Copenhagen",
+  schedule: [
+    "before 6am on Monday",
+  ],
+  updateNotScheduled: false,
+  labels: [
+    "dependencies",
+  ],
+  dependencyDashboard: true,
+  prConcurrentLimit: 5,
+  branchConcurrentLimit: 5,
+  separateMinorPatch: true,
+  separateMajorMinor: true,
+  rebaseWhen: "behind-base-branch",
+  packageRules: [
+    {
+      description: "Automerge patch updates after CI passes.",
+      matchUpdateTypes: [
+        "patch",
+      ],
+      automerge: true,
+      automergeType: "pr",
+    },
+    {
+      description: "Group Kubernetes ecosystem updates in Go modules.",
+      matchManagers: [
+        "gomod",
+      ],
+      matchPackageNames: [
+        "k8s.io/**",
+        "sigs.k8s.io/**",
+      ],
+      groupName: "Kubernetes dependencies",
+    },
+    {
+      description: "Keep GitHub Action updates together.",
+      matchManagers: [
+        "github-actions",
+      ],
+      groupName: "GitHub Actions",
+      groupSlug: "github-actions",
+      separateMajorMinor: true,
+      separateMinorPatch: true,
+    },
+    {
+      description: "Keep Docker image tag updates together.",
+      matchDatasources: [
+        "docker",
+      ],
+      groupName: "Docker images",
+    },
+    {
+      description: "Disable devcontainer updates because the repo no longer maintains a devcontainer workflow.",
+      matchManagers: [
+        "devcontainer",
+      ],
+      enabled: false,
+    },
+  ],
+  customManagers: [
+    {
+      customType: "regex",
+      description: "Update Docker image tags referenced in the Makefile.",
+      managerFilePatterns: [
+        "/^Makefile$/",
+      ],
+      matchStrings: [
+        "DOCS_CONTAINER_IMAGE\\s*\\?=\\s*(?<depName>[^:\\s]+(?:/[^:\\s]+)+):(?<currentValue>[^\\s]+)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Update Docker image tags used directly in the docs workflow run command.",
+      managerFilePatterns: [
+        "/^\\.github\\/workflows\\/docs\\.yaml$/",
+      ],
+      matchStrings: [
+        "(?<depName>squidfunk\\/mkdocs-material):(?<currentValue>[^\\s\"']+)",
+      ],
+      datasourceTemplate: "docker",
+    },
+  ],
+}
