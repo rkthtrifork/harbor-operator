@@ -4,9 +4,6 @@
     "config:recommended",
   ],
   timezone: "Europe/Copenhagen",
-  schedule: [
-    "before 6am on Monday",
-  ],
   updateNotScheduled: false,
   labels: [
     "dependencies",
