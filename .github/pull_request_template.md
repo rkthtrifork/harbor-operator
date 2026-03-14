@@ -2,6 +2,9 @@
 
 _TODO_
 
+PR title format: `type(scope): summary` or `type: summary`
+Examples: `fix(controller): handle orphaned HarborConnection`, `docs: clarify installation`
+
 ## Type of Change
 - [ ] Bug fix
 - [ ] New feature

@@ -50,3 +50,12 @@ The docs site is built with MkDocs Material. Keep the generated schema reference
 ## Verification
 Run:
 - `make manifests generate sync-chart generate-docs`
+
+## Release Branches
+- Release branches use the form `release/vX.Y` for supported operator minor lines.
+- `main` remains the development branch; maintenance patch releases are cut from release branches.
+- Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
+- Any non-dependency change on a release branch should be released manually.
+
+## Chart Packaging
+- Chart releases may package with explicit `--version` and `--app-version` values derived from release tags instead of committing patch-version bumps back into `Chart.yaml`.

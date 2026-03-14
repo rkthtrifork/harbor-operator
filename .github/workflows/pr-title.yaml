@@ -1,0 +1,27 @@
+name: PR Title
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Validate pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|chore|refactor|test|build|ci|perf|revert)(\([a-z0-9._/-]+\))?(!)?: .+'
+          if [[ "$PR_TITLE" =~ $pattern ]]; then
+            exit 0
+          fi
+
+          echo "Pull request title does not match the expected format."
+          echo "Expected: <type>(optional-scope): summary"
+          echo "Allowed types: feat, fix, docs, chore, refactor, test, build, ci, perf, revert"
+          echo "Example: fix(controller): handle deleted Harbor connection"
+          echo "Renovate titles such as 'chore(deps): update ...' are allowed."
+          exit 1

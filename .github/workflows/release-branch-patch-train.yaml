@@ -1,0 +1,39 @@
+name: Release Branch Patch Train
+
+on:
+  schedule:
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+    inputs:
+      release_branch:
+        description: Optional release branch to process, e.g. release/0.5
+        required: false
+        type: string
+      dry_run:
+        description: Evaluate eligibility without creating tags
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-branch-patch-train
+  cancel-in-progress: false
+
+jobs:
+  release-patch-train:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Create dependency-only patch releases for release branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: bash hack/release-branch-patch-train.sh

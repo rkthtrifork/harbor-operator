@@ -3,6 +3,10 @@
   extends: [
     "config:recommended",
   ],
+  baseBranchPatterns: [
+    "$default",
+    "/^release\\/.+$/",
+  ],
   timezone: "Europe/Copenhagen",
   updateNotScheduled: false,
   labels: [
@@ -22,6 +26,18 @@
       ],
       automerge: true,
       automergeType: "pr",
+    },
+    {
+      description: "Release branches only receive runtime dependency updates.",
+      matchBaseBranches: [
+        "/^release\\/.+$/",
+      ],
+      matchManagers: [
+        "github-actions",
+        "helm-values",
+        "custom.regex",
+      ],
+      enabled: false,
     },
     {
       description: "Group Kubernetes ecosystem updates in Go modules.",

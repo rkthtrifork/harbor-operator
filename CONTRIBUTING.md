@@ -194,10 +194,21 @@ We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in
 CI verifies both are in sync.
 
 ### Chart Versioning & Release Tags
-- Bump `charts/harbor-operator/Chart.yaml` `version` before release.
+- For manual chart releases, bump `charts/harbor-operator/Chart.yaml` `version` before release.
 - Chart releases use tags `chart-vX.Y.Z` or `chart-vX.Y.Z-rc.N`.
 - Any other suffix (e.g., `-test`) skips GitHub Release creation.
 
 ### Operator Release Tags
 - Operator releases use tags `vX.Y.Z` or `vX.Y.Z-rc.N`.
 - Any other suffix (e.g., `-test`) skips GitHub Release creation.
+
+### Release Branches
+- Release branches use the form `release/vX.Y` for supported operator minor lines.
+- `main` remains the development branch; maintenance patch releases are cut from release branches.
+- Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
+- Any non-dependency change on a release branch should be released manually.
+
+### Chart Packaging on Release Branches
+- The chart release workflow can package the chart with `helm package --version ... --app-version ...` using the release tags.
+- This keeps the published chart artifact aligned with the operator image version without committing `Chart.yaml` patch bumps back to the release branch.
+- Chart-only patch releases remain a manual path and should set the intended chart/operator versions deliberately before tagging.

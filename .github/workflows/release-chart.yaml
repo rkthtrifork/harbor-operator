@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v4.3.1
@@ -21,27 +23,32 @@ jobs:
       - name: Lint chart
         run: helm lint charts/harbor-operator
 
-      - name: Verify chart version matches tag
+      - name: Resolve chart release metadata
         run: |
           tag="${GITHUB_REF_NAME}"
-          version="${tag#chart-}"
-          version="${version#v}"
-          chart_version="$(grep -E '^version:' charts/harbor-operator/Chart.yaml | awk '{print $2}')"
-          if [ "$version" != "$chart_version" ]; then
-            echo "Tag version ($version) does not match Chart.yaml version ($chart_version)"
-            exit 1
+          chart_version="${tag#chart-v}"
+          operator_tag="$(git tag --points-at HEAD --list 'v*' --sort=-version:refname | head -n1)"
+          if [ -n "$operator_tag" ]; then
+            operator_version="${operator_tag#v}"
+          else
+            operator_version="$(grep -E '^appVersion:' charts/harbor-operator/Chart.yaml | sed -E 's/^appVersion:[[:space:]]*"?(.*)"?/\1/')"
           fi
 
+          echo "CHART_VERSION=$chart_version" >> "$GITHUB_ENV"
+          echo "OPERATOR_VERSION=$operator_version" >> "$GITHUB_ENV"
+
       - name: Package chart
-        run: helm package charts/harbor-operator --destination dist
+        run: |
+          helm package charts/harbor-operator \
+            --version "$CHART_VERSION" \
+            --app-version "$OPERATOR_VERSION" \
+            --destination dist
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push chart
-        run: |
-          chart_version="$(grep -E '^version:' charts/harbor-operator/Chart.yaml | awk '{print $2}')"
-          helm push "dist/harbor-operator-${chart_version}.tgz" oci://ghcr.io/rkthtrifork/charts
+        run: helm push "dist/harbor-operator-${CHART_VERSION}.tgz" oci://ghcr.io/rkthtrifork/charts
 
       - name: Classify tag
         id: classify
@@ -57,6 +64,6 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
-            dist/harbor-operator-*.tgz
+            dist/harbor-operator-${{ env.CHART_VERSION }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
