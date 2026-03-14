@@ -24,6 +24,7 @@ jobs:
         run: helm lint charts/harbor-operator
 
       - name: Resolve chart release metadata
+        id: chart_meta
         run: |
           tag="${GITHUB_REF_NAME}"
           chart_version="${tag#chart-v}"
@@ -34,21 +35,21 @@ jobs:
             operator_version="$(grep -E '^appVersion:' charts/harbor-operator/Chart.yaml | sed -E 's/^appVersion:[[:space:]]*"?(.*)"?/\1/')"
           fi
 
-          echo "CHART_VERSION=$chart_version" >> "$GITHUB_ENV"
-          echo "OPERATOR_VERSION=$operator_version" >> "$GITHUB_ENV"
+          echo "chart_version=$chart_version" >> "$GITHUB_OUTPUT"
+          echo "operator_version=$operator_version" >> "$GITHUB_OUTPUT"
 
       - name: Package chart
         run: |
           helm package charts/harbor-operator \
-            --version "$CHART_VERSION" \
-            --app-version "$OPERATOR_VERSION" \
+            --version "${{ steps.chart_meta.outputs.chart_version }}" \
+            --app-version "${{ steps.chart_meta.outputs.operator_version }}" \
             --destination dist
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push chart
-        run: helm push "dist/harbor-operator-${CHART_VERSION}.tgz" oci://ghcr.io/rkthtrifork/charts
+        run: helm push "dist/harbor-operator-${{ steps.chart_meta.outputs.chart_version }}.tgz" oci://ghcr.io/rkthtrifork/charts
 
       - name: Classify tag
         id: classify
@@ -64,6 +65,6 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
-            dist/harbor-operator-${{ env.CHART_VERSION }}.tgz
+            dist/harbor-operator-${{ steps.chart_meta.outputs.chart_version }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
