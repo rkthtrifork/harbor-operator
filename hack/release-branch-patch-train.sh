@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v gh >/dev/null 2>&1; then
-	echo "gh CLI is required" >&2
-	exit 1
-fi
-
-if ! command -v jq >/dev/null 2>&1; then
-	echo "jq is required" >&2
-	exit 1
-fi
-
-: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY must be set}"
-: "${GITHUB_TOKEN:?GITHUB_TOKEN must be set}"
-
-AUTO_RELEASE_LABEL="${AUTO_RELEASE_LABEL:-dependencies}"
 DRY_RUN="${DRY_RUN:-false}"
 RELEASE_BRANCH="${RELEASE_BRANCH:-}"
+
+AUTO_RELEASE_PATHS=(
+	"go.mod"
+	"go.sum"
+	"Dockerfile"
+)
 
 log() {
 	echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"
@@ -54,18 +46,17 @@ list_release_branches() {
 	git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/release/*
 }
 
-commit_pr_number() {
-	local sha="$1"
-	local branch="$2"
-	local prs_json
+path_is_auto_release_relevant() {
+	local path="$1"
+	local allowed_path
 
-	prs_json="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/pulls" -H "Accept: application/vnd.github+json")"
-	jq -r --arg branch "$branch" 'map(select(.base.ref == $branch))[0].number // empty' <<<"$prs_json"
-}
+	for allowed_path in "${AUTO_RELEASE_PATHS[@]}"; do
+		if [[ "$path" == "$allowed_path" ]]; then
+			return 0
+		fi
+	done
 
-pr_has_release_label() {
-	local pr_json="$1"
-	jq -e --arg label "$AUTO_RELEASE_LABEL" '.labels | map(.name) | index($label) != null' <<<"$pr_json" >/dev/null
+	return 1
 }
 
 git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
@@ -105,39 +96,22 @@ for branch in "${branches[@]}"; do
 		continue
 	fi
 
-	mapfile -t commits < <(git rev-list --reverse "${operator_tag}..${remote_ref}")
-	if [[ "${#commits[@]}" -eq 0 ]]; then
-		log "Skipping ${branch}: no commits since ${operator_tag}"
+	mapfile -t changed_paths < <(git diff --name-only "${operator_tag}..${remote_ref}")
+	if [[ "${#changed_paths[@]}" -eq 0 ]]; then
+		log "Skipping ${branch}: no file changes since ${operator_tag}"
 		continue
 	fi
 
-	declare -A seen_prs=()
-	eligible=true
-
-	for sha in "${commits[@]}"; do
-		pr_number="$(commit_pr_number "$sha" "$branch")"
-		if [[ -z "$pr_number" ]]; then
-			log "Skipping ${branch}: commit ${sha} is not associated with a pull request targeting ${branch}"
-			eligible=false
-			break
-		fi
-
-		if [[ -n "${seen_prs[$pr_number]:-}" ]]; then
-			continue
-		fi
-
-		seen_prs["$pr_number"]=1
-		pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
-		pr_title="$(jq -r '.title' <<<"$pr_json")"
-
-		if ! pr_has_release_label "$pr_json"; then
-			log "Skipping ${branch}: PR #${pr_number} (${pr_title}) does not have the ${AUTO_RELEASE_LABEL} label"
-			eligible=false
+	auto_release_change_detected=false
+	for path in "${changed_paths[@]}"; do
+		if path_is_auto_release_relevant "$path"; then
+			auto_release_change_detected=true
 			break
 		fi
 	done
 
-	if [[ "$eligible" != true ]]; then
+	if [[ "$auto_release_change_detected" != true ]]; then
+		log "Skipping ${branch}: no auto-release-relevant dependency changes since ${operator_tag}"
 		continue
 	fi
 

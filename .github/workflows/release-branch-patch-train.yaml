@@ -31,7 +31,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create dependency-only patch releases for release branches
+      - name: Create patch releases when runtime dependency files changed on release branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCH: ${{ inputs.release_branch }}
