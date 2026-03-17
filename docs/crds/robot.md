@@ -61,8 +61,9 @@ secret and stores it in the referenced Secret.
 
 ## Common Fields
 
-- **spec.harborConnectionRef** selects the Harbor connection object by `name` and optional `kind`.
-- **spec.deletionPolicy** controls delete behavior when Harbor cleanup cannot be completed. Use `Delete` (default) for managed cleanup or `Orphan` as an explicit break-glass option.
+`Robot` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)
+for the shared connection, deletion, and reconciliation controls, or jump to the
+generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 ## Behavior
 

@@ -69,6 +69,7 @@ nav:
       - FAQ: introduction/faq.md
   - API:
       - Overview: reference/index.md
+      - Common Spec Fields: reference/common-spec-fields.md
       - Connection Patterns: reference/connection-patterns.md
       - Deletion and Ownership: reference/deletion-and-ownership.md
       - Troubleshooting: reference/troubleshooting.md

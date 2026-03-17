@@ -9,6 +9,9 @@ Use the resource guides when you want to understand how a custom resource behave
 
 Use the generated reference when you want exact field definitions, defaults, enums, and validation markers.
 
+Use [Common Spec Fields](common-spec-fields.md) for the shared
+`HarborSpecBase` fields that appear on every Harbor-managed resource.
+
 ## Generated Reference
 
 The generated reference is produced with `crd-ref-docs` from the API types in `api/v1alpha1`.
