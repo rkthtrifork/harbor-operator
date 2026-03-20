@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_branch:
-        description: Optional release branch to process, e.g. release/0.5
+        description: Optional release branch to process, e.g. release/v0.5
         required: false
         type: string
       dry_run:
@@ -26,14 +26,22 @@ jobs:
       contents: write
       pull-requests: read
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3.0.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Checkout
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Create patch releases when runtime dependency files changed on release branches
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCH: ${{ inputs.release_branch }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: bash hack/release-branch-patch-train.sh
