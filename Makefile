@@ -118,6 +118,13 @@ apply-crds: ## Apply the latest CRDs to the current cluster
 .PHONY: prepare-deploy
 prepare-deploy: manifests generate sync-chart apply-crds ## Generate code/manifests, sync chart assets, and apply CRDs
 
+.PHONY: serve-swagger
+serve-swagger: update-harbor-openapi ## Serve the Harbor OpenAPI spec locally for testing purposes
+	docker run -p 8080:8080 \
+		-e SWAGGER_JSON=/harbor-openapi.yaml \
+		-v ./hack/harbor-openapi.yaml:/harbor-openapi.yaml \
+		swaggerapi/swagger-ui
+
 ##@ Build
 
 .PHONY: build
