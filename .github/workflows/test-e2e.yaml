@@ -24,7 +24,7 @@ jobs:
           sudo mv ./kind /usr/local/bin/kind
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.3.1
+        uses: azure/setup-helm@v5.0.0
 
       - name: Verify kind installation
         run: kind version
