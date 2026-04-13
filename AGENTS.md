@@ -59,3 +59,4 @@ Run:
 
 ## Chart Packaging
 - Chart releases may package with explicit `--version` and `--app-version` values derived from release tags instead of committing patch-version bumps back into `Chart.yaml`.
+- On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
