@@ -167,6 +167,7 @@ We treat generated outputs as source-of-truth for releases and keep Helm artifac
   ```
 
 CI verifies that chart RBAC, CRDs, and generated API reference docs stay in sync with these sources.
+Use `make sync-chart` to update both chart CRDs and RBAC together when a change affects generated chart assets.
 
 ## Helm Chart
 

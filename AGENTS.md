@@ -3,12 +3,21 @@
 This repo has strict structure expectations. If you expand the operator, follow this.
 Contributor-facing guidance lives in [`CONTRIBUTING.md`](./CONTRIBUTING.md). Keep this file aligned with it.
 
+## Self-Maintenance
+
+- Treat `AGENTS.md` as a living repo contract, not a static note.
+- When an agent learns a durable repo rule, workflow, constraint, or convention while doing work here, update `AGENTS.md` in the same change when practical.
+- If guidance in `AGENTS.md` is outdated, redundant, misleading, or no longer enforced by the repo, remove or replace it directly instead of leaving stale instructions behind.
+- Keep `AGENTS.md` and [`CONTRIBUTING.md`](./CONTRIBUTING.md) aligned on shared project rules. If one changes, check whether the other should change too.
+- Prefer documenting stable expectations and recurring workflows. Do not add one-off task notes, temporary incident details, or personal working preferences.
+
 ## Required Structure
 
 ### CRD Types
 Location: `api/v1alpha1/*_types.go`
 - Must embed `HarborSpecBase` in Spec and `HarborStatusBase` in Status.
 - Add `AllowTakeover` on identity-based CRDs that represent named Harbor identities without IDs.
+- Root CRDs must include `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status`.
 - Must include printcolumns: `Ready`, `Reason`, `Message` (priority=1), `Age`.
 - Add CRD-specific printcolumns (see existing types).
 
@@ -30,11 +39,12 @@ Errors must be surfaced through `setErrorStatus`.
 ### Docs
 Location: `docs/crds/*.md`
 Each CRD requires a doc file with:
-- Heading
+- Short description
 - Example YAML (code block)
-- Field summary/notes
+- Spec field summary
+- Notes about behavior and constraints
 
-The docs site is built with MkDocs Material. Keep the generated schema reference in `docs/reference/api.md` up to date with `make generate-docs`.
+The docs site is built with MkDocs Material. Hand-written guides live under `docs/crds/`. Keep the generated schema reference in `docs/reference/api.md` up to date with `make generate-docs`.
 
 ## Harbor API Reference
 - `hack/harbor-openapi.yaml` is the checked-in Harbor OpenAPI spec.
@@ -45,11 +55,21 @@ The docs site is built with MkDocs Material. Keep the generated schema reference
 - `config/crd/bases` is canonical for CRDs.
 - `config/rbac/role.yaml` is canonical for RBAC.
 - `docs/reference/api.md` is canonical for the generated API reference.
+- Sync chart CRDs with `make sync-chart-crds`.
+- Sync chart RBAC with `make sync-chart-rbac`.
 - Sync Helm chart assets with `make sync-chart`.
 
 ## Verification
 Run:
 - `make manifests generate sync-chart generate-docs`
+
+Useful local docs target:
+- `make docs-build`
+
+## Development Environment
+- Local host-based development is the supported workflow.
+- Use the `Makefile` with local installations of Docker, Go, Helm, `kubectl`, and Kind as needed.
+- This repository does not currently maintain a devcontainer setup.
 
 ## Release Branches
 - Release branches use the form `release/vX.Y` for supported operator minor lines.
@@ -60,3 +80,4 @@ Run:
 ## Chart Packaging
 - Chart releases may package with explicit `--version` and `--app-version` values derived from release tags instead of committing patch-version bumps back into `Chart.yaml`.
 - On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
+- Chart-only patch releases remain a manual path and should set intended chart and operator versions deliberately before tagging.
