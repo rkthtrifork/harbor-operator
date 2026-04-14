@@ -38,6 +38,27 @@ jobs:
           echo "chart_version=$chart_version" >> "$GITHUB_OUTPUT"
           echo "operator_version=$operator_version" >> "$GITHUB_OUTPUT"
 
+      - name: Verify operator image exists
+        env:
+          OPERATOR_IMAGE: ghcr.io/${{ github.repository }}
+          OPERATOR_VERSION: ${{ steps.chart_meta.outputs.operator_version }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+
+          for attempt in $(seq 1 30); do
+            if docker manifest inspect "${OPERATOR_IMAGE}:${OPERATOR_VERSION}" >/dev/null 2>&1; then
+              exit 0
+            fi
+
+            echo "Waiting for operator image ${OPERATOR_IMAGE}:${OPERATOR_VERSION} (${attempt}/30)"
+            sleep 15
+          done
+
+          echo "Operator image ${OPERATOR_IMAGE}:${OPERATOR_VERSION} was not found in GHCR" >&2
+          exit 1
+
       - name: Package chart
         run: |
           helm package charts/harbor-operator \

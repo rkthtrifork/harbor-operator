@@ -212,5 +212,6 @@ CI verifies both are in sync.
 ### Chart Packaging on Release Branches
 - The chart release workflow can package the chart with `helm package --version ... --app-version ...` using the release tags.
 - This keeps the published chart artifact aligned with the operator image version without committing `Chart.yaml` patch bumps back to the release branch.
+- Automated release-branch patch trains publish the operator tag first, wait for the matching GHCR image to exist, and only then create the chart tag.
 - On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
 - Chart-only patch releases remain a manual path and should set the intended chart/operator versions deliberately before tagging.

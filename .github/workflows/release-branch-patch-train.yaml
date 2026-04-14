@@ -24,13 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
       pull-requests: read
     steps:
       - name: Create GitHub App token
         id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
@@ -44,4 +45,7 @@ jobs:
         env:
           RELEASE_BRANCH: ${{ inputs.release_branch }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          GHCR_IMAGE: ghcr.io/${{ github.repository }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash hack/release-branch-patch-train.sh

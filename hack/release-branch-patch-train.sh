@@ -3,6 +3,11 @@ set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-false}"
 RELEASE_BRANCH="${RELEASE_BRANCH:-}"
+GHCR_IMAGE="${GHCR_IMAGE:-}"
+GHCR_USERNAME="${GHCR_USERNAME:-}"
+GHCR_TOKEN="${GHCR_TOKEN:-}"
+IMAGE_WAIT_TIMEOUT_SECONDS="${IMAGE_WAIT_TIMEOUT_SECONDS:-900}"
+IMAGE_WAIT_INTERVAL_SECONDS="${IMAGE_WAIT_INTERVAL_SECONDS:-15}"
 
 AUTO_RELEASE_PATHS=(
 	"go.mod"
@@ -35,6 +40,54 @@ latest_stable_tag() {
 tag_exists_remote() {
 	local tag="$1"
 	git ls-remote --tags origin "refs/tags/${tag}" | grep -q .
+}
+
+tag_message() {
+	local tag="$1"
+	git for-each-ref --format='%(contents)' "refs/tags/${tag}" | head -n1
+}
+
+stable_tag_points_at() {
+	local ref="$1"
+	local prefix="$2"
+
+	(git tag --points-at "$ref" --list "${prefix}*" |
+		grep -E "^${prefix}[0-9]+\.[0-9]+\.[0-9]+$" |
+		sort -V |
+		tail -n1) || true
+}
+
+ensure_ghcr_login() {
+	if [[ -z "$GHCR_IMAGE" || -z "$GHCR_USERNAME" || -z "$GHCR_TOKEN" ]]; then
+		log "Skipping image availability checks: GHCR credentials or image name not configured"
+		return 1
+	fi
+
+	echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+}
+
+wait_for_image_tag() {
+	local image_tag="$1"
+	local attempt=0
+	local max_attempts=$((IMAGE_WAIT_TIMEOUT_SECONDS / IMAGE_WAIT_INTERVAL_SECONDS))
+
+	if (( max_attempts < 1 )); then
+		max_attempts=1
+	fi
+
+	while (( attempt < max_attempts )); do
+		if docker manifest inspect "${GHCR_IMAGE}:${image_tag}" >/dev/null 2>&1; then
+			log "Found published operator image ${GHCR_IMAGE}:${image_tag}"
+			return 0
+		fi
+
+		attempt=$((attempt + 1))
+		log "Waiting for operator image ${GHCR_IMAGE}:${image_tag} (${attempt}/${max_attempts})"
+		sleep "$IMAGE_WAIT_INTERVAL_SECONDS"
+	done
+
+	log "Timed out waiting for operator image ${GHCR_IMAGE}:${image_tag}"
+	return 1
 }
 
 list_release_branches() {
@@ -71,6 +124,10 @@ fi
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+if [[ "$DRY_RUN" != "true" ]]; then
+	ensure_ghcr_login
+fi
+
 for branch in "${branches[@]}"; do
 	log "Inspecting ${branch}"
 
@@ -91,8 +148,47 @@ for branch in "${branches[@]}"; do
 	fi
 
 	last_release_sha="$(git rev-list -n 1 "${operator_tag}")"
+	operator_tag_on_head="$(stable_tag_points_at "${head_sha}" "v")"
+	chart_tag_on_head="$(stable_tag_points_at "${head_sha}" "chart-v")"
+
+	chart_tag="$( (git tag --merged "${remote_ref}" --list 'chart-v*' | grep -E '^chart-v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1) || true )"
+	if [[ -n "$chart_tag" ]]; then
+		current_chart_version="${chart_tag#chart-v}"
+	else
+		current_chart_version="$(git show "${remote_ref}:charts/harbor-operator/Chart.yaml" | awk '/^version:/ {print $2; exit}')"
+	fi
+
 	if [[ "$head_sha" == "$last_release_sha" ]]; then
-		log "Skipping ${branch}: no commits since ${operator_tag}"
+		if [[ -n "$chart_tag_on_head" ]]; then
+			log "Skipping ${branch}: no commits since ${operator_tag} and chart tag ${chart_tag_on_head} already points at HEAD"
+			continue
+		fi
+
+		if [[ "$(tag_message "${operator_tag}")" != Automated\ dependency\ patch\ release* ]]; then
+			log "Skipping ${branch}: no commits since ${operator_tag} and missing chart tag is not from an automated patch release"
+			continue
+		fi
+
+		current_operator_version="${operator_tag#v}"
+		next_chart_version="$(increment_patch "$current_chart_version")"
+		next_chart_tag="chart-v${next_chart_version}"
+
+		if tag_exists_remote "$next_chart_tag"; then
+			log "Skipping ${branch}: tag ${next_chart_tag} already exists"
+			continue
+		fi
+
+		log "Branch ${branch} is completing an in-progress automated patch release"
+		log "Existing operator tag: ${operator_tag}"
+		log "Next chart tag: ${next_chart_tag}"
+
+		if [[ "$DRY_RUN" == "true" ]]; then
+			continue
+		fi
+
+		wait_for_image_tag "${current_operator_version}"
+		git tag -a "${next_chart_tag}" "${head_sha}" -m "Automated chart patch release ${next_chart_tag} for ${operator_tag}"
+		git push origin "${next_chart_tag}"
 		continue
 	fi
 
@@ -119,19 +215,8 @@ for branch in "${branches[@]}"; do
 	next_operator_version="$(increment_patch "$current_operator_version")"
 	next_operator_tag="v${next_operator_version}"
 
-	chart_tag="$( (git tag --merged "${remote_ref}" --list 'chart-v*' | grep -E '^chart-v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1) || true )"
-	if [[ -n "$chart_tag" ]]; then
-		current_chart_version="${chart_tag#chart-v}"
-	else
-		current_chart_version="$(git show "${remote_ref}:charts/harbor-operator/Chart.yaml" | awk '/^version:/ {print $2; exit}')"
-	fi
 	next_chart_version="$(increment_patch "$current_chart_version")"
 	next_chart_tag="chart-v${next_chart_version}"
-
-	if tag_exists_remote "$next_operator_tag"; then
-		log "Skipping ${branch}: tag ${next_operator_tag} already exists"
-		continue
-	fi
 
 	if tag_exists_remote "$next_chart_tag"; then
 		log "Skipping ${branch}: tag ${next_chart_tag} already exists"
@@ -146,7 +231,14 @@ for branch in "${branches[@]}"; do
 		continue
 	fi
 
-	git tag -a "${next_operator_tag}" "${head_sha}" -m "Automated dependency patch release ${next_operator_tag}"
+	if tag_exists_remote "$next_operator_tag"; then
+		log "Operator tag ${next_operator_tag} already exists; resuming with image availability checks"
+	else
+		git tag -a "${next_operator_tag}" "${head_sha}" -m "Automated dependency patch release ${next_operator_tag}"
+		git push origin "${next_operator_tag}"
+	fi
+
+	wait_for_image_tag "${next_operator_version}"
 	git tag -a "${next_chart_tag}" "${head_sha}" -m "Automated chart patch release ${next_chart_tag} for ${next_operator_tag}"
-	git push origin "${next_operator_tag}" "${next_chart_tag}"
+	git push origin "${next_chart_tag}"
 done

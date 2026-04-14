@@ -79,5 +79,6 @@ Useful local docs target:
 
 ## Chart Packaging
 - Chart releases may package with explicit `--version` and `--app-version` values derived from release tags instead of committing patch-version bumps back into `Chart.yaml`.
+- Automated release-branch patch trains must publish the operator tag first, wait for the matching GHCR image to exist, and only then create the chart tag.
 - On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
 - Chart-only patch releases remain a manual path and should set intended chart and operator versions deliberately before tagging.

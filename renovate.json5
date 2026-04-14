@@ -61,11 +61,31 @@
       separateMinorPatch: true,
     },
     {
+      description: "Do not let helm-values mutate the chart image defaults; the chart intentionally derives the image tag from Chart.appVersion when tag and digest are empty.",
+      matchManagers: [
+        "helm-values",
+      ],
+      matchFileNames: [
+        "charts/harbor-operator/values.yaml",
+      ],
+      enabled: false,
+    },
+    {
       description: "Keep Docker image tag updates together.",
       matchDatasources: [
         "docker",
       ],
       groupName: "Docker images",
+    },
+    {
+      description: "Regex-managed Docker references only track tags here, so skip digest pinning.",
+      matchManagers: [
+        "custom.regex",
+      ],
+      matchDatasources: [
+        "docker",
+      ],
+      pinDigests: false,
     },
     {
       description: "Disable devcontainer updates because the repo no longer maintains a devcontainer workflow.",
