@@ -111,6 +111,13 @@ make generate manifests
 make generate-docs
 ```
 
+## Automation Conventions
+
+Pull request titles must follow conventional-commit format: `type(scope): summary` or `type: summary`.
+The `pr-title` workflow enforces this on every PR.
+
+Renovate is configured to emit semantic commit titles for dependency PRs and to use strict PR titles so base-branch suffixes like `(main)` are not appended.
+
 To build the documentation site locally:
 
 ```sh

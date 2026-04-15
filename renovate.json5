@@ -9,6 +9,10 @@
   ],
   timezone: "Europe/Copenhagen",
   updateNotScheduled: false,
+  semanticCommits: "enabled",
+  semanticCommitType: "chore",
+  semanticCommitScope: "deps",
+  prTitleStrict: true,
   labels: [
     "dependencies",
   ],

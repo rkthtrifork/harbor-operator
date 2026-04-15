@@ -59,6 +59,10 @@ The docs site is built with MkDocs Material. Hand-written guides live under `doc
 - Sync chart RBAC with `make sync-chart-rbac`.
 - Sync Helm chart assets with `make sync-chart`.
 
+## Automation Conventions
+- Pull request titles must follow conventional-commit format (`type(scope): summary` or `type: summary`) because the `pr-title` workflow enforces it.
+- Renovate PRs must keep semantic commit titles enabled and use strict PR titles so branch suffixes like `(main)` do not get appended.
+
 ## Verification
 Run:
 - `make manifests generate sync-chart generate-docs`
