@@ -118,6 +118,9 @@ The `pr-title` workflow enforces this on every PR.
 
 Renovate is configured to emit semantic commit titles for dependency PRs and to use strict PR titles so base-branch suffixes like `(main)` are not appended.
 
+When a GitHub Actions workflow only applies to a subset of the repository, prefer trigger-level `paths` filters unless the pull request check is required for merging.
+For required PR checks, let the workflow start and use lightweight changed-file detection inside the workflow to skip unnecessary work.
+
 To build the documentation site locally:
 
 ```sh
