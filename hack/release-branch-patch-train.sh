@@ -8,6 +8,7 @@ GHCR_USERNAME="${GHCR_USERNAME:-}"
 GHCR_TOKEN="${GHCR_TOKEN:-}"
 IMAGE_WAIT_TIMEOUT_SECONDS="${IMAGE_WAIT_TIMEOUT_SECONDS:-900}"
 IMAGE_WAIT_INTERVAL_SECONDS="${IMAGE_WAIT_INTERVAL_SECONDS:-15}"
+SUPPORTED_RELEASE_BRANCH_COUNT="${SUPPORTED_RELEASE_BRANCH_COUNT:-3}"
 
 AUTO_RELEASE_PATHS=(
 	"go.mod"
@@ -99,6 +100,38 @@ list_release_branches() {
 	git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/release/*
 }
 
+branch_version_key() {
+	local branch="$1"
+	local release_line="${branch#release/}"
+	release_line="${release_line#v}"
+
+	if [[ ! "$release_line" =~ ^[0-9]+\.[0-9]+$ ]]; then
+		return 1
+	fi
+
+	printf '%s\n' "$release_line"
+}
+
+filter_supported_release_branches() {
+	local branches=("$@")
+	local branch
+	local line
+
+	if [[ -n "$RELEASE_BRANCH" ]]; then
+		printf '%s\n' "${branches[@]}"
+		return
+	fi
+
+	for branch in "${branches[@]}"; do
+		if line="$(branch_version_key "$branch")"; then
+			printf '%s %s\n' "$line" "$branch"
+		fi
+	done |
+		sort -k1,1V |
+		tail -n "$SUPPORTED_RELEASE_BRANCH_COUNT" |
+		awk '{print $2}'
+}
+
 path_is_auto_release_relevant() {
 	local path="$1"
 	local allowed_path
@@ -119,6 +152,17 @@ mapfile -t branches < <(list_release_branches)
 if [[ "${#branches[@]}" -eq 0 ]]; then
 	log "No release branches found"
 	exit 0
+fi
+
+if [[ -z "$RELEASE_BRANCH" ]]; then
+	mapfile -t branches < <(filter_supported_release_branches "${branches[@]}")
+
+	if [[ "${#branches[@]}" -eq 0 ]]; then
+		log "No supported release branches found"
+		exit 0
+	fi
+
+	log "Processing supported release branches: ${branches[*]}"
 fi
 
 git config user.name "github-actions[bot]"
