@@ -58,7 +58,7 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Handle deletion with finalizer pattern
-	if done, err := finalizeIfDeleting(ctx, r.Client, &member, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &member, member.Spec.GetDeletionPolicy(), func() error {
 		return r.ensureMemberAbsent(ctx, hc, &member)
 	}); done {
 		return ctrl.Result{}, err

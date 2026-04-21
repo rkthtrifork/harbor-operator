@@ -16,8 +16,9 @@ For the exact generated schema, defaults, and validation markers, see
 
 - **`spec.deletionPolicy`**
   Controls what happens when the Kubernetes object is deleted. `Delete`
-  attempts Harbor-side cleanup before removing the finalizer. `Orphan` removes
-  the finalizer even if Harbor cleanup cannot be completed.
+  attempts Harbor-side cleanup before removing the finalizer. `Orphan` skips
+  Harbor-side deletion and removes the finalizer so the Kubernetes object can
+  be deleted immediately.
 
 - **`spec.driftDetectionInterval`**
   Enables periodic drift checks between the desired state in Kubernetes and the

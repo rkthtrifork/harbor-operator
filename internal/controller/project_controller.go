@@ -53,7 +53,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Handle deletion
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
 		return r.deleteProject(ctx, hc, &cr)
 	}); done {
 		return ctrl.Result{}, err

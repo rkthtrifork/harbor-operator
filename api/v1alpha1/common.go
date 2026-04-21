@@ -39,7 +39,8 @@ type HarborSpecBase struct {
 
 	// DeletionPolicy controls what happens when the Kubernetes object is deleted.
 	// Delete removes the corresponding Harbor resource before removing the finalizer.
-	// Orphan removes the finalizer even if Harbor cleanup cannot be completed.
+	// Orphan skips Harbor-side deletion and removes the finalizer so the
+	// Kubernetes object can be deleted while leaving the Harbor resource in place.
 	// +kubebuilder:default=Delete
 	// +kubebuilder:validation:Enum=Delete;Orphan
 	// +optional

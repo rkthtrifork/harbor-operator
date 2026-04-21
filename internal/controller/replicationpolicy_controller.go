@@ -53,7 +53,7 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
 		if cr.Status.HarborReplicationPolicyID == 0 {
 			return nil
 		}

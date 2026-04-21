@@ -48,7 +48,7 @@ func (r *PurgeAuditScheduleReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, nil); done {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), nil); done {
 		return ctrl.Result{}, err
 	}
 
