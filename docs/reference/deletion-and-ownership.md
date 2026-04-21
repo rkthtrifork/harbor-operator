@@ -21,9 +21,9 @@ This is the normal managed-lifecycle mode.
 
 ## Orphan
 
-With `deletionPolicy: Orphan`, the operator removes the Kubernetes finalizer even if Harbor cleanup cannot be completed.
+With `deletionPolicy: Orphan`, the operator skips Harbor-side deletion and removes the Kubernetes finalizer so the CR can disappear while the Harbor object remains.
 
-This is the break-glass mode when you need the Kubernetes object gone even though Harbor cleanup is impossible or undesirable.
+This is the mode to use when Harbor cleanup is undesirable or when you need Kubernetes deletion to proceed without waiting on Harbor-side deletion.
 
 ## Connection Deleted First
 

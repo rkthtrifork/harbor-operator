@@ -277,11 +277,11 @@ func defaultString(value, fallback string) string {
 	return value
 }
 
-func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object, deleteFn func() error) (bool, error) {
+func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object, deletionPolicy harborv1alpha1.DeletionPolicy, deleteFn func() error) (bool, error) {
 	if obj.GetDeletionTimestamp().IsZero() {
 		return false, nil
 	}
-	if deleteFn != nil {
+	if deleteFn != nil && deletionPolicy != harborv1alpha1.DeletionPolicyOrphan {
 		if err := deleteFn(); err != nil {
 			return true, err
 		}

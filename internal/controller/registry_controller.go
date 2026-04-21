@@ -52,7 +52,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Deletion
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
 		return r.deleteRegistry(ctx, hc, &cr)
 	}); done {
 		return ctrl.Result{}, err

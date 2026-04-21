@@ -50,7 +50,7 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
 		if cr.Status.HarborGroupID == 0 {
 			return nil
 		}

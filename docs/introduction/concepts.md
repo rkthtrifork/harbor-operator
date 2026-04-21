@@ -44,7 +44,7 @@ Singleton resources are unique per Harbor instance. If multiple CRs target the s
 `spec.deletionPolicy` controls what happens when a Kubernetes object is deleted:
 
 - `Delete` is the default and attempts Harbor cleanup before removing the finalizer
-- `Orphan` removes the Kubernetes object even if Harbor cleanup cannot be completed
+- `Orphan` removes the Kubernetes object without deleting the corresponding Harbor object
 
 This matters mainly when Harbor is unreachable or the referenced connection object has already been removed.
 

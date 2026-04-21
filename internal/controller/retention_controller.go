@@ -54,7 +54,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, func() error {
+	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
 		if cr.Status.HarborRetentionID == 0 {
 			return nil
 		}
