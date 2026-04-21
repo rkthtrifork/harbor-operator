@@ -78,12 +78,56 @@ jobs:
         with:
           prefix: "chart-v"
 
+      - name: Resolve release notes start tag
+        if: ${{ steps.classify.outputs.is_release == 'true' }}
+        id: notes
+        run: |
+          previous_in_series() {
+            local target="$1"
+            local pattern="$2"
+            local regex="$3"
+
+            {
+              git tag --list "$pattern" | grep -E "$regex" || true
+              echo "$target"
+            } | sort -V | awk -v target="$target" '
+              $0 == target { print prev; found = 1; exit }
+              { prev = $0 }
+              END {
+                if (!found && prev != target) {
+                  print prev
+                }
+              }
+            '
+          }
+
+          current_tag="${GITHUB_REF_NAME}"
+
+          if [ "${{ steps.classify.outputs.is_rc }}" = "true" ]; then
+            version="${current_tag#chart-v}"
+            base_version="${version%%-rc.*}"
+            release_line="$(printf '%s' "${base_version}" | cut -d. -f1-2)"
+            previous_tag="$(
+              previous_in_series "chart-v${base_version}" "chart-v${release_line}.*" "^chart-v${release_line}\.[0-9]+$"
+            )"
+
+            if [ -z "$previous_tag" ]; then
+              previous_tag="$(previous_in_series "chart-v${base_version}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
+            fi
+          else
+            previous_tag="$(previous_in_series "${current_tag}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
+          fi
+
+          echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           tag_name: ${{ github.ref_name }}
+          previous_tag: ${{ steps.notes.outputs.previous_tag }}
           generate_release_notes: true
+          make_latest: false
           prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
           files: |
             dist/harbor-operator-${{ steps.chart_meta.outputs.chart_version }}.tgz

@@ -216,6 +216,7 @@ CI verifies both are in sync.
 ### Release Branches
 - Release branches use the form `release/vX.Y` for supported operator minor lines.
 - `main` remains the development branch; maintenance patch releases are cut from release branches.
+- Support only the latest 3 release branches by semver for routine maintenance automation.
 - Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
 - Any non-dependency change on a release branch should be released manually.
 
@@ -223,5 +224,9 @@ CI verifies both are in sync.
 - The chart release workflow can package the chart with `helm package --version ... --app-version ...` using the release tags.
 - This keeps the published chart artifact aligned with the operator image version without committing `Chart.yaml` patch bumps back to the release branch.
 - Automated release-branch patch trains publish the operator tag first, wait for the matching GHCR image to exist, and only then create the chart tag.
+- The scheduled patch train only processes the latest 3 supported release branches; you can still target an older branch explicitly through `workflow_dispatch` when needed.
 - On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
 - Chart-only patch releases remain a manual path and should set the intended chart/operator versions deliberately before tagging.
+- GitHub's `latest` release is reserved for the highest stable operator tag (`vX.Y.Z`); chart releases (`chart-vX.Y.Z`) publish GitHub releases for assets/notes but do not mark themselves as `latest`.
+- Auto-generated GitHub release notes are scoped by tag family so operator releases compare against earlier `v*` tags and chart releases compare against earlier `chart-v*` tags.
+- RC release notes compare against the latest stable release on the same release branch (`X.Y` line); if that line has no stable release yet, the workflow falls back to the previous stable tag in the same tag family.
