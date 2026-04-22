@@ -79,11 +79,6 @@ spec:
                   DriftDetectionInterval is the interval at which the operator will check
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
-              groupName:
-                description: |-
-                  GroupName is the user group name.
-                  Defaults to metadata.name when omitted.
-                type: string
               groupType:
                 description: GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC).
                 enum:
@@ -92,21 +87,20 @@ spec:
                 - 3
                 type: integer
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -120,7 +114,6 @@ spec:
                 type: string
             required:
             - groupType
-            - harborConnectionRef
             type: object
           status:
             description: UserGroupStatus defines the observed state of UserGroup.

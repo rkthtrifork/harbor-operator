@@ -118,7 +118,7 @@ func (r *GCScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.GCSchedule{},
 		func() client.ObjectList { return &harborv1alpha1.GCScheduleList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.GCSchedule).Spec.HarborConnectionRef
 		},
 		"gcschedule",

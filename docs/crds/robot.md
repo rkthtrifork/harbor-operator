@@ -70,7 +70,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 - **Create**
 
   - Creates the robot account with the requested permissions.
-  - Uses `spec.name` or defaults to `metadata.name`.
+  - Uses `metadata.name` as the Harbor robot name.
   - If `allowTakeover` is `true` and a robot already exists, it is adopted.
 
 - **Update**

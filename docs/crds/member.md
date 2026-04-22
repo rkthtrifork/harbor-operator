@@ -20,17 +20,15 @@ spec:
     kind: HarborConnection
   allowTakeover: false
 
-  # Project reference in Harbor (name or ID, depending on your usage).
-  projectRef: "my-project"
+  projectRef:
+    name: my-project
 
   # Role within the project. The operator converts this to Harbor's role ID.
   role: "developer"
 
   memberUser:
-    # Either an existing Harbor user ID...
-    # userID: 123
-    # ...or a username (the operator will resolve it as needed).
-    username: "alice"
+    userRef:
+      name: alice
 ```
 
 ### Example: group member
@@ -44,18 +42,13 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  projectRef: "my-project"
+  projectRef:
+    name: my-project
   role: "maintainer"
 
   memberGroup:
-    # Group ID in Harbor, if already known.
-    id: 42
-    # Optional group name.
-    groupName: "dev-team"
-    # Group type / backend, e.g. LDAP (integer code as in Harbor API).
-    groupType: 1
-    # For LDAP groups, the group DN.
-    ldapGroupDN: "cn=dev-team,ou=groups,dc=example,dc=com"
+    groupRef:
+      name: dev-team
 ```
 
 ## Key Fields
@@ -64,11 +57,8 @@ spec:
   Reference to the Harbor connection object to use. Set `name` and optional `kind`
   (`HarborConnection` by default or `ClusterHarborConnection`).
 
-- **spec.projectRef** (string, required)
-  Project identifier in Harbor:
-
-  - Often a project name.
-  - Depending on your client usage, may also be a numeric ID.
+- **spec.projectRef** (object, required)
+  Project custom resource reference.
 
 - **spec.role** (string, required)
   Human-readable role name. The operator maps this to a Harbor role ID, e.g.:
@@ -81,18 +71,10 @@ spec:
   (Exactly as implemented in your controller.)
 
 - **spec.memberUser** (object, optional)
-  Defines a user member:
-
-  - **userID** (int, optional) – existing Harbor user ID.
-  - **username** (string, optional) – Harbor username.
+  References the `User` custom resource to grant membership to.
 
 - **spec.memberGroup** (object, optional)
-  Defines a group member:
-
-  - **id** (int, optional) – existing Harbor group ID.
-  - **groupName** (string, optional)
-  - **groupType** (int, optional) – Harbor group type (e.g. internal, LDAP).
-  - **ldapGroupDN** (string, optional) – DN for LDAP groups.
+  References the `UserGroup` custom resource to grant membership to.
 
 Exactly one of `memberUser` or `memberGroup` should be set.
 

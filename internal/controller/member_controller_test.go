@@ -32,7 +32,7 @@ import (
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 )
 
-const projectMembersPath = "/api/v2.0/projects/demo/members"
+const projectMembersPath = "/api/v2.0/projects/42/members"
 
 var _ = Describe("Member Controller", func() {
 	Context("When reconciling a resource", func() {
@@ -70,6 +70,24 @@ var _ = Describe("Member Controller", func() {
 
 			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
+			project := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
+					Public:         false,
+				},
+			}
+			Expect(k8sClient.Create(ctx, project)).To(Succeed())
+			project.Status.HarborProjectID = 42
+			Expect(k8sClient.Status().Update(ctx, project)).To(Succeed())
+			user := &harborv1alpha1.User{
+				ObjectMeta: metav1.ObjectMeta{Name: "alice", Namespace: "default"},
+				Spec: harborv1alpha1.UserSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
+					Email:          "alice@example.com",
+				},
+			}
+			Expect(k8sClient.Create(ctx, user)).To(Succeed())
 
 			By("creating the custom resource for the Kind Member")
 			resource := &harborv1alpha1.Member{
@@ -79,12 +97,12 @@ var _ = Describe("Member Controller", func() {
 				},
 				Spec: harborv1alpha1.MemberSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
-					ProjectRef: "demo",
+					ProjectRef: harborv1alpha1.ProjectReference{Name: "demo"},
 					Role:       "developer",
 					MemberUser: &harborv1alpha1.MemberUser{
-						Username: "alice",
+						UserRef: harborv1alpha1.UserReference{Name: "alice"},
 					},
 				},
 			}
@@ -98,6 +116,12 @@ var _ = Describe("Member Controller", func() {
 
 			By("Cleanup the specific resource instance Member")
 			_ = k8sClient.Delete(ctx, resource)
+			project := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)
+			_ = k8sClient.Delete(ctx, project)
+			user := &harborv1alpha1.User{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "alice", Namespace: "default"}, user)
+			_ = k8sClient.Delete(ctx, user)
 
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)
@@ -156,6 +180,24 @@ var _ = Describe("Member Controller", func() {
 
 			Expect(createPasswordSecret(ctx, k8sClient, adminSecretName, testPassword)).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, connName, server.URL, adminSecretName)).To(Succeed())
+			project := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
+					Public:         false,
+				},
+			}
+			Expect(k8sClient.Create(ctx, project)).To(Succeed())
+			project.Status.HarborProjectID = 42
+			Expect(k8sClient.Status().Update(ctx, project)).To(Succeed())
+			user := &harborv1alpha1.User{
+				ObjectMeta: metav1.ObjectMeta{Name: "alice", Namespace: "default"},
+				Spec: harborv1alpha1.UserSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
+					Email:          "alice@example.com",
+				},
+			}
+			Expect(k8sClient.Create(ctx, user)).To(Succeed())
 
 			resource := &harborv1alpha1.Member{
 				ObjectMeta: metav1.ObjectMeta{
@@ -164,13 +206,13 @@ var _ = Describe("Member Controller", func() {
 				},
 				Spec: harborv1alpha1.MemberSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					AllowTakeover: false,
-					ProjectRef:    "demo",
+					ProjectRef:    harborv1alpha1.ProjectReference{Name: "demo"},
 					Role:          "developer",
 					MemberUser: &harborv1alpha1.MemberUser{
-						Username: "alice",
+						UserRef: harborv1alpha1.UserReference{Name: "alice"},
 					},
 				},
 			}
@@ -182,6 +224,12 @@ var _ = Describe("Member Controller", func() {
 			resource := &harborv1alpha1.Member{}
 			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
 			_ = k8sClient.Delete(ctx, resource)
+			project := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)
+			_ = k8sClient.Delete(ctx, project)
+			user := &harborv1alpha1.User{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "alice", Namespace: "default"}, user)
+			_ = k8sClient.Delete(ctx, user)
 
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: connName, Namespace: "default"}, conn)

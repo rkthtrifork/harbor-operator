@@ -59,7 +59,7 @@ func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	_, projectID, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
+	_, projectID, err := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -106,7 +106,7 @@ func (r *QuotaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Quota{},
 		func() client.ObjectList { return &harborv1alpha1.QuotaList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Quota).Spec.HarborConnectionRef
 		},
 		"quota",

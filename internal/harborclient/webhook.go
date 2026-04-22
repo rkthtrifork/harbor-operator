@@ -29,30 +29,30 @@ type WebhookPolicy struct {
 }
 
 // ListWebhookPolicies lists webhook policies for a project.
-func (c *Client) ListWebhookPolicies(ctx context.Context, projectNameOrID string) ([]WebhookPolicy, error) {
+func (c *Client) ListWebhookPolicies(ctx context.Context, projectRef string) ([]WebhookPolicy, error) {
 	var out []WebhookPolicy
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectRef), &out)
 	return out, err
 }
 
 // GetWebhookPolicy retrieves a webhook policy by ID.
-func (c *Client) GetWebhookPolicy(ctx context.Context, projectNameOrID string, id int) (*WebhookPolicy, error) {
+func (c *Client) GetWebhookPolicy(ctx context.Context, projectRef string, id int) (*WebhookPolicy, error) {
 	var out WebhookPolicy
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectRef, id), &out)
 	return &out, err
 }
 
 // CreateWebhookPolicy creates a webhook policy.
-func (c *Client) CreateWebhookPolicy(ctx context.Context, projectNameOrID string, in WebhookPolicy) (int, error) {
-	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectNameOrID), &in)
+func (c *Client) CreateWebhookPolicy(ctx context.Context, projectRef string, in WebhookPolicy) (int, error) {
+	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectRef), &in)
 }
 
 // UpdateWebhookPolicy updates a webhook policy.
-func (c *Client) UpdateWebhookPolicy(ctx context.Context, projectNameOrID string, id int, in WebhookPolicy) error {
-	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id), &in)
+func (c *Client) UpdateWebhookPolicy(ctx context.Context, projectRef string, id int, in WebhookPolicy) error {
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectRef, id), &in)
 }
 
 // DeleteWebhookPolicy deletes a webhook policy.
-func (c *Client) DeleteWebhookPolicy(ctx context.Context, projectNameOrID string, id int) error {
-	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectNameOrID, id))
+func (c *Client) DeleteWebhookPolicy(ctx context.Context, projectRef string, id int) error {
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies/%d", projectRef, id))
 }

@@ -54,3 +54,20 @@ Cross-namespace sharing is not done through namespaced references. Instead:
 
 - use `HarborConnection` for namespaced local use
 - use `ClusterHarborConnection` when you intentionally want sharing
+
+## Operator-Wide Connection
+
+If you deploy the operator with `--harbor-connection=<name>`, every Harbor-backed
+resource uses that `ClusterHarborConnection`. In that mode, per-resource
+`spec.harborConnectionRef` is optional and must not point anywhere else.
+
+## Multi-Tenant Naming Policy
+
+If you need tenant-specific naming prefixes, enforce them at admission time with
+cluster policy such as Kyverno rather than encoding prefix logic into the
+operator. The operator treats `metadata.name` as the Harbor-side identity for
+named resources and Kubernetes object refs as the way Harbor resources relate
+to each other.
+
+See [Multi-Tenancy](multi-tenancy.md) for a recommended deployment model and
+example Kyverno policies.

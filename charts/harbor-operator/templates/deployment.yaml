@@ -48,6 +48,12 @@ spec:
           args:
             - --leader-elect=true
             - --health-probe-bind-address=:8081
+            {{- if gt (len .Values.watchNamespaces) 0 }}
+            - --watch-namespaces={{ join "," .Values.watchNamespaces }}
+            {{- end }}
+            {{- if .Values.harborConnection }}
+            - --harbor-connection={{ .Values.harborConnection }}
+            {{- end }}
             {{- if .Values.metrics.enabled }}
             - --metrics-bind-address={{ .Values.metrics.bindAddress }}
             - --metrics-secure={{ .Values.metrics.secure }}

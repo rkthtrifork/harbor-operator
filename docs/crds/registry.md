@@ -28,10 +28,6 @@ spec:
   # The registry type, e.g. "github-ghcr".
   type: github-ghcr
 
-  # Optional explicit registry name in Harbor.
-  # Recommendation: leave empty to default to metadata.name.
-  name: ""
-
   # The registry URL.
   url: "https://registry.example.com"
 
@@ -77,11 +73,8 @@ spec:
 - **spec.type** (string, required)
   The Harbor registry type (e.g. `github-ghcr`). Must be one of the supported types.
 
-- **spec.name** (string, optional)
-  Name of the registry in Harbor.
-
-  - If empty, the operator uses `metadata.name`.
-  - Using the CR name keeps the cluster as the single source of truth.
+- **metadata.name** (string, required)
+  The Harbor registry name managed by this CR.
 
 - **spec.url** (string, required)
   Registry URL. Validated as a URL.

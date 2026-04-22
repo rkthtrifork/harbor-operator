@@ -26,23 +26,23 @@ type ImmutableRule struct {
 }
 
 // ListImmutableRules lists immutable tag rules for a project.
-func (c *Client) ListImmutableRules(ctx context.Context, projectNameOrID string) ([]ImmutableRule, error) {
+func (c *Client) ListImmutableRules(ctx context.Context, projectRef string) ([]ImmutableRule, error) {
 	var out []ImmutableRule
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectNameOrID), &out)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectRef), &out)
 	return out, err
 }
 
 // CreateImmutableRule creates a new immutable tag rule.
-func (c *Client) CreateImmutableRule(ctx context.Context, projectNameOrID string, in ImmutableRule) error {
-	return c.post(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectNameOrID), &in, nil)
+func (c *Client) CreateImmutableRule(ctx context.Context, projectRef string, in ImmutableRule) error {
+	return c.post(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectRef), &in, nil)
 }
 
 // UpdateImmutableRule updates an immutable tag rule.
-func (c *Client) UpdateImmutableRule(ctx context.Context, projectNameOrID string, id int, in ImmutableRule) error {
-	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules/%d", projectNameOrID, id), &in)
+func (c *Client) UpdateImmutableRule(ctx context.Context, projectRef string, id int, in ImmutableRule) error {
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules/%d", projectRef, id), &in)
 }
 
 // DeleteImmutableRule deletes an immutable tag rule.
-func (c *Client) DeleteImmutableRule(ctx context.Context, projectNameOrID string, id int) error {
-	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules/%d", projectNameOrID, id))
+func (c *Client) DeleteImmutableRule(ctx context.Context, projectRef string, id int) error {
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules/%d", projectRef, id))
 }

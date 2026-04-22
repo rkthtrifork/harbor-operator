@@ -63,8 +63,7 @@ var _ = Describe("ScannerRegistration Controller", func() {
 			resource := &harborv1alpha1.ScannerRegistration{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.ScannerRegistrationSpec{
-					HarborSpecBase:   harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
-					Name:             "trivy",
+					HarborSpecBase:   harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					URL:              "http://scanner:8080",
 					Auth:             "Bearer",
 					AccessCredential: "token",

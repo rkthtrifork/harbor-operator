@@ -17,10 +17,6 @@ spec:
     name: my-harbor
     kind: HarborConnection
 
-  # Optional explicit name for the Harbor project.
-  # If empty, defaults to metadata.name.
-  name: ""
-
   # Allow adopting an existing project with the same name.
   allowTakeover: false
 
@@ -45,13 +41,11 @@ spec:
 - **spec.harborConnectionRef** (object, required)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
-- **spec.name** (string, optional)
-  Name of the Harbor project.
-
-  - If empty, `metadata.name` is used.
-
 - **spec.public** (bool, required)
   Controls whether the project is public or private.
+
+- **metadata.name** (string, required)
+  The Harbor project name managed by this CR.
 
 - **spec.allowTakeover** (bool, optional)
   If `true`, the operator will adopt an existing Harbor project with the same name.

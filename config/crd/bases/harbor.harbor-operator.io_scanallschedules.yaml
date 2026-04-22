@@ -79,21 +79,20 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -133,7 +132,6 @@ spec:
                 - message: cron must be set when type is not Manual or None
                   rule: self.type in ['Manual', 'None'] || size(self.cron) > 0
             required:
-            - harborConnectionRef
             - schedule
             type: object
             x-kubernetes-validations:

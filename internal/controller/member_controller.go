@@ -29,6 +29,7 @@ type MemberReconciler struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects;users;usergroups,verbs=get;list;watch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -99,13 +100,13 @@ func (r *MemberReconciler) ensureMemberPresent(
 	member *harborv1alpha1.Member,
 	roleID int,
 ) error {
-	projectKey := member.Spec.ProjectRef
-	if projectKey == "" {
-		return fmt.Errorf("spec.projectRef must not be empty")
+	projectKey, _, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
+	if err != nil {
+		return err
 	}
 
 	// Determine desired identity (entity type + name) from spec.
-	entityType, entityName, err := desiredEntityFromSpec(member)
+	entityType, entityName, reqBody, err := r.desiredEntityFromSpec(ctx, member, roleID)
 	if err != nil {
 		return err
 	}
@@ -129,7 +130,6 @@ func (r *MemberReconciler) ensureMemberPresent(
 
 	if existing == nil {
 		// Member does not exist → create it.
-		reqBody := buildMemberCreateRequest(member, roleID)
 		newID, err := hc.CreateProjectMember(ctx, projectKey, reqBody)
 		if err != nil {
 			return err
@@ -189,13 +189,12 @@ func (r *MemberReconciler) ensureMemberAbsent(
 	hc *harborclient.Client,
 	member *harborv1alpha1.Member,
 ) error {
-	projectKey := member.Spec.ProjectRef
-	if projectKey == "" {
-		// nothing we can do; treat as already gone
+	projectKey, _, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
+	if err != nil {
 		return nil
 	}
 
-	entityType, entityName, err := desiredEntityFromSpec(member)
+	entityType, entityName, _, err := r.desiredEntityFromSpec(ctx, member, 0)
 	if err != nil {
 		return err
 	}
@@ -240,63 +239,51 @@ func (r *MemberReconciler) ensureMemberAbsent(
 	return nil
 }
 
-// desiredEntityFromSpec computes the logical member identity from the CR.
-// It enforces that exactly one of member_user or member_group is set.
-func desiredEntityFromSpec(member *harborv1alpha1.Member) (string, string, error) {
+// desiredEntityFromSpec computes the logical member identity from the CR and
+// returns the matching Harbor create payload.
+func (r *MemberReconciler) desiredEntityFromSpec(
+	ctx context.Context,
+	member *harborv1alpha1.Member,
+	roleID int,
+) (string, string, harborclient.CreateMemberRequest, error) {
 	u := member.Spec.MemberUser
 	g := member.Spec.MemberGroup
 
 	switch {
 	case u == nil && g == nil:
-		return "", "", fmt.Errorf("exactly one of member_user or member_group must be set (found none)")
+		return "", "", harborclient.CreateMemberRequest{}, fmt.Errorf("exactly one of memberUser or memberGroup must be set (found none)")
 	case u != nil && g != nil:
-		return "", "", fmt.Errorf("exactly one of member_user or member_group must be set (found both)")
+		return "", "", harborclient.CreateMemberRequest{}, fmt.Errorf("exactly one of memberUser or memberGroup must be set (found both)")
 	}
 
 	if u != nil {
-		// Users → entity_type "u". Use username as stable identity key.
-		if u.Username == "" {
-			return "", "", fmt.Errorf("member_user.username must be set")
+		username, err := resolveUserName(ctx, r.Client, member.Namespace, u.UserRef)
+		if err != nil {
+			return "", "", harborclient.CreateMemberRequest{}, err
 		}
-		return "u", u.Username, nil
+		return "u", username, harborclient.CreateMemberRequest{
+			RoleID: roleID,
+			MemberUser: &harborclient.MemberUser{
+				Username: username,
+			},
+		}, nil
 	}
 
-	// Groups → entity_type "g".
-	if g.GroupName == "" && g.LDAPGroupDN == "" {
-		return "", "", fmt.Errorf("member_group must specify group_name or ldap_group_dn")
+	group, err := resolveUserGroup(ctx, r.Client, member.Namespace, g.GroupRef)
+	if err != nil {
+		return "", "", harborclient.CreateMemberRequest{}, err
 	}
-
-	// Prefer group_name as primary identity. If only DN is provided, fall back to it.
-	if g.GroupName != "" {
-		return "g", g.GroupName, nil
+	entityName := group.GroupName
+	if entityName == "" {
+		entityName = group.LDAPGroupDN
 	}
-	return "g", g.LDAPGroupDN, nil
-}
-
-// buildMemberCreateRequest constructs the payload for the Harbor member creation call.
-// It passes through user/group fields and the resolved role ID.
-func buildMemberCreateRequest(member *harborv1alpha1.Member, roleID int) harborclient.CreateMemberRequest {
-	var user *harborclient.MemberUser
-	var group *harborclient.MemberGroup
-
-	if member.Spec.MemberUser != nil {
-		user = &harborclient.MemberUser{
-			Username: member.Spec.MemberUser.Username,
-		}
+	if entityName == "" {
+		return "", "", harborclient.CreateMemberRequest{}, fmt.Errorf("resolved UserGroup %q has no Harbor identity", g.GroupRef.Name)
 	}
-	if member.Spec.MemberGroup != nil {
-		group = &harborclient.MemberGroup{
-			GroupName:   member.Spec.MemberGroup.GroupName,
-			GroupType:   member.Spec.MemberGroup.GroupType,
-			LDAPGroupDN: member.Spec.MemberGroup.LDAPGroupDN,
-		}
-	}
-
-	return harborclient.CreateMemberRequest{
+	return "g", entityName, harborclient.CreateMemberRequest{
 		RoleID:      roleID,
-		MemberUser:  user,
 		MemberGroup: group,
-	}
+	}, nil
 }
 
 // convertRoleNameToID converts a human-readable role name into the corresponding Harbor role ID.
@@ -322,7 +309,7 @@ func (r *MemberReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Member{},
 		func() client.ObjectList { return &harborv1alpha1.MemberList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Member).Spec.HarborConnectionRef
 		},
 		"member",

@@ -20,22 +20,25 @@ const (
 // cluster-scoped ClusterHarborConnection.
 type HarborConnectionReference struct {
 	// Name of the referenced Harbor connection object.
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Kind selects the Harbor connection object kind.
-	// Defaults to HarborConnection.
-	// +kubebuilder:default=HarborConnection
+	// When omitted, controllers treat it as HarborConnection.
 	// +kubebuilder:validation:Enum=HarborConnection;ClusterHarborConnection
 	// +optional
 	Kind HarborConnectionReferenceKind `json:"kind,omitempty"`
 }
 
+func (r HarborConnectionReference) IsZero() bool {
+	return r.Name == "" && r.Kind == ""
+}
+
 // HarborSpecBase holds the fields that appear in every Harbor CR.
 type HarborSpecBase struct {
 	// HarborConnectionRef references the Harbor connection object to use.
-	// +kubebuilder:validation:Required
-	HarborConnectionRef HarborConnectionReference `json:"harborConnectionRef"`
+	// When the operator is started with --harbor-connection, this field may be omitted.
+	// +optional
+	HarborConnectionRef *HarborConnectionReference `json:"harborConnectionRef,omitempty"`
 
 	// DeletionPolicy controls what happens when the Kubernetes object is deleted.
 	// Delete removes the corresponding Harbor resource before removing the finalizer.
@@ -87,6 +90,26 @@ type RegistryReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// Namespace of the Registry resource. Defaults to the referencing resource namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// UserReference identifies a User custom resource.
+type UserReference struct {
+	// Name of the User resource.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Namespace of the User resource. Defaults to the referencing resource namespace.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// UserGroupReference identifies a UserGroup custom resource.
+type UserGroupReference struct {
+	// Name of the UserGroup resource.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Namespace of the UserGroup resource. Defaults to the referencing resource namespace.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }

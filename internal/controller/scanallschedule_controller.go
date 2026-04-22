@@ -126,7 +126,7 @@ func (r *ScanAllScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.ScanAllSchedule{},
 		func() client.ObjectList { return &harborv1alpha1.ScanAllScheduleList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.ScanAllSchedule).Spec.HarborConnectionRef
 		},
 		"scanallschedule",

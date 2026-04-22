@@ -25,7 +25,7 @@ type ImmutableSelector struct {
 }
 
 // ImmutableTagRuleSpec defines the desired state of ImmutableTagRule.
-// +kubebuilder:validation:XValidation:rule="has(self.projectRef) != has(self.projectNameOrID)",message="exactly one of projectRef or projectNameOrID must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.projectRef)",message="projectRef is required"
 type ImmutableTagRuleSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -37,10 +37,6 @@ type ImmutableTagRuleSpec struct {
 	// ProjectRef references a Project CR to derive the Harbor project ID.
 	// +optional
 	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
-
-	// ProjectNameOrID is the Harbor project name or numeric ID.
-	// +optional
-	ProjectNameOrID string `json:"projectNameOrID,omitempty"`
 
 	// Disabled indicates whether the rule is disabled.
 	// +optional

@@ -12,11 +12,6 @@ type ScannerRegistrationSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Name is the registration name.
-	// Defaults to metadata.name when omitted.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Description is an optional description.
 	// +optional
 	Description string `json:"description,omitempty"`

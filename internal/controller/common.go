@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -43,7 +44,7 @@ type connectionConfig struct {
 	displayName       string
 }
 
-type harborConnectionRefAccessor func(client.Object) harborv1alpha1.HarborConnectionReference
+type harborConnectionRefAccessor func(client.Object) *harborv1alpha1.HarborConnectionReference
 
 func setupHarborBackedController(
 	mgr ctrl.Manager,
@@ -52,6 +53,24 @@ func setupHarborBackedController(
 	getRef harborConnectionRefAccessor,
 	name string,
 ) (*builder.TypedBuilder[reconcile.Request], error) {
+	if forcedName := ForcedHarborConnection(); forcedName != "" {
+		// In operator-wide connection mode, every Harbor-backed object depends on
+		// the same ClusterHarborConnection. We still watch that object so a
+		// connection update fans out reconciles across all dependent CRs.
+		return ctrl.NewControllerManagedBy(mgr).
+			For(obj).
+			Watches(
+				&harborv1alpha1.ClusterHarborConnection{},
+				handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+					if object.GetName() != forcedName {
+						return nil
+					}
+					return requestsForAllHarborBackedObjects(ctx, mgr, newList)
+				}),
+			).
+			Named(name), nil
+	}
+
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), obj, harborConnectionRefNamespacedIndex, func(raw client.Object) []string {
 		ref := normalizedHarborConnectionRef(getRef(raw))
 		if ref.Name == "" || ref.Kind != harborv1alpha1.HarborConnectionReferenceKindNamespaced {
@@ -116,7 +135,51 @@ func requestsForIndexedHarborConnection(
 	return requests
 }
 
-func resolveHarborConnection(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.HarborConnectionReference) (*connectionConfig, error) {
+func requestsForAllHarborBackedObjects(
+	ctx context.Context,
+	mgr ctrl.Manager,
+	newList func() client.ObjectList,
+) []reconcile.Request {
+	list := newList()
+	if err := mgr.GetClient().List(ctx, list); err != nil {
+		ctrl.Log.WithName("harbor-connection-watch").Error(err, "Failed to list Harbor dependents for forced connection")
+		return nil
+	}
+
+	requests := []reconcile.Request{}
+	if err := apimeta.EachListItem(list, func(item runtime.Object) error {
+		obj, ok := item.(client.Object)
+		if !ok {
+			return nil
+		}
+		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(obj)})
+		return nil
+	}); err != nil {
+		ctrl.Log.WithName("harbor-connection-watch").Error(err, "Failed to walk Harbor dependents for forced connection")
+		return nil
+	}
+	return requests
+}
+
+func resolveHarborConnection(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*connectionConfig, error) {
+	if forcedName := ForcedHarborConnection(); forcedName != "" {
+		if ref != nil && ref.Name != "" {
+			normalized := normalizedHarborConnectionRef(ref)
+			ref = &normalized
+			if ref.Kind != harborv1alpha1.HarborConnectionReferenceKindCluster || ref.Name != forcedName {
+				return nil, fmt.Errorf("spec.harborConnectionRef must be omitted or reference ClusterHarborConnection %q when --harbor-connection is set", forcedName)
+			}
+		}
+		ref = &harborv1alpha1.HarborConnectionReference{
+			Name: forcedName,
+			Kind: harborv1alpha1.HarborConnectionReferenceKindCluster,
+		}
+	}
+
+	if ref == nil || ref.Name == "" {
+		return nil, fmt.Errorf("spec.harborConnectionRef is required unless the operator is started with --harbor-connection")
+	}
+
 	kind := ref.Kind
 	if kind == "" {
 		kind = harborv1alpha1.HarborConnectionReferenceKindNamespaced
@@ -171,7 +234,7 @@ func getHarborAuth(ctx context.Context, c client.Client, conn *connectionConfig)
 	return conn.credentials.Username, pass, nil
 }
 
-func getHarborClient(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
+func getHarborClient(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
 	conn, err := resolveHarborConnection(ctx, c, namespace, ref)
 	if err != nil {
 		return nil, err
@@ -235,6 +298,7 @@ func ensureFinalizer(ctx context.Context, c client.Client, obj client.Object) er
 	if controllerutil.ContainsFinalizer(obj, finalizerName) {
 		return nil
 	}
+	sanitizeOptionalHarborConnectionRef(obj)
 	controllerutil.AddFinalizer(obj, finalizerName)
 	return c.Update(ctx, obj)
 }
@@ -243,8 +307,37 @@ func removeFinalizer(ctx context.Context, c client.Client, obj client.Object) er
 	if !controllerutil.ContainsFinalizer(obj, finalizerName) {
 		return nil
 	}
+	sanitizeOptionalHarborConnectionRef(obj)
 	controllerutil.RemoveFinalizer(obj, finalizerName)
 	return c.Update(ctx, obj)
+}
+
+func sanitizeOptionalHarborConnectionRef(obj client.Object) {
+	value := reflect.ValueOf(obj)
+	if value.Kind() != reflect.Ptr || value.IsNil() {
+		return
+	}
+
+	spec := value.Elem().FieldByName("Spec")
+	if !spec.IsValid() {
+		return
+	}
+
+	refField := spec.FieldByName("HarborConnectionRef")
+	if !refField.IsValid() || refField.Kind() != reflect.Ptr || refField.IsNil() || !refField.CanSet() {
+		return
+	}
+
+	ref := refField.Elem()
+	nameField := ref.FieldByName("Name")
+	kindField := ref.FieldByName("Kind")
+	if !nameField.IsValid() || !kindField.IsValid() {
+		return
+	}
+
+	if nameField.String() == "" && kindField.Len() == 0 {
+		refField.Set(reflect.Zero(refField.Type()))
+	}
 }
 
 // DriftDetectable is an interface for objects that have a DriftDetectionInterval.
@@ -330,72 +423,72 @@ func finalizeWithoutHarborConnection(ctx context.Context, c client.Client, obj c
 	return false, nil
 }
 
-func resolveRegistryID(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference, id *int) (int, error) {
-	if ref != nil && id != nil {
-		return 0, fmt.Errorf("registryRef and registryID are mutually exclusive")
+func resolveRegistryID(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference) (int, error) {
+	if ref == nil {
+		return 0, fmt.Errorf("registryRef is required")
 	}
-	if ref != nil {
-		if ref.Name == "" {
-			return 0, fmt.Errorf("registryRef.name must not be empty")
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = namespace
-		}
-		var registry harborv1alpha1.Registry
-		if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &registry); err != nil {
-			return 0, err
-		}
-		if registry.Status.HarborRegistryID == 0 {
-			return 0, fmt.Errorf("referenced Registry %s/%s does not have harborRegistryID yet", ns, ref.Name)
-		}
-		return registry.Status.HarborRegistryID, nil
+	if ref.Name == "" {
+		return 0, fmt.Errorf("registryRef.name must not be empty")
 	}
-	if id != nil {
-		if *id <= 0 {
-			return 0, fmt.Errorf("registryID must be greater than 0")
-		}
-		return *id, nil
+	ns := ref.Namespace
+	if ns == "" {
+		ns = namespace
 	}
-	return 0, fmt.Errorf("registryRef or registryID must be set")
+	var registry harborv1alpha1.Registry
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &registry); err != nil {
+		return 0, err
+	}
+	if registry.Status.HarborRegistryID == 0 {
+		return 0, fmt.Errorf("referenced Registry %s/%s does not have harborRegistryID yet", ns, ref.Name)
+	}
+	return registry.Status.HarborRegistryID, nil
 }
 
-func resolveProject(ctx context.Context, c client.Client, hc *harborclient.Client, namespace string, ref *harborv1alpha1.ProjectReference, nameOrID string) (string, int, error) {
-	if ref != nil && nameOrID != "" {
-		return "", 0, fmt.Errorf("projectRef and projectNameOrID are mutually exclusive")
+func resolveProject(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.ProjectReference) (string, int, error) {
+	if ref == nil {
+		return "", 0, fmt.Errorf("projectRef is required")
 	}
-	if ref != nil {
-		if ref.Name == "" {
-			return "", 0, fmt.Errorf("projectRef.name must not be empty")
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = namespace
-		}
-		var project harborv1alpha1.Project
-		if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &project); err != nil {
-			return "", 0, err
-		}
-		if project.Status.HarborProjectID == 0 {
-			return "", 0, fmt.Errorf("referenced Project %s/%s does not have harborProjectID yet", ns, ref.Name)
-		}
-		return strconv.Itoa(project.Status.HarborProjectID), project.Status.HarborProjectID, nil
+	if ref.Name == "" {
+		return "", 0, fmt.Errorf("projectRef.name must not be empty")
 	}
-	if nameOrID == "" {
-		return "", 0, fmt.Errorf("projectRef or projectNameOrID must be set")
+	ns := ref.Namespace
+	if ns == "" {
+		ns = namespace
 	}
-	if id, err := strconv.Atoi(nameOrID); err == nil && id > 0 {
-		return nameOrID, id, nil
-	}
-	if hc == nil {
-		return nameOrID, 0, nil
-	}
-	project, err := hc.FindProjectByName(ctx, nameOrID)
-	if err != nil {
+	var project harborv1alpha1.Project
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &project); err != nil {
 		return "", 0, err
 	}
-	if project == nil || project.ProjectID == 0 {
-		return "", 0, fmt.Errorf("project %q not found in Harbor", nameOrID)
+	if project.Status.HarborProjectID == 0 {
+		return "", 0, fmt.Errorf("referenced Project %s/%s does not have harborProjectID yet", ns, ref.Name)
 	}
-	return nameOrID, project.ProjectID, nil
+	return strconv.Itoa(project.Status.HarborProjectID), project.Status.HarborProjectID, nil
+}
+
+func resolveUserName(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.UserReference) (string, error) {
+	ns := ref.Namespace
+	if ns == "" {
+		ns = namespace
+	}
+	var user harborv1alpha1.User
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &user); err != nil {
+		return "", err
+	}
+	return user.Name, nil
+}
+
+func resolveUserGroup(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.UserGroupReference) (*harborclient.MemberGroup, error) {
+	ns := ref.Namespace
+	if ns == "" {
+		ns = namespace
+	}
+	var group harborv1alpha1.UserGroup
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &group); err != nil {
+		return nil, err
+	}
+	return &harborclient.MemberGroup{
+		GroupName:   group.Name,
+		GroupType:   group.Spec.GroupType,
+		LDAPGroupDN: group.Spec.LDAPGroupDN,
+	}, nil
 }

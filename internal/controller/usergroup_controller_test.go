@@ -63,8 +63,7 @@ var _ = Describe("UserGroup Controller", func() {
 			resource := &harborv1alpha1.UserGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.UserGroupSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
-					GroupName:      "developers",
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					GroupType:      2,
 				},
 			}

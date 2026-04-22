@@ -62,7 +62,7 @@ var _ = Describe("ScanAllSchedule Controller", func() {
 			resource := &harborv1alpha1.ScanAllSchedule{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.ScanAllScheduleSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Schedule:       harborv1alpha1.ScheduleSpec{Type: "Daily", Cron: "0 0 0 * * *"},
 				},
 			}

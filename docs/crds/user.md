@@ -18,9 +18,6 @@ spec:
     name: my-harbor
     kind: HarborConnection
 
-  # Harbor username (defaults to metadata.name if omitted).
-  username: "alice"
-
   # Email address for the Harbor user.
   email: "alice@example.com"
 
@@ -47,10 +44,8 @@ spec:
 - **spec.harborConnectionRef** (object, required)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
-- **spec.username** (string, optional)
-  Username in Harbor.
-
-  - If omitted, the operator may default to `metadata.name`.
+- **metadata.name** (string, required)
+  The Harbor username managed by this CR.
 
 - **spec.email** (string, required by Harbor)
   Email associated with the user.
@@ -90,5 +85,4 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 - **Interaction with Member**
 
-  - User CRs are typically referenced indirectly by Member CRs (via username
-    or user ID) to assign roles in projects.
+  - User CRs are typically referenced by `Member.spec.memberUser.userRef`.

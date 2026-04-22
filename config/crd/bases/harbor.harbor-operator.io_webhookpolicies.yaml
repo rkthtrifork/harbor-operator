@@ -96,34 +96,24 @@ spec:
                 minItems: 1
                 type: array
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
                 type: object
-              name:
-                description: |-
-                  Name is the webhook policy name.
-                  Defaults to metadata.name when omitted.
-                type: string
-              projectNameOrID:
-                description: ProjectNameOrID is the Harbor project name or numeric
-                  ID.
-                type: string
               projectRef:
                 description: ProjectRef references a Project CR to derive the Harbor
                   project ID.
@@ -193,12 +183,11 @@ spec:
                 type: array
             required:
             - eventTypes
-            - harborConnectionRef
             - targets
             type: object
             x-kubernetes-validations:
-            - message: exactly one of projectRef or projectNameOrID must be set
-              rule: has(self.projectRef) != has(self.projectNameOrID)
+            - message: projectRef is required
+              rule: has(self.projectRef)
           status:
             description: WebhookPolicyStatus defines the observed state of WebhookPolicy.
             properties:

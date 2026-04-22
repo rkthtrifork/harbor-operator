@@ -12,6 +12,9 @@ Use the generated reference when you want exact field definitions, defaults, enu
 Use [Common Spec Fields](common-spec-fields.md) for the shared
 `HarborSpecBase` fields that appear on every Harbor-managed resource.
 
+Use [Multi-Tenancy](multi-tenancy.md) for guidance on namespace scoping,
+operator-wide Harbor connections, and Kyverno-based tenant naming policies.
+
 ## Generated Reference
 
 The generated reference is produced with `crd-ref-docs` from the API types in `api/v1alpha1`.

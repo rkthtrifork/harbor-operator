@@ -21,7 +21,7 @@ spec:
 
 ## Key Fields
 
-- **spec.projectRef** / **spec.projectNameOrID** (one required)
+- **spec.projectRef** (object, required)
   Project whose quota should be updated.
 
 - **spec.hard** (map, optional)

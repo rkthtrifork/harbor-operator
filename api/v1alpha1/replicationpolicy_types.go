@@ -40,8 +40,8 @@ type ReplicationFilterSpec struct {
 }
 
 // ReplicationPolicySpec defines the desired state of ReplicationPolicy.
-// +kubebuilder:validation:XValidation:rule="(has(self.sourceRegistryRef) && !has(self.sourceRegistryID)) || (!has(self.sourceRegistryRef) && has(self.sourceRegistryID))",message="exactly one of sourceRegistryRef or sourceRegistryID must be set"
-// +kubebuilder:validation:XValidation:rule="(has(self.destinationRegistryRef) && !has(self.destinationRegistryID)) || (!has(self.destinationRegistryRef) && has(self.destinationRegistryID))",message="exactly one of destinationRegistryRef or destinationRegistryID must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.sourceRegistryRef)",message="sourceRegistryRef is required"
+// +kubebuilder:validation:XValidation:rule="has(self.destinationRegistryRef)",message="destinationRegistryRef is required"
 // +kubebuilder:validation:XValidation:rule="!has(self.trigger) || self.trigger.type != 'scheduled' || (has(self.trigger.settings) && has(self.trigger.settings.cron))",message="trigger.settings.cron must be set when trigger.type is scheduled"
 type ReplicationPolicySpec struct {
 	HarborSpecBase `json:",inline"`
@@ -51,11 +51,6 @@ type ReplicationPolicySpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Name is the policy name.
-	// Defaults to metadata.name when omitted.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Description is an optional policy description.
 	// +optional
 	Description string `json:"description,omitempty"`
@@ -64,19 +59,9 @@ type ReplicationPolicySpec struct {
 	// +optional
 	SourceRegistryRef *RegistryReference `json:"sourceRegistryRef,omitempty"`
 
-	// SourceRegistryID sets the source registry by Harbor registry ID.
-	// +kubebuilder:validation:Minimum=1
-	// +optional
-	SourceRegistryID *int `json:"sourceRegistryID,omitempty"`
-
 	// DestinationRegistryRef references a Registry CR to use as the destination.
 	// +optional
 	DestinationRegistryRef *RegistryReference `json:"destinationRegistryRef,omitempty"`
-
-	// DestinationRegistryID sets the destination registry by Harbor registry ID.
-	// +kubebuilder:validation:Minimum=1
-	// +optional
-	DestinationRegistryID *int `json:"destinationRegistryID,omitempty"`
 
 	// DestNamespace is the destination namespace.
 	// +optional

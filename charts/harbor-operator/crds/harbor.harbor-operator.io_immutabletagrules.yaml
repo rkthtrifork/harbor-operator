@@ -89,21 +89,20 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -116,10 +115,6 @@ spec:
               priority:
                 description: Priority defines the rule priority.
                 type: integer
-              projectNameOrID:
-                description: ProjectNameOrID is the Harbor project name or numeric
-                  ID.
-                type: string
               projectRef:
                 description: ProjectRef references a Project CR to derive the Harbor
                   project ID.
@@ -181,12 +176,10 @@ spec:
               template:
                 description: Template defines the rule template.
                 type: string
-            required:
-            - harborConnectionRef
             type: object
             x-kubernetes-validations:
-            - message: exactly one of projectRef or projectNameOrID must be set
-              rule: has(self.projectRef) != has(self.projectNameOrID)
+            - message: projectRef is required
+              rule: has(self.projectRef)
           status:
             description: ImmutableTagRuleStatus defines the observed state of ImmutableTagRule.
             properties:

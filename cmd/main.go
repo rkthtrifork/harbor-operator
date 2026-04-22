@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -30,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -63,6 +65,8 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var watchNamespaces string
+	var harborConnection string
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -81,6 +85,10 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&watchNamespaces, "watch-namespaces", "",
+		"Comma-separated list of namespaces to watch. Leave empty to watch all namespaces.")
+	flag.StringVar(&harborConnection, "harbor-connection", "",
+		"ClusterHarborConnection name to use for all Harbor-backed resources. Leave empty to use each resource's spec.harborConnectionRef.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -176,8 +184,23 @@ func main() {
 		})
 	}
 
+	controller.SetForcedHarborConnection(harborConnection)
+
+	cacheOptions := cache.Options{}
+	if watchNamespaces != "" {
+		cacheOptions.DefaultNamespaces = map[string]cache.Config{}
+		for _, namespace := range strings.Split(watchNamespaces, ",") {
+			namespace = strings.TrimSpace(namespace)
+			if namespace == "" {
+				continue
+			}
+			cacheOptions.DefaultNamespaces[namespace] = cache.Config{}
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
+		Cache:                  cacheOptions,
 		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
@@ -199,6 +222,8 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
+	controller.SetSecretReader(mgr.GetAPIReader())
 
 	if err = (&controller.RegistryReconciler{
 		Client: mgr.GetClient(),

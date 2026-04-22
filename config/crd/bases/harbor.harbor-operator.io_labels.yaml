@@ -89,30 +89,24 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
                 type: object
-              name:
-                description: |-
-                  Name is the label name.
-                  Defaults to metadata.name when omitted.
-                type: string
               projectRef:
                 description: ProjectRef references a Project CR for project-scoped
                   labels.
@@ -138,8 +132,6 @@ spec:
                 - g
                 - p
                 type: string
-            required:
-            - harborConnectionRef
             type: object
             x-kubernetes-validations:
             - message: scope must be 'p' when projectRef is set

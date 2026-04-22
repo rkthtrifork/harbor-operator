@@ -66,15 +66,13 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 }
 
 func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.ScannerRegistration) (ctrl.Result, error) {
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
 	credential, credentialHash, err := r.resolveCredential(ctx, cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
 	reqBody := harborclient.ScannerRegistrationReq{
-		Name:             cr.Spec.Name,
+		Name:             cr.Name,
 		Description:      cr.Spec.Description,
 		URL:              cr.Spec.URL,
 		Auth:             cr.Spec.Auth,
@@ -170,7 +168,7 @@ func (r *ScannerRegistrationReconciler) adoptExisting(ctx context.Context, hc *h
 		return false, err
 	}
 	for _, reg := range registrations {
-		if strings.EqualFold(reg.Name, cr.Spec.Name) {
+		if strings.EqualFold(reg.Name, cr.Name) {
 			cr.Status.HarborScannerID = reg.UUID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -183,7 +181,7 @@ func (r *ScannerRegistrationReconciler) SetupWithManager(mgr ctrl.Manager) error
 		mgr,
 		&harborv1alpha1.ScannerRegistration{},
 		func() client.ObjectList { return &harborv1alpha1.ScannerRegistrationList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.ScannerRegistration).Spec.HarborConnectionRef
 		},
 		"scannerregistration",

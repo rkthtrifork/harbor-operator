@@ -36,39 +36,39 @@ type ProjectMember struct {
 }
 
 // ListProjectMembers lists all members of a Harbor project.
-// projectNameOrID can be either the project name or numeric ID.
-func (c *Client) ListProjectMembers(ctx context.Context, projectNameOrID string) ([]ProjectMember, error) {
+// Harbor accepts a project path segment here; controllers pass the resolved project name.
+func (c *Client) ListProjectMembers(ctx context.Context, projectRef string) ([]ProjectMember, error) {
 	var ms []ProjectMember
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID), &ms)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectRef), &ms)
 	return ms, err
 }
 
 // CreateProjectMember creates a new project member.
 // Returns the numeric member ID parsed from the Location header, if present.
-func (c *Client) CreateProjectMember(ctx context.Context, projectNameOrID string, in CreateMemberRequest) (int, error) {
-	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectNameOrID), &in)
+func (c *Client) CreateProjectMember(ctx context.Context, projectRef string, in CreateMemberRequest) (int, error) {
+	return c.createWithNumericLocationID(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectRef), &in)
 }
 
 // GetProjectMember retrieves a specific project member by ID.
-func (c *Client) GetProjectMember(ctx context.Context, projectNameOrID string, memberID int) (*ProjectMember, error) {
+func (c *Client) GetProjectMember(ctx context.Context, projectRef string, memberID int) (*ProjectMember, error) {
 	var m ProjectMember
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID), &m)
+	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectRef, memberID), &m)
 	return &m, err
 }
 
 // UpdateProjectMemberRole updates only the role_id of an existing project member.
-func (c *Client) UpdateProjectMemberRole(ctx context.Context, projectNameOrID string, memberID int, roleID int) error {
+func (c *Client) UpdateProjectMemberRole(ctx context.Context, projectRef string, memberID int, roleID int) error {
 	body := struct {
 		RoleID int `json:"role_id"`
 	}{
 		RoleID: roleID,
 	}
 
-	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID), &body)
+	return c.put(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectRef, memberID), &body)
 }
 
 // DeleteProjectMember deletes a project member.
 // 404 is treated as success (already gone).
-func (c *Client) DeleteProjectMember(ctx context.Context, projectNameOrID string, memberID int) error {
-	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectNameOrID, memberID))
+func (c *Client) DeleteProjectMember(ctx context.Context, projectRef string, memberID int) error {
+	return c.deleteIgnoringNotFound(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members/%d", projectRef, memberID))
 }

@@ -18,12 +18,6 @@ type RegistrySpec struct {
 	// +kubebuilder:validation:Enum=github-ghcr;ali-acr;aws-ecr;azure-acr;docker-hub;docker-registry;google-gcr;harbor;huawei-SWR;jfrog-artifactory;tencent-tcr;volcengine-cr
 	Type string `json:"type"`
 
-	// Name is the registry name.
-	// It is recommended to leave this field empty so that the operator defaults it
-	// to the custom resource's metadata name.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Description is an optional description.
 	// +optional
 	Description string `json:"description,omitempty"`

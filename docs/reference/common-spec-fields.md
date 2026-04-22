@@ -13,6 +13,8 @@ For the exact generated schema, defaults, and validation markers, see
 - **`spec.harborConnectionRef`**
   Selects the Harbor connection object to use. Set `name` and, when needed,
   `kind` to choose between `HarborConnection` and `ClusterHarborConnection`.
+  When the operator is started with `--harbor-connection`, this field may be
+  omitted and the operator-wide `ClusterHarborConnection` is used instead.
 
 - **`spec.deletionPolicy`**
   Controls what happens when the Kubernetes object is deleted. `Delete`

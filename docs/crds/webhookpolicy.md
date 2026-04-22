@@ -28,8 +28,11 @@ spec:
 
 ## Key Fields
 
-- **spec.projectRef** / **spec.projectNameOrID** (one required)
+- **spec.projectRef** (object, required)
   Project to attach the policy to.
+
+- **metadata.name** (string, required)
+  The Harbor webhook policy name managed by this CR.
 
 - **spec.eventTypes** (array, required)
   Harbor webhook event types.

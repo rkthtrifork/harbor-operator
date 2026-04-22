@@ -121,6 +121,7 @@ func markError(base *harborv1alpha1.HarborStatusBase, generation int64, err erro
 
 func setReadyStatus(ctx context.Context, c client.Client, obj client.Object, base *harborv1alpha1.HarborStatusBase, generation int64, reason, message string) error {
 	if changed := markReady(base, generation, reason, message); changed {
+		sanitizeOptionalHarborConnectionRef(obj)
 		return c.Status().Update(ctx, obj)
 	}
 	return nil
@@ -128,6 +129,7 @@ func setReadyStatus(ctx context.Context, c client.Client, obj client.Object, bas
 
 func setReconcilingStatus(ctx context.Context, c client.Client, obj client.Object, base *harborv1alpha1.HarborStatusBase, generation int64, reason, message string) error {
 	if changed := markReconciling(base, generation, reason, message); changed {
+		sanitizeOptionalHarborConnectionRef(obj)
 		return c.Status().Update(ctx, obj)
 	}
 	return nil
@@ -135,6 +137,7 @@ func setReconcilingStatus(ctx context.Context, c client.Client, obj client.Objec
 
 func setErrorStatus(ctx context.Context, c client.Client, obj client.Object, base *harborv1alpha1.HarborStatusBase, generation int64, err error) error {
 	if changed := markError(base, generation, err); changed {
+		sanitizeOptionalHarborConnectionRef(obj)
 		if updateErr := c.Status().Update(ctx, obj); updateErr != nil {
 			return updateErr
 		}

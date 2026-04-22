@@ -14,14 +14,13 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  groupName: developers
   groupType: 2
 ```
 
 ## Key Fields
 
-- **spec.groupName** (string, optional)
-  Group name. Defaults to metadata.name.
+- **metadata.name** (string, required)
+  The Harbor user group name managed by this CR.
 
 - **spec.groupType** (int, required)
   Group type: 1 = LDAP, 2 = HTTP, 3 = OIDC.

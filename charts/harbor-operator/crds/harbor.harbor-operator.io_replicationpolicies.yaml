@@ -93,11 +93,6 @@ spec:
                 description: DestNamespaceReplaceCount controls namespace replacement
                   behavior.
                 type: integer
-              destinationRegistryID:
-                description: DestinationRegistryID sets the destination registry by
-                  Harbor registry ID.
-                minimum: 1
-                type: integer
               destinationRegistryRef:
                 description: DestinationRegistryRef references a Registry CR to use
                   as the destination.
@@ -138,30 +133,24 @@ spec:
                   type: object
                 type: array
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
                 type: object
-              name:
-                description: |-
-                  Name is the policy name.
-                  Defaults to metadata.name when omitted.
-                type: string
               override:
                 description: Override indicates whether to overwrite destination resources.
                 type: boolean
@@ -175,11 +164,6 @@ spec:
               singleActiveReplication:
                 description: SingleActiveReplication avoids overlapping executions.
                 type: boolean
-              sourceRegistryID:
-                description: SourceRegistryID sets the source registry by Harbor registry
-                  ID.
-                minimum: 1
-                type: integer
               sourceRegistryRef:
                 description: SourceRegistryRef references a Registry CR to use as
                   the source.
@@ -217,18 +201,12 @@ spec:
                     - scheduled
                     type: string
                 type: object
-            required:
-            - harborConnectionRef
             type: object
             x-kubernetes-validations:
-            - message: exactly one of sourceRegistryRef or sourceRegistryID must be
-                set
-              rule: (has(self.sourceRegistryRef) && !has(self.sourceRegistryID)) ||
-                (!has(self.sourceRegistryRef) && has(self.sourceRegistryID))
-            - message: exactly one of destinationRegistryRef or destinationRegistryID
-                must be set
-              rule: (has(self.destinationRegistryRef) && !has(self.destinationRegistryID))
-                || (!has(self.destinationRegistryRef) && has(self.destinationRegistryID))
+            - message: sourceRegistryRef is required
+              rule: has(self.sourceRegistryRef)
+            - message: destinationRegistryRef is required
+              rule: has(self.destinationRegistryRef)
             - message: trigger.settings.cron must be set when trigger.type is scheduled
               rule: '!has(self.trigger) || self.trigger.type != ''scheduled'' || (has(self.trigger.settings)
                 && has(self.trigger.settings.cron))'

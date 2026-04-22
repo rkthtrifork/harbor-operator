@@ -105,11 +105,6 @@ type RobotSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Name is the robot account name (without Harbor's prefix).
-	// Defaults to metadata.name when omitted.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Description of the robot account.
 	// +optional
 	Description string `json:"description,omitempty"`
@@ -159,7 +154,7 @@ type RobotStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=harbor
-// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
+// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.metadata.name`
 // +kubebuilder:printcolumn:name="Level",type=string,JSONPath=`.spec.level`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

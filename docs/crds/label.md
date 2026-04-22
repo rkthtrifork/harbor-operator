@@ -14,7 +14,6 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  name: team-blue
   color: "#3366ff"
   scope: g
 ```
@@ -27,8 +26,8 @@ spec:
 - **spec.projectRef** (object, optional)
   Required when using `scope: p`.
 
-- **spec.name** (string, optional)
-  Label name. Defaults to metadata.name.
+- **metadata.name** (string, required)
+  The Harbor label name managed by this CR.
 
 ## Common Fields
 
