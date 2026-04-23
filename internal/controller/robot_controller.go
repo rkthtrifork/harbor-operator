@@ -62,8 +62,6 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
 	if err := validateRobotSpec(&cr); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -184,7 +182,7 @@ func (r *RobotReconciler) deleteRobot(ctx context.Context, hc *harborclient.Clie
 }
 
 func (r *RobotReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Robot) (bool, error) {
-	query := "name=" + cr.Spec.Name
+	query := "name=" + cr.Name
 	robots, err := hc.ListRobots(ctx, query)
 	if err != nil {
 		return false, err
@@ -202,7 +200,7 @@ func (r *RobotReconciler) adoptExisting(ctx context.Context, hc *harborclient.Cl
 
 func (r *RobotReconciler) findAndAdoptRobot(ctx context.Context, cr *harborv1alpha1.Robot, robots []harborclient.Robot) (bool, error) {
 	for _, robot := range robots {
-		if robotNameMatches(cr.Spec.Name, robot.Name) && robotLevelMatches(cr.Spec.Level, robot.Level) {
+		if robotNameMatches(cr.Name, robot.Name) && robotLevelMatches(cr.Spec.Level, robot.Level) {
 			cr.Status.HarborRobotID = robot.ID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -246,7 +244,7 @@ func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretRefer
 
 func buildRobotCreateRequest(cr *harborv1alpha1.Robot) harborclient.RobotCreateRequest {
 	return harborclient.RobotCreateRequest{
-		Name:        cr.Spec.Name,
+		Name:        cr.Name,
 		Description: cr.Spec.Description,
 		Secret:      "",
 		Level:       cr.Spec.Level,
@@ -430,7 +428,7 @@ func (r *RobotReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Robot{},
 		func() client.ObjectList { return &harborv1alpha1.RobotList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Robot).Spec.HarborConnectionRef
 		},
 		"robot",

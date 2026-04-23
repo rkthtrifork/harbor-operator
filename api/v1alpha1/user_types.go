@@ -14,12 +14,6 @@ type UserSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Username is the Harbor username.
-	// It is recommended to leave this field empty so that the operator defaults it
-	// to the custom resource's metadata name.
-	// +optional
-	Username string `json:"username,omitempty"`
-
 	// Email address of the user.
 	// +kubebuilder:validation:Format=email
 	Email string `json:"email"`
@@ -47,7 +41,7 @@ type UserStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=harbor
-// +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.spec.username`
+// +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.metadata.name`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,priority=1

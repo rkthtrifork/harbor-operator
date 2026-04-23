@@ -56,7 +56,7 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if cr.Status.HarborWebhookPolicyID == 0 {
 			return nil
 		}
-		projectKey, _, resolveErr := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
+		projectKey, _, resolveErr := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 		if resolveErr != nil {
 			return resolveErr
 		}
@@ -73,9 +73,7 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.WebhookPolicy) (ctrl.Result, error) {
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
-	projectKey, projectID, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
+	projectKey, projectID, err := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -86,7 +84,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 	}
 
 	policy := harborclient.WebhookPolicy{
-		Name:        cr.Spec.Name,
+		Name:        cr.Name,
 		Description: cr.Spec.Description,
 		Targets:     targets,
 		EventTypes:  cr.Spec.EventTypes,
@@ -187,7 +185,7 @@ func (r *WebhookPolicyReconciler) adoptExisting(ctx context.Context, hc *harborc
 		return false, err
 	}
 	for _, p := range policies {
-		if strings.EqualFold(p.Name, cr.Spec.Name) {
+		if strings.EqualFold(p.Name, cr.Name) {
 			cr.Status.HarborWebhookPolicyID = p.ID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -200,7 +198,7 @@ func (r *WebhookPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.WebhookPolicy{},
 		func() client.ObjectList { return &harborv1alpha1.WebhookPolicyList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.WebhookPolicy).Spec.HarborConnectionRef
 		},
 		"webhookpolicy",

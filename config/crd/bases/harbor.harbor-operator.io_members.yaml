@@ -17,13 +17,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.projectRef
+    - jsonPath: .spec.projectRef.name
       name: Project
       type: string
-    - jsonPath: .spec.memberUser.username
+    - jsonPath: .spec.memberUser.userRef.name
       name: User
       type: string
-    - jsonPath: .spec.memberGroup.group_name
+    - jsonPath: .spec.memberGroup.groupRef.name
       name: Group
       type: string
     - jsonPath: .spec.role
@@ -89,21 +89,20 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -111,28 +110,59 @@ spec:
               memberGroup:
                 description: MemberGroup defines the member if it is a group.
                 properties:
-                  group_name:
-                    description: GroupName is the name of the group.
-                    type: string
-                  group_type:
-                    description: GroupType is the type of the group.
-                    type: integer
-                  ldap_group_dn:
-                    description: LDAPGroupDN is used for LDAP groups.
-                    type: string
+                  groupRef:
+                    description: GroupRef references the UserGroup to grant membership
+                      to.
+                    properties:
+                      name:
+                        description: Name of the UserGroup resource.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace of the UserGroup resource. Defaults
+                          to the referencing resource namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - groupRef
                 type: object
               memberUser:
                 description: MemberUser defines the member if it is a user.
                 properties:
-                  username:
-                    description: Username is used to onboard a user if not already
-                      present.
-                    type: string
+                  userRef:
+                    description: UserRef references the User to grant membership to.
+                    properties:
+                      name:
+                        description: Name of the User resource.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace of the User resource. Defaults to the
+                          referencing resource namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - userRef
                 type: object
               projectRef:
-                description: ProjectRef is the name (or ID) of the project in Harbor
-                  where the member should be added.
-                type: string
+                description: ProjectRef references the project where the member should
+                  be added.
+                properties:
+                  name:
+                    description: Name of the Project resource.
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: Namespace of the Project resource. Defaults to the
+                      referencing resource namespace.
+                    type: string
+                required:
+                - name
+                type: object
               reconcileNonce:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
@@ -147,18 +177,18 @@ spec:
                 - guest
                 type: string
             required:
-            - harborConnectionRef
             - projectRef
             - role
             type: object
             x-kubernetes-validations:
             - message: exactly one of memberUser or memberGroup must be set
               rule: has(self.memberUser) != has(self.memberGroup)
-            - message: memberUser.username must be set when memberUser is provided
-              rule: '!has(self.memberUser) || size(self.memberUser.username) > 0'
-            - message: memberGroup must specify group_name or ldap_group_dn
-              rule: '!has(self.memberGroup) || size(self.memberGroup.group_name) >
-                0 || size(self.memberGroup.ldap_group_dn) > 0'
+            - message: memberUser.userRef.name must be set when memberUser is provided
+              rule: '!has(self.memberUser) || size(self.memberUser.userRef.name) >
+                0'
+            - message: memberGroup.groupRef.name must be set when memberGroup is provided
+              rule: '!has(self.memberGroup) || size(self.memberGroup.groupRef.name)
+                > 0'
           status:
             description: MemberStatus defines the observed state of Member.
             properties:

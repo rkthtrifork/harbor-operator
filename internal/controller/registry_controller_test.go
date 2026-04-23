@@ -62,9 +62,8 @@ var _ = Describe("Registry Controller", func() {
 				},
 				Spec: harborv1alpha1.RegistrySpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
-					Name:        resourceName,
 					URL:         "https://registry.example.com",
 					Description: "test registry",
 					Type:        "docker-hub",

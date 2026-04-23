@@ -17,7 +17,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.name
+    - jsonPath: .metadata.name
       name: Name
       type: string
     - jsonPath: .spec.level
@@ -95,21 +95,20 @@ spec:
                   If omitted, it defaults to -1.
                 type: integer
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -121,11 +120,6 @@ spec:
                 enum:
                 - system
                 - project
-                type: string
-              name:
-                description: |-
-                  Name is the robot account name (without Harbor's prefix).
-                  Defaults to metadata.name when omitted.
                 type: string
               permissions:
                 description: Permissions define the access granted to the robot account.
@@ -252,7 +246,6 @@ spec:
                 - name
                 type: object
             required:
-            - harborConnectionRef
             - level
             - permissions
             type: object

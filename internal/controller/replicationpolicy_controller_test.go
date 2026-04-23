@@ -63,7 +63,7 @@ var _ = Describe("ReplicationPolicy Controller", func() {
 			srcRegistry := &harborv1alpha1.Registry{
 				ObjectMeta: metav1.ObjectMeta{Name: "src-reg", Namespace: "default"},
 				Spec: harborv1alpha1.RegistrySpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Type:           "docker-registry",
 					URL:            "https://example.com",
 				},
@@ -71,7 +71,7 @@ var _ = Describe("ReplicationPolicy Controller", func() {
 			destRegistry := &harborv1alpha1.Registry{
 				ObjectMeta: metav1.ObjectMeta{Name: "dest-reg", Namespace: "default"},
 				Spec: harborv1alpha1.RegistrySpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Type:           "docker-registry",
 					URL:            "https://example.org",
 				},
@@ -86,8 +86,7 @@ var _ = Describe("ReplicationPolicy Controller", func() {
 			resource := &harborv1alpha1.ReplicationPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.ReplicationPolicySpec{
-					HarborSpecBase:         harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
-					Name:                   "replication-policy",
+					HarborSpecBase:         harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					SourceRegistryRef:      &harborv1alpha1.RegistryReference{Name: "src-reg"},
 					DestinationRegistryRef: &harborv1alpha1.RegistryReference{Name: "dest-reg"},
 					ReplicateDeletion:      func() *bool { v := true; return &v }(),

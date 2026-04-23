@@ -11,11 +11,6 @@ type UserGroupSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// GroupName is the user group name.
-	// Defaults to metadata.name when omitted.
-	// +optional
-	GroupName string `json:"groupName,omitempty"`
-
 	// GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC).
 	// +kubebuilder:validation:Enum=1;2;3
 	GroupType int `json:"groupType"`

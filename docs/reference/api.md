@@ -117,7 +117,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -208,7 +208,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -265,8 +265,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name of the referenced Harbor connection object. |  | MinLength: 1 <br /> |
-| `kind` _[HarborConnectionReferenceKind](#harborconnectionreferencekind)_ | Kind selects the Harbor connection object kind.<br />Defaults to HarborConnection. | HarborConnection | Enum: [HarborConnection ClusterHarborConnection] <br />Optional: \{\} <br /> |
+| `name` _string_ | Name of the referenced Harbor connection object. |  |  |
+| `kind` _[HarborConnectionReferenceKind](#harborconnectionreferencekind)_ | Kind selects the Harbor connection object kind.<br />When omitted, controllers treat it as HarborConnection. |  | Enum: [HarborConnection ClusterHarborConnection] <br />Optional: \{\} <br /> |
 
 
 #### HarborConnectionReferenceKind
@@ -335,7 +335,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -393,13 +393,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing immutable tag rule in Harbor that matches this spec. |  | Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID. |  | Optional: \{\} <br /> |
-| `projectNameOrID` _string_ | ProjectNameOrID is the Harbor project name or numeric ID. |  | Optional: \{\} <br /> |
 | `disabled` _boolean_ | Disabled indicates whether the rule is disabled. |  | Optional: \{\} <br /> |
 | `action` _string_ | Action defines the rule action. |  | Optional: \{\} <br /> |
 | `template` _string_ | Template defines the rule template. |  | Optional: \{\} <br /> |
@@ -440,12 +439,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing label in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the label name.<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `color` _string_ | Color is the label color, e.g. #3366ff. |  | Optional: \{\} <br /> |
 | `scope` _string_ | Scope is the label scope. Valid values are g (global) and p (project). |  | Enum: [g p] <br />Optional: \{\} <br /> |
@@ -483,9 +481,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `group_name` _string_ | GroupName is the name of the group. |  | Optional: \{\} <br /> |
-| `group_type` _integer_ | GroupType is the type of the group. |  | Optional: \{\} <br /> |
-| `ldap_group_dn` _string_ | LDAPGroupDN is used for LDAP groups. |  | Optional: \{\} <br /> |
+| `groupRef` _[UserGroupReference](#usergroupreference)_ | GroupRef references the UserGroup to grant membership to. |  |  |
 
 
 #### MemberSpec
@@ -501,12 +497,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing project membership in Harbor for the same identity. |  | Optional: \{\} <br /> |
-| `projectRef` _string_ | ProjectRef is the name (or ID) of the project in Harbor where the member should be added. |  | Required: \{\} <br /> |
+| `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references the project where the member should be added. |  |  |
 | `role` _string_ | Role is the human‑readable name of the role.<br />Allowed values: "admin", "maintainer", "developer", "guest" |  | Enum: [admin maintainer developer guest] <br />Required: \{\} <br /> |
 | `memberUser` _[MemberUser](#memberuser)_ | MemberUser defines the member if it is a user. |  | Optional: \{\} <br /> |
 | `memberGroup` _[MemberGroup](#membergroup)_ | MemberGroup defines the member if it is a group. |  | Optional: \{\} <br /> |
@@ -525,7 +521,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `username` _string_ | Username is used to onboard a user if not already present. |  | Optional: \{\} <br /> |
+| `userRef` _[UserReference](#userreference)_ | UserRef references the User to grant membership to. |  |  |
 
 
 #### Project
@@ -582,6 +578,7 @@ ProjectReference identifies a Project custom resource.
 _Appears in:_
 - [ImmutableTagRuleSpec](#immutabletagrulespec)
 - [LabelSpec](#labelspec)
+- [MemberSpec](#memberspec)
 - [QuotaSpec](#quotaspec)
 - [RetentionPolicySpec](#retentionpolicyspec)
 - [WebhookPolicySpec](#webhookpolicyspec)
@@ -605,18 +602,17 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing project in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the name of the project.<br />It is recommended to leave this field empty so that the operator defaults it<br />to the custom resource’s metadata name. |  | Optional: \{\} <br /> |
 | `public` _boolean_ | Public indicates whether the project is public. |  |  |
 | `owner` _string_ | Owner is an optional field for the project owner. |  | Optional: \{\} <br /> |
 | `metadata` _[ProjectMetadata](#projectmetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
 | `cve_allowlist` _[CVEAllowlist](#cveallowlist)_ | CVEAllowlist holds the configuration for the CVE allowlist. |  | Optional: \{\} <br /> |
 | `storage_limit` _integer_ | StorageLimit is the storage limit for the project. |  | Optional: \{\} <br /> |
-| `registryName` _string_ | RegistryName is the name of the registry to use for proxy cache projects.<br />The operator will search Harbor for a registry with this name. |  | Optional: \{\} <br /> |
+| `registryRef` _[RegistryReference](#registryreference)_ | RegistryRef references the Registry to use for proxy cache projects. |  | Optional: \{\} <br /> |
 
 
 #### PurgeAuditParameters
@@ -668,7 +664,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -707,12 +703,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID. |  | Optional: \{\} <br /> |
-| `projectNameOrID` _string_ | ProjectNameOrID is the Harbor project name or numeric ID. |  | Optional: \{\} <br /> |
 | `hard` _object (keys:string, values:integer)_ | Hard defines the quota hard limits (resource name -> limit). |  | Optional: \{\} <br /> |
 
 
@@ -761,6 +756,7 @@ RegistryReference identifies a Registry custom resource.
 
 
 _Appears in:_
+- [ProjectSpec](#projectspec)
 - [ReplicationPolicySpec](#replicationpolicyspec)
 
 | Field | Description | Default | Validation |
@@ -782,13 +778,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing registry in Harbor with the same name. |  | Optional: \{\} <br /> |
 | `type` _string_ | Type of the registry, e.g., "github-ghcr". |  | Enum: [github-ghcr ali-acr aws-ecr azure-acr docker-hub docker-registry google-gcr harbor huawei-SWR jfrog-artifactory tencent-tcr volcengine-cr] <br /> |
-| `name` _string_ | Name is the registry name.<br />It is recommended to leave this field empty so that the operator defaults it<br />to the custom resource's metadata name. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `url` _string_ | URL is the registry URL. |  | Format: url <br /> |
 | `credential` _[RegistryCredentialSpec](#registrycredentialspec)_ | Credential holds authentication details for the registry. |  | Optional: \{\} <br /> |
@@ -846,17 +841,14 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing replication policy in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the policy name.<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional policy description. |  | Optional: \{\} <br /> |
 | `sourceRegistryRef` _[RegistryReference](#registryreference)_ | SourceRegistryRef references a Registry CR to use as the source. |  | Optional: \{\} <br /> |
-| `sourceRegistryID` _integer_ | SourceRegistryID sets the source registry by Harbor registry ID. |  | Minimum: 1 <br />Optional: \{\} <br /> |
 | `destinationRegistryRef` _[RegistryReference](#registryreference)_ | DestinationRegistryRef references a Registry CR to use as the destination. |  | Optional: \{\} <br /> |
-| `destinationRegistryID` _integer_ | DestinationRegistryID sets the destination registry by Harbor registry ID. |  | Minimum: 1 <br />Optional: \{\} <br /> |
 | `destNamespace` _string_ | DestNamespace is the destination namespace. |  | Optional: \{\} <br /> |
 | `destNamespaceReplaceCount` _integer_ | DestNamespaceReplaceCount controls namespace replacement behavior. |  | Optional: \{\} <br /> |
 | `trigger` _[ReplicationTriggerSpec](#replicationtriggerspec)_ | Trigger defines when the replication policy runs. |  | Optional: \{\} <br /> |
@@ -933,7 +925,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -1167,12 +1159,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing robot in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the robot account name (without Harbor's prefix).<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description of the robot account. |  | Optional: \{\} <br /> |
 | `level` _string_ | Level is the scope of the robot account.<br />Allowed values: "system", "project". |  | Enum: [system project] <br /> |
 | `permissions` _[RobotPermission](#robotpermission) array_ | Permissions define the access granted to the robot account. |  | MinItems: 1 <br /> |
@@ -1212,7 +1203,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
@@ -1251,12 +1242,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing scanner registration in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the registration name.<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `url` _string_ | URL is the scanner adapter base URL. |  | Format: uri <br /> |
 | `auth` _string_ | Auth defines the authentication approach (e.g. Basic, Bearer, X-ScannerAdapter-API-Key). |  | Optional: \{\} <br /> |
@@ -1349,6 +1339,23 @@ UserGroup is the Schema for the usergroups API.
 | `spec` _[UserGroupSpec](#usergroupspec)_ |  |  |  |
 
 
+#### UserGroupReference
+
+
+
+UserGroupReference identifies a UserGroup custom resource.
+
+
+
+_Appears in:_
+- [MemberGroup](#membergroup)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the UserGroup resource. |  | MinLength: 1 <br /> |
+| `namespace` _string_ | Namespace of the UserGroup resource. Defaults to the referencing resource namespace. |  | Optional: \{\} <br /> |
+
+
 #### UserGroupSpec
 
 
@@ -1362,14 +1369,30 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing user group in Harbor with the same name. |  | Optional: \{\} <br /> |
-| `groupName` _string_ | GroupName is the user group name.<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `groupType` _integer_ | GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC). |  | Enum: [1 2 3] <br /> |
 | `ldapGroupDN` _string_ | LDAPGroupDN is the DN of the LDAP group when GroupType is LDAP. |  | Optional: \{\} <br /> |
+
+
+#### UserReference
+
+
+
+UserReference identifies a User custom resource.
+
+
+
+_Appears in:_
+- [MemberUser](#memberuser)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the User resource. |  | MinLength: 1 <br /> |
+| `namespace` _string_ | Namespace of the User resource. Defaults to the referencing resource namespace. |  | Optional: \{\} <br /> |
 
 
 #### UserSpec
@@ -1385,12 +1408,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing user in Harbor with the same username. |  | Optional: \{\} <br /> |
-| `username` _string_ | Username is the Harbor username.<br />It is recommended to leave this field empty so that the operator defaults it<br />to the custom resource's metadata name. |  | Optional: \{\} <br /> |
 | `email` _string_ | Email address of the user. |  | Format: email <br /> |
 | `realname` _string_ | Realname is an optional full name. |  | Optional: \{\} <br /> |
 | `comment` _string_ | Comment is an optional comment for the user. |  | Optional: \{\} <br /> |
@@ -1428,14 +1450,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use. |  | Required: \{\} <br /> |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `allowTakeover` _boolean_ | AllowTakeover indicates whether the operator is allowed to adopt an<br />existing webhook policy in Harbor with the same name. |  | Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID. |  | Optional: \{\} <br /> |
-| `projectNameOrID` _string_ | ProjectNameOrID is the Harbor project name or numeric ID. |  | Optional: \{\} <br /> |
-| `name` _string_ | Name is the webhook policy name.<br />Defaults to metadata.name when omitted. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional policy description. |  | Optional: \{\} <br /> |
 | `enabled` _boolean_ | Enabled indicates whether the policy is enabled. | true | Optional: \{\} <br /> |
 | `eventTypes` _string array_ | EventTypes lists the webhook event types. |  | MinItems: 1 <br /> |

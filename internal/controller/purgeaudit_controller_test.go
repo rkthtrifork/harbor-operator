@@ -71,7 +71,7 @@ var _ = Describe("Purge Audit Schedule Controller", func() {
 				},
 				Spec: harborv1alpha1.PurgeAuditScheduleSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					Schedule: harborv1alpha1.ScheduleSpec{
 						Type: "Daily",

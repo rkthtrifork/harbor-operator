@@ -29,7 +29,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ProjectSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 			},
 		}
@@ -39,7 +39,8 @@ var _ = Describe("CRD validation and defaulting", func() {
 
 		var stored harborv1alpha1.Project
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(project), &stored)).To(Succeed())
-		Expect(stored.Spec.HarborConnectionRef.Kind).To(Equal(harborv1alpha1.HarborConnectionReferenceKindNamespaced))
+		Expect(stored.Spec.HarborConnectionRef).NotTo(BeNil())
+		Expect(stored.Spec.HarborConnectionRef.Kind).To(BeEmpty())
 		Expect(stored.Spec.DeletionPolicy).To(Equal(harborv1alpha1.DeletionPolicyDelete))
 	})
 
@@ -51,10 +52,10 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.WebhookPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectNameOrID: "library",
-				EventTypes:      []string{"PUSH_ARTIFACT"},
+				ProjectRef: &harborv1alpha1.ProjectReference{Name: "library"},
+				EventTypes: []string{"PUSH_ARTIFACT"},
 				Targets: []harborv1alpha1.WebhookTargetSpec{
 					{Type: "http", Address: "https://example.invalid/hook"},
 				},
@@ -94,7 +95,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.GCScheduleSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Schedule: harborv1alpha1.ScheduleSpec{Type: harborv1alpha1.ScheduleTypeDaily},
 			},
@@ -109,7 +110,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ScanAllScheduleSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Schedule: harborv1alpha1.ScheduleSpec{Type: harborv1alpha1.ScheduleTypeManual},
 			},
@@ -124,9 +125,9 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.MemberSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectRef: "library",
+				ProjectRef: harborv1alpha1.ProjectReference{Name: "library"},
 				Role:       "developer",
 			},
 		})
@@ -138,12 +139,12 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.MemberSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectRef:  "library",
+				ProjectRef:  harborv1alpha1.ProjectReference{Name: "library"},
 				Role:        "developer",
-				MemberUser:  &harborv1alpha1.MemberUser{Username: "alice"},
-				MemberGroup: &harborv1alpha1.MemberGroup{GroupName: "devs"},
+				MemberUser:  &harborv1alpha1.MemberUser{UserRef: harborv1alpha1.UserReference{Name: "alice"}},
+				MemberGroup: &harborv1alpha1.MemberGroup{GroupRef: harborv1alpha1.UserGroupReference{Name: "devs"}},
 			},
 		})
 	})
@@ -156,16 +157,16 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.MemberSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectRef: "library",
+				ProjectRef: harborv1alpha1.ProjectReference{Name: "library"},
 				Role:       "owner",
-				MemberUser: &harborv1alpha1.MemberUser{Username: "alice"},
+				MemberUser: &harborv1alpha1.MemberUser{UserRef: harborv1alpha1.UserReference{Name: "alice"}},
 			},
 		})
 	})
 
-	It("rejects webhook policies with conflicting project selectors", func() {
+	It("rejects webhook policies without projectRef", func() {
 		expectInvalid(&harborv1alpha1.WebhookPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testNamespace,
@@ -173,11 +174,9 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.WebhookPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectRef:      &harborv1alpha1.ProjectReference{Name: "project"},
-				ProjectNameOrID: "library",
-				EventTypes:      []string{"PUSH_ARTIFACT"},
+				EventTypes: []string{"PUSH_ARTIFACT"},
 				Targets: []harborv1alpha1.WebhookTargetSpec{
 					{Type: "http", Address: "https://example.invalid/hook"},
 				},
@@ -193,10 +192,10 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.WebhookPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectNameOrID: "library",
-				EventTypes:      []string{"PUSH_ARTIFACT"},
+				ProjectRef: &harborv1alpha1.ProjectReference{Name: "library"},
+				EventTypes: []string{"PUSH_ARTIFACT"},
 				Targets: []harborv1alpha1.WebhookTargetSpec{
 					{
 						Type:       "http",
@@ -219,7 +218,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.RegistrySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Type:          "docker-registry",
 				URL:           "https://registry.example.com",
@@ -231,9 +230,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 		})
 	})
 
-	It("rejects replication policies with invalid registry selector combinations", func() {
-		srcID := 1
-		destID := 2
+	It("rejects replication policies without registry refs", func() {
 		expectInvalid(&harborv1alpha1.ReplicationPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testNamespace,
@@ -241,19 +238,13 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ReplicationPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				SourceRegistryRef:      &harborv1alpha1.RegistryReference{Name: "src"},
-				SourceRegistryID:       &srcID,
-				DestinationRegistryRef: &harborv1alpha1.RegistryReference{Name: "dest"},
-				DestinationRegistryID:  &destID,
 			},
 		})
 	})
 
 	It("rejects scheduled replication policies without cron", func() {
-		srcID := 1
-		destID := 2
 		expectInvalid(&harborv1alpha1.ReplicationPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testNamespace,
@@ -261,10 +252,10 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ReplicationPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				SourceRegistryID:      &srcID,
-				DestinationRegistryID: &destID,
+				SourceRegistryRef:      &harborv1alpha1.RegistryReference{Name: "src"},
+				DestinationRegistryRef: &harborv1alpha1.RegistryReference{Name: "dest"},
 				Trigger: &harborv1alpha1.ReplicationTriggerSpec{
 					Type:     "scheduled",
 					Settings: &harborv1alpha1.ReplicationTriggerSettings{},
@@ -281,7 +272,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ScannerRegistrationSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				URL:              "https://scanner.example.com",
 				AccessCredential: "token",
@@ -292,7 +283,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 		})
 	})
 
-	It("rejects immutable tag rules with conflicting project selectors", func() {
+	It("rejects immutable tag rules without projectRef", func() {
 		expectInvalid(&harborv1alpha1.ImmutableTagRule{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testNamespace,
@@ -300,10 +291,8 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.ImmutableTagRuleSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
-				ProjectRef:      &harborv1alpha1.ProjectReference{Name: "project"},
-				ProjectNameOrID: "library",
 			},
 		})
 	})
@@ -316,7 +305,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.LabelSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Scope:      "g",
 				ProjectRef: &harborv1alpha1.ProjectReference{Name: "project"},
@@ -330,7 +319,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.LabelSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Scope: "p",
 			},
@@ -345,7 +334,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.RetentionPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Rules: []harborv1alpha1.RetentionRule{{Action: "delete"}},
 			},
@@ -360,7 +349,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.RetentionPolicySpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				ProjectRef: &harborv1alpha1.ProjectReference{Name: "project"},
 				Trigger:    &harborv1alpha1.RetentionTrigger{Kind: "Manual"},
@@ -381,7 +370,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 			},
 			Spec: harborv1alpha1.RobotSpec{
 				HarborSpecBase: harborv1alpha1.HarborSpecBase{
-					HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				Level:    "system",
 				Duration: -2,

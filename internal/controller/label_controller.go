@@ -64,8 +64,6 @@ func (r *LabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
 	scope := cr.Spec.Scope
 	var projectID int
 	if cr.Spec.ProjectRef != nil {
@@ -74,7 +72,7 @@ func (r *LabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		} else if scope != "p" {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("spec.scope must be 'p' when projectRef is set"))
 		}
-		_, pid, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, "")
+		_, pid, err := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
@@ -87,7 +85,7 @@ func (r *LabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	desired := harborclient.Label{
-		Name:        cr.Spec.Name,
+		Name:        cr.Name,
 		Description: cr.Spec.Description,
 		Color:       cr.Spec.Color,
 		Scope:       scope,
@@ -165,7 +163,7 @@ func (r *LabelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Label{},
 		func() client.ObjectList { return &harborv1alpha1.LabelList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Label).Spec.HarborConnectionRef
 		},
 		"label",

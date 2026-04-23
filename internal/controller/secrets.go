@@ -37,7 +37,11 @@ func readSecretValue(ctx context.Context, c client.Client, ref harborv1alpha1.Se
 	}
 
 	var secret corev1.Secret
-	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, &secret); err != nil {
+	reader := client.Reader(c)
+	if uncached := SecretReader(); uncached != nil {
+		reader = uncached
+	}
+	if err := reader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, &secret); err != nil {
 		return "", err
 	}
 	value, ok := secret.Data[key]

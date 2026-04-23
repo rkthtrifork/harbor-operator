@@ -57,7 +57,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if cr.Status.HarborImmutableRuleID == 0 {
 			return nil
 		}
-		projectKey, _, resolveErr := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
+		projectKey, _, resolveErr := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 		if resolveErr != nil {
 			return resolveErr
 		}
@@ -70,7 +70,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	projectKey, _, err := resolveProject(ctx, r.Client, hc, cr.Namespace, cr.Spec.ProjectRef, cr.Spec.ProjectNameOrID)
+	projectKey, _, err := resolveProject(ctx, r.Client, cr.Namespace, cr.Spec.ProjectRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -143,7 +143,7 @@ func (r *ImmutableTagRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.ImmutableTagRule{},
 		func() client.ObjectList { return &harborv1alpha1.ImmutableTagRuleList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.ImmutableTagRule).Spec.HarborConnectionRef
 		},
 		"immutabletagrule",

@@ -63,10 +63,8 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	cr.Spec.GroupName = defaultString(cr.Spec.GroupName, cr.Name)
-
 	desired := harborclient.UserGroup{
-		GroupName:   cr.Spec.GroupName,
+		GroupName:   cr.Name,
 		GroupType:   cr.Spec.GroupType,
 		LDAPGroupDN: cr.Spec.LDAPGroupDN,
 	}
@@ -118,12 +116,12 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *UserGroupReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.UserGroup) (bool, error) {
-	groups, err := hc.SearchUserGroups(ctx, cr.Spec.GroupName)
+	groups, err := hc.SearchUserGroups(ctx, cr.Name)
 	if err != nil {
 		return false, err
 	}
 	for _, g := range groups {
-		if strings.EqualFold(g.GroupName, cr.Spec.GroupName) {
+		if strings.EqualFold(g.GroupName, cr.Name) {
 			cr.Status.HarborGroupID = g.ID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -136,7 +134,7 @@ func (r *UserGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.UserGroup{},
 		func() client.ObjectList { return &harborv1alpha1.UserGroupList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.UserGroup).Spec.HarborConnectionRef
 		},
 		"usergroup",

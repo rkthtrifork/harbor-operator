@@ -34,7 +34,11 @@ linters:
       - linters:
           - dupl
           - lll
-        path: internal/*
+        path: internal/.*
+      - linters:
+          - revive
+        path: internal/controller/.*_test\.go
+        text: "dot-imports:"
     paths:
       - third_party$
       - builtin$

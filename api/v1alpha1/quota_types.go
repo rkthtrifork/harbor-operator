@@ -2,6 +2,7 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// +kubebuilder:validation:XValidation:rule="has(self.projectRef)",message="projectRef is required"
 // QuotaSpec defines the desired state of Quota.
 type QuotaSpec struct {
 	HarborSpecBase `json:",inline"`
@@ -9,10 +10,6 @@ type QuotaSpec struct {
 	// ProjectRef references a Project CR to derive the Harbor project ID.
 	// +optional
 	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
-
-	// ProjectNameOrID is the Harbor project name or numeric ID.
-	// +optional
-	ProjectNameOrID string `json:"projectNameOrID,omitempty"`
 
 	// Hard defines the quota hard limits (resource name -> limit).
 	// +optional

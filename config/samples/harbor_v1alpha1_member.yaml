@@ -9,5 +9,9 @@ spec:
   harborConnectionRef:
     name: harborconnection-sample
     kind: HarborConnection
-  projectRef: project-sample
+  projectRef:
+    name: project-sample
   role: admin
+  memberUser:
+    userRef:
+      name: user-sample

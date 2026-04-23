@@ -64,8 +64,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Defaults & adoption
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
 	if cr.Status.HarborRegistryID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -140,7 +138,7 @@ func (r *RegistryReconciler) deleteRegistry(ctx context.Context, hc *harborclien
 }
 
 func (r *RegistryReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Registry) (bool, error) {
-	reg, err := hc.FindRegistryByName(ctx, cr.Spec.Name)
+	reg, err := hc.FindRegistryByName(ctx, cr.Name)
 	if err != nil {
 		return false, err
 	}
@@ -154,7 +152,7 @@ func (r *RegistryReconciler) adoptExisting(ctx context.Context, hc *harborclient
 func (r *RegistryReconciler) buildCreateReq(cr harborv1alpha1.Registry, credential *harborclient.RegistryCredential, caCert string) harborclient.CreateRegistryRequest {
 	desired := harborclient.CreateRegistryRequest{
 		URL:           cr.Spec.URL,
-		Name:          cr.Spec.Name,
+		Name:          cr.Name,
 		Description:   cr.Spec.Description,
 		Type:          cr.Spec.Type,
 		Insecure:      cr.Spec.Insecure,
@@ -166,7 +164,7 @@ func (r *RegistryReconciler) buildCreateReq(cr harborv1alpha1.Registry, credenti
 
 func (r *RegistryReconciler) buildUpdateReq(cr harborv1alpha1.Registry, credential *harborclient.RegistryCredential, caCert string) harborclient.UpdateRegistryRequest {
 	req := harborclient.UpdateRegistryRequest{
-		Name:          cr.Spec.Name,
+		Name:          cr.Name,
 		Description:   cr.Spec.Description,
 		URL:           cr.Spec.URL,
 		Insecure:      cr.Spec.Insecure,
@@ -181,7 +179,7 @@ func (r *RegistryReconciler) buildUpdateReq(cr harborv1alpha1.Registry, credenti
 }
 
 func registryNeedsUpdate(cr harborv1alpha1.Registry, current harborclient.Registry, desiredCredHash, desiredCACert string) bool {
-	if cr.Spec.Name != "" && cr.Spec.Name != current.Name {
+	if cr.Name != current.Name {
 		return true
 	}
 	if cr.Spec.URL != current.URL {
@@ -260,7 +258,7 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Registry{},
 		func() client.ObjectList { return &harborv1alpha1.RegistryList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Registry).Spec.HarborConnectionRef
 		},
 		"registry",

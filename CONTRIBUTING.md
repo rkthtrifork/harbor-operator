@@ -10,6 +10,8 @@ This guidance is kept in `CONTRIBUTING.md` because it is contributor-facing and 
 Each CRD type file must include:
 - A **Spec** and **Status** struct with `HarborSpecBase` and `HarborStatusBase` embedded.
 - `AllowTakeover` on CRDs that represent named Harbor identities without IDs (Registry, Project, User, Robot, Member).
+- Use `metadata.name` as the Harbor identity for named resources instead of adding duplicate name fields in `spec`.
+- Prefer Kubernetes object references and referenced status over raw Harbor IDs or `nameOrID` selector fields.
 - `// +kubebuilder:object:root=true` and `// +kubebuilder:subresource:status` on the root type.
 - **Print columns** for `Ready`, `Reason`, `Message`, and `Age`.
 
@@ -191,6 +193,7 @@ We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in
 ### Chart Values & Schema
 - Update `charts/harbor-operator/values.yaml` and `charts/harbor-operator/values.schema.json` together.
 - Prefer additive changes to values to avoid breaking upgrades.
+- Runtime flags exposed by the chart, such as `watchNamespaces` and `harborConnection`, should be documented in the chart README when added or changed.
 
 ### Chart RBAC & CRDs
 - **RBAC**: `config/rbac/role.yaml` is canonical. Sync to the chart with:

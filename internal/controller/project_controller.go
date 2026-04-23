@@ -65,19 +65,17 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Defaults & adoption
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
 	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if adopted {
 			r.logger.Info("Adopted existing project",
-				"Name", cr.Spec.Name, "ID", cr.Status.HarborProjectID)
+				"Name", cr.Name, "ID", cr.Status.HarborProjectID)
 		}
 	}
 
 	// Desired payload
-	createReq, err := r.buildCreateReq(ctx, hc, &cr)
+	createReq, err := r.buildCreateReq(ctx, &cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -144,7 +142,7 @@ func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.
 		return false, err
 	}
 	for _, p := range projects {
-		if strings.EqualFold(p.Name, cr.Spec.Name) {
+		if strings.EqualFold(p.Name, cr.Name) {
 			cr.Status.HarborProjectID = p.ProjectID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -152,7 +150,7 @@ func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.
 	return false, nil
 }
 
-func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
+func (r *ProjectReconciler) buildCreateReq(ctx context.Context, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
 	var meta harborclient.ProjectMetadata
 	if m := cr.Spec.Metadata; m != nil {
 		meta = harborclient.ProjectMetadata{
@@ -195,20 +193,16 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient
 	}
 
 	var registryID *int
-	if rn := cr.Spec.RegistryName; rn != "" {
-		reg, err := hc.FindRegistryByName(ctx, rn)
+	if cr.Spec.RegistryRef != nil {
+		id, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.RegistryRef)
 		if err != nil {
 			return harborclient.CreateProjectRequest{}, err
 		}
-		if reg == nil {
-			return harborclient.CreateProjectRequest{},
-				fmt.Errorf("registry %q not found in Harbor", rn)
-		}
-		registryID = &reg.ID
+		registryID = &id
 	}
 
 	return harborclient.CreateProjectRequest{
-		ProjectName:  cr.Spec.Name,
+		ProjectName:  cr.Name,
 		Public:       cr.Spec.Public,
 		Owner:        cr.Spec.Owner,
 		Metadata:     meta,
@@ -280,7 +274,7 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Project{},
 		func() client.ObjectList { return &harborv1alpha1.ProjectList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Project).Spec.HarborConnectionRef
 		},
 		"project",

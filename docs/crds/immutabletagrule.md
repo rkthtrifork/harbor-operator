@@ -27,7 +27,7 @@ spec:
 
 ## Key Fields
 
-- **spec.projectRef** / **spec.projectNameOrID** (one required)
+- **spec.projectRef** (object, required)
   Project to attach the rule to.
 
 - **spec.action**, **spec.template** (string, optional)

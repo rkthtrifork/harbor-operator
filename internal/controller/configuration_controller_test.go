@@ -83,7 +83,7 @@ var _ = Describe("Configuration Controller", func() {
 				},
 				Spec: harborv1alpha1.ConfigurationSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					Settings: map[string]apiextensionsv1.JSON{
 						"robot_name_prefix": {Raw: []byte(`"robot+"`)},
@@ -148,7 +148,7 @@ var _ = Describe("Configuration Controller", func() {
 				},
 				Spec: harborv1alpha1.ConfigurationSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn-config-2"},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn-config-2"},
 					},
 					Settings: map[string]apiextensionsv1.JSON{
 						"robot_name_prefix": {Raw: []byte(`"robot-second"`)},

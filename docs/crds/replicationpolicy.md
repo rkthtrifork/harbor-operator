@@ -18,9 +18,6 @@ spec:
     name: my-harbor
     kind: HarborConnection
 
-  # Optional explicit name (defaults to metadata.name)
-  name: "sample-replication"
-
   # Source / destination registries
   sourceRegistryRef:
     name: src-registry
@@ -48,10 +45,13 @@ spec:
 - **spec.harborConnectionRef** (object, required)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
-- **spec.sourceRegistryRef** / **spec.sourceRegistryID** (one required)
+- **metadata.name** (string, required)
+  The Harbor replication policy name managed by this CR.
+
+- **spec.sourceRegistryRef** (object, required)
   Select the source registry for replication.
 
-- **spec.destinationRegistryRef** / **spec.destinationRegistryID** (one required)
+- **spec.destinationRegistryRef** (object, required)
   Select the destination registry.
 
 - **spec.trigger** (object, optional)

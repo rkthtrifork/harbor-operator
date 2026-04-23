@@ -123,7 +123,7 @@ func (r *PurgeAuditScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		mgr,
 		&harborv1alpha1.PurgeAuditSchedule{},
 		func() client.ObjectList { return &harborv1alpha1.PurgeAuditScheduleList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.PurgeAuditSchedule).Spec.HarborConnectionRef
 		},
 		"purgeaudit",

@@ -9,5 +9,4 @@ spec:
   harborConnectionRef:
     name: harborconnection-sample
     kind: HarborConnection
-  groupName: developers
   groupType: 2

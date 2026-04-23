@@ -63,8 +63,7 @@ var _ = Describe("WebhookPolicy Controller", func() {
 			project := &harborv1alpha1.Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
 				Spec: harborv1alpha1.ProjectSpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
-					Name:           "demo",
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Public:         true,
 				},
 			}
@@ -75,7 +74,7 @@ var _ = Describe("WebhookPolicy Controller", func() {
 			resource := &harborv1alpha1.WebhookPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.WebhookPolicySpec{
-					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName}},
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					ProjectRef:     &harborv1alpha1.ProjectReference{Name: "demo"},
 					EventTypes:     []string{"PUSH_ARTIFACT"},
 					Targets: []harborv1alpha1.WebhookTargetSpec{

@@ -18,6 +18,11 @@ That means:
 - edits in Kubernetes drive Harbor changes
 - Harbor-side drift is corrected on reconcile
 - connection changes also trigger reconcile of dependent resources
+- `metadata.name` is the Harbor identity for named resources such as `Project`,
+  `Registry`, `User`, `UserGroup`, `Label`, `Robot`, `ReplicationPolicy`, and
+  `ScannerRegistration`
+- inter-resource relationships should use Kubernetes object references and the
+  referenced object status rather than free-form Harbor identifiers
 
 ## Resource Ownership
 

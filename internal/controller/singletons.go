@@ -17,17 +17,21 @@ type singletonCandidate struct {
 	createdAt metav1.Time
 }
 
-func normalizedHarborConnectionRef(ref harborv1alpha1.HarborConnectionReference) harborv1alpha1.HarborConnectionReference {
-	if ref.Kind == "" {
-		ref.Kind = harborv1alpha1.HarborConnectionReferenceKindNamespaced
+func normalizedHarborConnectionRef(ref *harborv1alpha1.HarborConnectionReference) harborv1alpha1.HarborConnectionReference {
+	if ref == nil {
+		return harborv1alpha1.HarborConnectionReference{}
 	}
-	return ref
+	out := *ref
+	if out.Kind == "" {
+		out.Kind = harborv1alpha1.HarborConnectionReferenceKindNamespaced
+	}
+	return out
 }
 
-func harborConnectionRefsEqual(a, b harborv1alpha1.HarborConnectionReference) bool {
-	a = normalizedHarborConnectionRef(a)
-	b = normalizedHarborConnectionRef(b)
-	return a.Name == b.Name && a.Kind == b.Kind
+func harborConnectionRefsEqual(a, b *harborv1alpha1.HarborConnectionReference) bool {
+	normalizedA := normalizedHarborConnectionRef(a)
+	normalizedB := normalizedHarborConnectionRef(b)
+	return normalizedA.Name == normalizedB.Name && normalizedA.Kind == normalizedB.Kind
 }
 
 func normalizeBaseURL(baseURL string) string {

@@ -31,7 +31,7 @@ type WebhookTargetSpec struct {
 }
 
 // WebhookPolicySpec defines the desired state of WebhookPolicy.
-// +kubebuilder:validation:XValidation:rule="has(self.projectRef) != has(self.projectNameOrID)",message="exactly one of projectRef or projectNameOrID must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.projectRef)",message="projectRef is required"
 type WebhookPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -43,15 +43,6 @@ type WebhookPolicySpec struct {
 	// ProjectRef references a Project CR to derive the Harbor project ID.
 	// +optional
 	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
-
-	// ProjectNameOrID is the Harbor project name or numeric ID.
-	// +optional
-	ProjectNameOrID string `json:"projectNameOrID,omitempty"`
-
-	// Name is the webhook policy name.
-	// Defaults to metadata.name when omitted.
-	// +optional
-	Name string `json:"name,omitempty"`
 
 	// Description is an optional policy description.
 	// +optional

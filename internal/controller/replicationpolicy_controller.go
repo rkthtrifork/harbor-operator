@@ -66,13 +66,11 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	cr.Spec.Name = defaultString(cr.Spec.Name, cr.Name)
-
-	srcID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.SourceRegistryRef, cr.Spec.SourceRegistryID)
+	srcID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.SourceRegistryRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	destID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.DestinationRegistryRef, cr.Spec.DestinationRegistryID)
+	destID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.DestinationRegistryRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -82,7 +80,7 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	policy := harborclient.ReplicationPolicy{
-		Name:                      cr.Spec.Name,
+		Name:                      cr.Name,
 		Description:               cr.Spec.Description,
 		SrcRegistry:               &harborclient.Registry{ID: srcID},
 		DestRegistry:              &harborclient.Registry{ID: destID},
@@ -145,12 +143,12 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *ReplicationPolicyReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.ReplicationPolicy) (bool, error) {
-	policies, err := hc.ListReplicationPolicies(ctx, cr.Spec.Name)
+	policies, err := hc.ListReplicationPolicies(ctx, cr.Name)
 	if err != nil {
 		return false, err
 	}
 	for _, p := range policies {
-		if strings.EqualFold(p.Name, cr.Spec.Name) {
+		if strings.EqualFold(p.Name, cr.Name) {
 			cr.Status.HarborReplicationPolicyID = p.ID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -163,7 +161,7 @@ func (r *ReplicationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.ReplicationPolicy{},
 		func() client.ObjectList { return &harborv1alpha1.ReplicationPolicyList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.ReplicationPolicy).Spec.HarborConnectionRef
 		},
 		"replicationpolicy",

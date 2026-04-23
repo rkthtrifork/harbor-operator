@@ -13,12 +13,6 @@ type ProjectSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Name is the name of the project.
-	// It is recommended to leave this field empty so that the operator defaults it
-	// to the custom resource’s metadata name.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Public indicates whether the project is public.
 	Public bool `json:"public"`
 
@@ -38,10 +32,9 @@ type ProjectSpec struct {
 	// +optional
 	StorageLimit int `json:"storage_limit,omitempty"`
 
-	// RegistryName is the name of the registry to use for proxy cache projects.
-	// The operator will search Harbor for a registry with this name.
+	// RegistryRef references the Registry to use for proxy cache projects.
 	// +optional
-	RegistryName string `json:"registryName,omitempty"`
+	RegistryRef *RegistryReference `json:"registryRef,omitempty"`
 }
 
 // ProjectMetadata defines additional metadata for the project.
@@ -85,7 +78,7 @@ type ProjectStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Public",type=boolean,JSONPath=`.spec.public`
-// +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registryName`
+// +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registryRef.name`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,priority=1

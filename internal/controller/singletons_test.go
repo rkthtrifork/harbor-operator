@@ -10,8 +10,8 @@ import (
 )
 
 func TestHarborConnectionRefsEqualDefaultsKind(t *testing.T) {
-	a := harborv1alpha1.HarborConnectionReference{Name: "conn"}
-	b := harborv1alpha1.HarborConnectionReference{
+	a := &harborv1alpha1.HarborConnectionReference{Name: "conn"}
+	b := &harborv1alpha1.HarborConnectionReference{
 		Name: "conn",
 		Kind: harborv1alpha1.HarborConnectionReferenceKindNamespaced,
 	}

@@ -172,7 +172,7 @@ func (r *ConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.Configuration{},
 		func() client.ObjectList { return &harborv1alpha1.ConfigurationList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.Configuration).Spec.HarborConnectionRef
 		},
 		"configuration",

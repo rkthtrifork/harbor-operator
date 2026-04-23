@@ -35,6 +35,6 @@ spec:
 
 ## Notes
 
-- If `spec.name` is omitted on the `Project`, `metadata.name` is used
+- `metadata.name` is the Harbor project name for `Project`
 - `public` is required on the `Project` spec
 - updating the connection object requeues the dependent `Project`

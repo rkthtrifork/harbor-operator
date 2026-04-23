@@ -71,9 +71,8 @@ var _ = Describe("Project Controller", func() {
 				},
 				Spec: harborv1alpha1.ProjectSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
-					Name:   resourceName,
 					Public: false,
 				},
 			}

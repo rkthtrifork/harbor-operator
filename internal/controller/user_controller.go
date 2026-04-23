@@ -64,8 +64,6 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Defaults & adoption
-	cr.Spec.Username = defaultString(cr.Spec.Username, cr.Name)
-
 	if cr.Status.HarborUserID == 0 && cr.Spec.AllowTakeover {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -127,12 +125,17 @@ func (r *UserReconciler) getUserPassword(ctx context.Context, cr harborv1alpha1.
 }
 
 func (r *UserReconciler) buildCreateReq(cr harborv1alpha1.User, password string) harborclient.CreateUserRequest {
+	realname := cr.Spec.Realname
+	if realname == "" {
+		realname = cr.Name
+	}
+
 	return harborclient.CreateUserRequest{
 		Email:    cr.Spec.Email,
-		Realname: cr.Spec.Realname,
+		Realname: realname,
 		Comment:  cr.Spec.Comment,
 		Password: password,
-		Username: cr.Spec.Username,
+		Username: cr.Name,
 	}
 }
 
@@ -148,12 +151,12 @@ func (r *UserReconciler) deleteUser(ctx context.Context, hc *harborclient.Client
 }
 
 func (r *UserReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.User) (bool, error) {
-	users, err := hc.ListUsers(ctx, "username="+cr.Spec.Username)
+	users, err := hc.ListUsers(ctx, "username="+cr.Name)
 	if err != nil {
 		return false, err
 	}
 	for _, u := range users {
-		if strings.EqualFold(u.Username, cr.Spec.Username) {
+		if strings.EqualFold(u.Username, cr.Name) {
 			cr.Status.HarborUserID = u.UserID
 			return true, r.Status().Update(ctx, cr)
 		}
@@ -172,7 +175,7 @@ func (r *UserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.User{},
 		func() client.ObjectList { return &harborv1alpha1.UserList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.User).Spec.HarborConnectionRef
 		},
 		"user",

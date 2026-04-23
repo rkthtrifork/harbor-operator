@@ -50,6 +50,10 @@ containerSecurityContext:
 
 env: []
 
+watchNamespaces: []
+
+harborConnection: ""
+
 pdb:
   enabled: false
   minAvailable: 1

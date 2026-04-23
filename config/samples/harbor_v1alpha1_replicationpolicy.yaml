@@ -9,7 +9,6 @@ spec:
   harborConnectionRef:
     name: harborconnection-sample
     kind: HarborConnection
-  name: sample-replication
   sourceRegistryRef:
     name: registry-sample
   destinationRegistryRef:

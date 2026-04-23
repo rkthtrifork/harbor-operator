@@ -18,8 +18,6 @@ spec:
     name: harborconnection-sample
     kind: HarborConnection
   email: example@email.com
-  # I recommend not specifying this field in which case the metadata.name will be used
-  username: project-sample
   passwordSecretRef:
     name: harbor-user-password
     key: password

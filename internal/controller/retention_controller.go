@@ -304,7 +304,7 @@ func (r *RetentionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		mgr,
 		&harborv1alpha1.RetentionPolicy{},
 		func() client.ObjectList { return &harborv1alpha1.RetentionPolicyList{} },
-		func(obj client.Object) harborv1alpha1.HarborConnectionReference {
+		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
 			return obj.(*harborv1alpha1.RetentionPolicy).Spec.HarborConnectionRef
 		},
 		"retentionpolicy",

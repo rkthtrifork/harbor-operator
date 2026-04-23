@@ -13,11 +13,6 @@ type LabelSpec struct {
 	// +optional
 	AllowTakeover bool `json:"allowTakeover,omitempty"`
 
-	// Name is the label name.
-	// Defaults to metadata.name when omitted.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// Description is an optional description.
 	// +optional
 	Description string `json:"description,omitempty"`

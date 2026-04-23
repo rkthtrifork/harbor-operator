@@ -74,6 +74,11 @@
         "additionalProperties": true
       }
     },
+    "watchNamespaces": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "harborConnection": { "type": "string" },
     "pdb": {
       "type": "object",
       "additionalProperties": false,

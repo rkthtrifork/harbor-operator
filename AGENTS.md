@@ -17,6 +17,8 @@ Contributor-facing guidance lives in [`CONTRIBUTING.md`](./CONTRIBUTING.md). Kee
 Location: `api/v1alpha1/*_types.go`
 - Must embed `HarborSpecBase` in Spec and `HarborStatusBase` in Status.
 - Add `AllowTakeover` on identity-based CRDs that represent named Harbor identities without IDs.
+- Use `metadata.name` as the Harbor-side identity for named resources. Do not add duplicate `spec.name` / `spec.username` / `spec.groupName` style fields for the same identity.
+- Prefer Kubernetes object references plus referenced status over raw Harbor IDs or `nameOrID` union fields.
 - Root CRDs must include `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status`.
 - Must include printcolumns: `Ready`, `Reason`, `Message` (priority=1), `Age`.
 - Add CRD-specific printcolumns (see existing types).
@@ -58,6 +60,10 @@ The docs site is built with MkDocs Material. Hand-written guides live under `doc
 - Sync chart CRDs with `make sync-chart-crds`.
 - Sync chart RBAC with `make sync-chart-rbac`.
 - Sync Helm chart assets with `make sync-chart`.
+
+## Operator Runtime Flags
+- `--watch-namespaces` scopes the operator to a fixed namespace set when needed.
+- `--harbor-connection` points Harbor-backed resources at one operator-wide `ClusterHarborConnection`; in that mode `spec.harborConnectionRef` may be omitted or must match the configured cluster connection.
 
 ## Automation Conventions
 - Pull request titles must follow conventional-commit format (`type(scope): summary` or `type: summary`) because the `pr-title` workflow enforces it.

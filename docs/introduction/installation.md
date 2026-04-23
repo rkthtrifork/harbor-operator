@@ -34,6 +34,8 @@ Useful overrides include:
 - ServiceMonitor creation
 - PodDisruptionBudget settings
 - NetworkPolicy settings
+- `watchNamespaces` to scope the operator to specific namespaces
+- `harborConnection` to force a single `ClusterHarborConnection` for all Harbor-backed resources
 
 See the chart documentation in [`charts/harbor-operator/README.md`](https://github.com/rkthtrifork/harbor-operator/blob/main/charts/harbor-operator/README.md) for the install flags that matter most.
 
@@ -45,6 +47,10 @@ The operator is only the control plane. You still need to create one of:
 - a cluster-scoped `ClusterHarborConnection`
 
 Then create Harbor-backed resources that reference that connection object.
+If you set `harborConnection` in the chart values, Harbor-backed resources can
+omit `spec.harborConnectionRef` and will all use that cluster-scoped connection.
+
+For shared-cluster setups, see [Multi-Tenancy](../reference/multi-tenancy.md).
 
 ## Local Development Stack
 

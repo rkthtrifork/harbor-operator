@@ -20,7 +20,7 @@ spec:
     - jsonPath: .spec.public
       name: Public
       type: boolean
-    - jsonPath: .spec.registryName
+    - jsonPath: .spec.registryRef.name
       name: Registry
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -110,21 +110,20 @@ spec:
                   for drift. A value of 0 (or omitted) disables periodic drift detection.
                 type: string
               harborConnectionRef:
-                description: HarborConnectionRef references the Harbor connection
-                  object to use.
+                description: |-
+                  HarborConnectionRef references the Harbor connection object to use.
+                  When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
-                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      Defaults to HarborConnection.
+                      When omitted, controllers treat it as HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection
                     type: string
                   name:
                     description: Name of the referenced Harbor connection object.
-                    minLength: 1
                     type: string
                 required:
                 - name
@@ -154,12 +153,6 @@ spec:
                   severity:
                     type: string
                 type: object
-              name:
-                description: |-
-                  Name is the name of the project.
-                  It is recommended to leave this field empty so that the operator defaults it
-                  to the custom resource’s metadata name.
-                type: string
               owner:
                 description: Owner is an optional field for the project owner.
                 type: string
@@ -169,16 +162,25 @@ spec:
               reconcileNonce:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
-              registryName:
-                description: |-
-                  RegistryName is the name of the registry to use for proxy cache projects.
-                  The operator will search Harbor for a registry with this name.
-                type: string
+              registryRef:
+                description: RegistryRef references the Registry to use for proxy
+                  cache projects.
+                properties:
+                  name:
+                    description: Name of the Registry resource.
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: Namespace of the Registry resource. Defaults to the
+                      referencing resource namespace.
+                    type: string
+                required:
+                - name
+                type: object
               storage_limit:
                 description: StorageLimit is the storage limit for the project.
                 type: integer
             required:
-            - harborConnectionRef
             - public
             type: object
           status:

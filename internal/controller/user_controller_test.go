@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 
@@ -56,6 +58,13 @@ var _ = Describe("User Controller", func() {
 					return
 				}
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/users" {
+					var req map[string]any
+					body, err := io.ReadAll(r.Body)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.Unmarshal(body, &req)).To(Succeed())
+					Expect(req["username"]).To(Equal(resourceName))
+					Expect(req["realname"]).To(Equal(resourceName))
+
 					w.Header().Set("Location", "/api/v2.0/users/5")
 					w.WriteHeader(http.StatusCreated)
 					return
@@ -75,7 +84,7 @@ var _ = Describe("User Controller", func() {
 				},
 				Spec: harborv1alpha1.UserSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: connName},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					Email: "user@example.com",
 					PasswordSecretRef: corev1.SecretKeySelector{

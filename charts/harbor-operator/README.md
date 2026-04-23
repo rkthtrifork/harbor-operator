@@ -25,8 +25,13 @@ Common overrides:
 helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \\
   --version <chart-version> \\
   --set image.tag=v0.3.0 \\
-  --set metrics.enabled=true
+  --set metrics.enabled=true \\
+  --set harborConnection=shared-harbor \\
+  --set watchNamespaces[0]=team-a
 ```
+
+- `harborConnection` sets the operator-wide `ClusterHarborConnection` used for all Harbor-backed resources.
+- `watchNamespaces` scopes the operator cache and reconcilers to a fixed list of namespaces.
 
 When `metrics.enabled=true` and `metrics.secure=true`, the chart also installs the delegated authentication RBAC needed for authenticated access to `/metrics` (`tokenreviews`, `subjectaccessreviews`, `system:auth-delegator`, and `extension-apiserver-authentication-reader`).
 

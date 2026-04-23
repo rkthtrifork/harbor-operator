@@ -80,7 +80,7 @@ var _ = Describe("Robot Controller", func() {
 				},
 				Spec: harborv1alpha1.RobotSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
-						HarborConnectionRef: harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
 					Level:    "project",
 					Duration: -1,
