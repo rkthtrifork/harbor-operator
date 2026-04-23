@@ -20,6 +20,7 @@ limitations under the License.
 package e2e
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -352,7 +353,6 @@ spec:
     name: %s
     kind: HarborConnection
   type: docker-registry
-  name: %s
   url: https://registry-1.docker.io
   insecure: false
 ---
@@ -368,7 +368,8 @@ spec:
   public: true
   metadata:
     public: "true"
-  registryName: %s
+  registryRef:
+    name: %s
 ---
 apiVersion: v1
 kind: Secret
@@ -388,7 +389,6 @@ spec:
   harborConnectionRef:
     name: %s
     kind: HarborConnection
-  username: %s
   email: %s@example.com
   realname: e2e user
   passwordSecretRef:
@@ -427,9 +427,9 @@ spec:
             decoration: repoMatches
             pattern: "**"
 `, adminSecretName, namespace, adminPass, connName, namespace, inClusterBaseURL, adminUser, adminSecretName,
-					registryName, namespace, connName, registryName,
+					registryName, namespace, connName,
 					projectName, namespace, connName, registryName,
-					userSecretName, namespace, userName, namespace, connName, userName, userName, userSecretName,
+					userSecretName, namespace, userName, namespace, connName, userName, userSecretName,
 					retentionName, namespace, connName, projectName)
 
 				applyFile := writeTempFile(crs)
@@ -929,21 +929,50 @@ func harborHasObject(baseURL, user, pass, path, needle string) bool {
 		return false
 	}
 
-	var items []map[string]any
-	if err := json.Unmarshal([]byte(out), &items); err == nil {
-		parts := strings.SplitN(needle, ":", 2)
-		if len(parts) == 2 {
-			key := strings.Trim(parts[0], "\" ")
-			want := strings.Trim(parts[1], "\" ")
-			for _, item := range items {
-				if got, ok := item[key]; ok && fmt.Sprint(got) == want {
-					return true
-				}
+	key, want, ok := parseNeedle(needle)
+	var body any
+	if ok && json.Unmarshal([]byte(out), &body) == nil && jsonContainsValue(body, key, want) {
+		return true
+	}
+
+	var compact bytes.Buffer
+	if json.Compact(&compact, []byte(out)) == nil {
+		out = compact.String()
+	}
+	return strings.Contains(out, needle)
+}
+
+func parseNeedle(needle string) (string, string, bool) {
+	parts := strings.SplitN(needle, ":", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+
+	key := strings.Trim(parts[0], "\" ")
+	want := strings.Trim(parts[1], "\" ")
+	return key, want, key != "" && want != ""
+}
+
+func jsonContainsValue(value any, key, want string) bool {
+	switch typed := value.(type) {
+	case []any:
+		for _, item := range typed {
+			if jsonContainsValue(item, key, want) {
+				return true
+			}
+		}
+	case map[string]any:
+		if got, ok := typed[key]; ok && fmt.Sprint(got) == want {
+			return true
+		}
+		for _, item := range typed {
+			if jsonContainsValue(item, key, want) {
+				return true
 			}
 		}
 	}
 
-	return strings.Contains(out, needle)
+	return false
 }
 
 func deleteHarborProjectByName(baseURL, user, pass, projectName string) {
