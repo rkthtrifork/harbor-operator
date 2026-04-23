@@ -68,6 +68,7 @@ The docs site is built with MkDocs Material. Hand-written guides live under `doc
 ## Automation Conventions
 - Pull request titles must follow conventional-commit format (`type(scope): summary` or `type: summary`) because the `pr-title` workflow enforces it.
 - Renovate PRs must keep semantic commit titles enabled and use strict PR titles so branch suffixes like `(main)` do not get appended.
+- Release branches should only receive patch-level dependency update PRs. Minor and major dependency bumps stay manual so patch releases do not silently widen the operator's dependency baseline.
 - GitHub Actions workflows should use trigger-level `paths` filters for clearly scoped automation, but not on pull-request workflows whose checks are required for merging. For required PR checks, let the workflow start and use lightweight changed-file detection inside jobs or steps.
 
 ## Verification
@@ -87,6 +88,7 @@ Useful local docs target:
 - `main` remains the development branch; maintenance patch releases are cut from release branches.
 - Support only the latest 3 release branches by semver for routine maintenance automation.
 - Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
+- Only patch-level dependency updates should be merged to release branches automatically. Minor and major dependency updates should be handled manually, with explicit review and release intent.
 - Any non-dependency change on a release branch should be released manually.
 
 ## Chart Packaging

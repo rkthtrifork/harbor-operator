@@ -1,0 +1,1762 @@
+2026-04-23T09:32:05.6024422Z Current runner version: '2.333.1'
+2026-04-23T09:32:05.6049650Z ##[group]Runner Image Provisioner
+2026-04-23T09:32:05.6050389Z Hosted Compute Agent
+2026-04-23T09:32:05.6051054Z Version: 20260415.520
+2026-04-23T09:32:05.6051617Z Commit: af089020f5f67b61ccc91db6c07980876c02bf7b
+2026-04-23T09:32:05.6052298Z Build Date: 2026-04-15T18:07:08Z
+2026-04-23T09:32:05.6053006Z Worker ID: {a5e358e8-cee4-43a3-b3a1-c08f97c81ee1}
+2026-04-23T09:32:05.6053658Z Azure Region: eastus2
+2026-04-23T09:32:05.6054195Z ##[endgroup]
+2026-04-23T09:32:05.6055710Z ##[group]Operating System
+2026-04-23T09:32:05.6056377Z Ubuntu
+2026-04-23T09:32:05.6056805Z 24.04.4
+2026-04-23T09:32:05.6057287Z LTS
+2026-04-23T09:32:05.6057716Z ##[endgroup]
+2026-04-23T09:32:05.6058206Z ##[group]Runner Image
+2026-04-23T09:32:05.6059064Z Image: ubuntu-24.04
+2026-04-23T09:32:05.6059581Z Version: 20260420.95.1
+2026-04-23T09:32:05.6060735Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260420.95/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-23T09:32:05.6062192Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260420.95
+2026-04-23T09:32:05.6063077Z ##[endgroup]
+2026-04-23T09:32:05.6064183Z ##[group]GITHUB_TOKEN Permissions
+2026-04-23T09:32:05.6066053Z Contents: read
+2026-04-23T09:32:05.6066597Z Metadata: read
+2026-04-23T09:32:05.6067216Z Packages: read
+2026-04-23T09:32:05.6067714Z ##[endgroup]
+2026-04-23T09:32:05.6070423Z Secret source: Actions
+2026-04-23T09:32:05.6071425Z Prepare workflow directory
+2026-04-23T09:32:05.6416802Z Prepare all required actions
+2026-04-23T09:32:05.6454969Z Getting action download info
+2026-04-23T09:32:06.0852877Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+2026-04-23T09:32:06.2279277Z Download action repository 'dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d' (SHA:fbd0ab8f3e69293af611ebaee6363fc25e6d187d)
+2026-04-23T09:32:06.4806236Z Download action repository 'actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c' (SHA:4a3601121dd01d1626a1e23e37211e3254c1c06c)
+2026-04-23T09:32:06.7982093Z Download action repository 'azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2' (SHA:dda3372f752e03dde6b3237bc9431cdc2f7a02a2)
+2026-04-23T09:32:07.1375205Z Complete job name: test-e2e
+2026-04-23T09:32:07.2240269Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+2026-04-23T09:32:07.2241940Z with:
+2026-04-23T09:32:07.2242681Z   repository: rkthtrifork/harbor-operator
+2026-04-23T09:32:07.2243965Z   token: ***
+2026-04-23T09:32:07.2244646Z   ssh-strict: true
+2026-04-23T09:32:07.2245367Z   ssh-user: git
+2026-04-23T09:32:07.2246100Z   persist-credentials: true
+2026-04-23T09:32:07.2246924Z   clean: true
+2026-04-23T09:32:07.2247725Z   sparse-checkout-cone-mode: true
+2026-04-23T09:32:07.2248808Z   fetch-depth: 1
+2026-04-23T09:32:07.2249546Z   fetch-tags: false
+2026-04-23T09:32:07.2250281Z   show-progress: true
+2026-04-23T09:32:07.2251022Z   lfs: false
+2026-04-23T09:32:07.2251701Z   submodules: false
+2026-04-23T09:32:07.2252470Z   set-safe-directory: true
+2026-04-23T09:32:07.2253547Z ##[endgroup]
+2026-04-23T09:32:07.3198527Z Syncing repository: rkthtrifork/harbor-operator
+2026-04-23T09:32:07.3201546Z ##[group]Getting Git version info
+2026-04-23T09:32:07.3203056Z Working directory is '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:32:07.3205146Z [command]/usr/bin/git version
+2026-04-23T09:32:07.3286714Z git version 2.53.0
+2026-04-23T09:32:07.3311628Z ##[endgroup]
+2026-04-23T09:32:07.3326816Z Temporarily overriding HOME='/home/runner/work/_temp/1a75c850-3b2a-4c6a-bf7c-7d6aef5291e6' before making global git config changes
+2026-04-23T09:32:07.3329902Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-23T09:32:07.3332856Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/harbor-operator/harbor-operator
+2026-04-23T09:32:07.3393243Z Deleting the contents of '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:32:07.3397298Z ##[group]Initializing the repository
+2026-04-23T09:32:07.3402368Z [command]/usr/bin/git init /home/runner/work/harbor-operator/harbor-operator
+2026-04-23T09:32:07.3545834Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-23T09:32:07.3548351Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-23T09:32:07.3551335Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-23T09:32:07.3552753Z hint: call:
+2026-04-23T09:32:07.3553418Z hint:
+2026-04-23T09:32:07.3554294Z hint: 	git config --global init.defaultBranch <name>
+2026-04-23T09:32:07.3555522Z hint:
+2026-04-23T09:32:07.3556806Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-23T09:32:07.3558612Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-23T09:32:07.3560402Z hint:
+2026-04-23T09:32:07.3561517Z hint: 	git branch -m <name>
+2026-04-23T09:32:07.3562390Z hint:
+2026-04-23T09:32:07.3563852Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-23T09:32:07.3566111Z Initialized empty Git repository in /home/runner/work/harbor-operator/harbor-operator/.git/
+2026-04-23T09:32:07.3569924Z [command]/usr/bin/git remote add origin https://github.com/rkthtrifork/harbor-operator
+2026-04-23T09:32:07.3609596Z ##[endgroup]
+2026-04-23T09:32:07.3611141Z ##[group]Disabling automatic garbage collection
+2026-04-23T09:32:07.3613202Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-23T09:32:07.3644308Z ##[endgroup]
+2026-04-23T09:32:07.3645705Z ##[group]Setting up auth
+2026-04-23T09:32:07.3647066Z Removing SSH command configuration
+2026-04-23T09:32:07.3651342Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-23T09:32:07.3685129Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-23T09:32:07.4052655Z Removing HTTP extra header
+2026-04-23T09:32:07.4059715Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-23T09:32:07.4093547Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-23T09:32:07.4307997Z Removing includeIf entries pointing to credentials config files
+2026-04-23T09:32:07.4314958Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-23T09:32:07.4350733Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-23T09:32:07.4572494Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-23T09:32:07.4613369Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git.path /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:32:07.4643712Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:32:07.4677780Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:32:07.4707165Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:32:07.4735754Z ##[endgroup]
+2026-04-23T09:32:07.4737186Z ##[group]Fetching the repository
+2026-04-23T09:32:07.4745941Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +b5caee655e585c976163d8307805ee9692c2a540:refs/remotes/pull/51/merge
+2026-04-23T09:32:07.7448362Z From https://github.com/rkthtrifork/harbor-operator
+2026-04-23T09:32:07.7450830Z  * [new ref]         b5caee655e585c976163d8307805ee9692c2a540 -> pull/51/merge
+2026-04-23T09:32:07.7491527Z ##[endgroup]
+2026-04-23T09:32:07.7493265Z ##[group]Determining the checkout info
+2026-04-23T09:32:07.7494809Z ##[endgroup]
+2026-04-23T09:32:07.7497783Z [command]/usr/bin/git sparse-checkout disable
+2026-04-23T09:32:07.7552272Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-23T09:32:07.7580872Z ##[group]Checking out the ref
+2026-04-23T09:32:07.7583493Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/51/merge
+2026-04-23T09:32:07.7759689Z Note: switching to 'refs/remotes/pull/51/merge'.
+2026-04-23T09:32:07.7760890Z 
+2026-04-23T09:32:07.7761636Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-04-23T09:32:07.7764294Z changes and commit them, and you can discard any commits you make in this
+2026-04-23T09:32:07.7767218Z state without impacting any branches by switching back to a branch.
+2026-04-23T09:32:07.7769352Z 
+2026-04-23T09:32:07.7770542Z If you want to create a new branch to retain commits you create, you may
+2026-04-23T09:32:07.7773387Z do so (now or later) by using -c with the switch command. Example:
+2026-04-23T09:32:07.7774983Z 
+2026-04-23T09:32:07.7775592Z   git switch -c <new-branch-name>
+2026-04-23T09:32:07.7776757Z 
+2026-04-23T09:32:07.7777344Z Or undo this operation with:
+2026-04-23T09:32:07.7778275Z 
+2026-04-23T09:32:07.7779193Z   git switch -
+2026-04-23T09:32:07.7780039Z 
+2026-04-23T09:32:07.7780801Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-04-23T09:32:07.7781987Z 
+2026-04-23T09:32:07.7783216Z HEAD is now at b5caee6 Merge f99c078864777673d3b7b5623e2e441519b5855a into 8b91d4dee7a8ced1b2b05d35fe479cbe5209a947
+2026-04-23T09:32:07.7787729Z ##[endgroup]
+2026-04-23T09:32:07.7810579Z [command]/usr/bin/git log -1 --format=%H
+2026-04-23T09:32:07.7833848Z b5caee655e585c976163d8307805ee9692c2a540
+2026-04-23T09:32:07.8118415Z ##[group]Run dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d
+2026-04-23T09:32:07.8120433Z with:
+2026-04-23T09:32:07.8123093Z   filters: e2e:
+  - 'api/**'
+  - 'charts/**'
+  - 'cmd/**'
+  - 'config/**'
+  - 'hack/**'
+  - 'internal/**'
+  - 'test/**'
+  - '.dockerignore'
+  - 'Dockerfile'
+  - 'Makefile'
+  - 'PROJECT'
+  - 'go.mod'
+  - 'go.sum'
+  - '.github/workflows/test-e2e.yaml'
+
+2026-04-23T09:32:07.8126131Z   token: ***
+2026-04-23T09:32:07.8126853Z   list-files: none
+2026-04-23T09:32:07.8127720Z   initial-fetch-depth: 100
+2026-04-23T09:32:07.8128613Z   predicate-quantifier: some
+2026-04-23T09:32:07.8129908Z ##[endgroup]
+2026-04-23T09:32:07.8965199Z ##[group]Fetching list of changed files for PR#51 from Github API
+2026-04-23T09:32:07.8973722Z Invoking listFiles(pull_number: 51, per_page: 100)
+2026-04-23T09:32:08.3133302Z Received 100 items
+2026-04-23T09:32:08.3134905Z [modified] .github/workflows/lint.yaml
+2026-04-23T09:32:08.3136584Z [modified] .golangci.yml
+2026-04-23T09:32:08.3138063Z [modified] AGENTS.md
+2026-04-23T09:32:08.3139650Z [modified] CONTRIBUTING.md
+2026-04-23T09:32:08.3141064Z [modified] Makefile
+2026-04-23T09:32:08.3142438Z [modified] api/v1alpha1/common.go
+2026-04-23T09:32:08.3144263Z [modified] api/v1alpha1/immutabletagrule_types.go
+2026-04-23T09:32:08.3146159Z [modified] api/v1alpha1/label_types.go
+2026-04-23T09:32:08.3147836Z [modified] api/v1alpha1/member_types.go
+2026-04-23T09:32:08.3149919Z [modified] api/v1alpha1/project_types.go
+2026-04-23T09:32:08.3151669Z [modified] api/v1alpha1/quota_types.go
+2026-04-23T09:32:08.3153426Z [modified] api/v1alpha1/registry_types.go
+2026-04-23T09:32:08.3155361Z [modified] api/v1alpha1/replicationpolicy_types.go
+2026-04-23T09:32:08.3156678Z [modified] api/v1alpha1/robot_types.go
+2026-04-23T09:32:08.3157802Z [modified] api/v1alpha1/scannerregistration_types.go
+2026-04-23T09:32:08.3159655Z [modified] api/v1alpha1/user_types.go
+2026-04-23T09:32:08.3160659Z [modified] api/v1alpha1/usergroup_types.go
+2026-04-23T09:32:08.3161772Z [modified] api/v1alpha1/webhookpolicy_types.go
+2026-04-23T09:32:08.3162926Z [modified] api/v1alpha1/zz_generated.deepcopy.go
+2026-04-23T09:32:08.3164030Z [modified] charts/harbor-operator/README.md
+2026-04-23T09:32:08.3165548Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_configurations.yaml
+2026-04-23T09:32:08.3167517Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_gcschedules.yaml
+2026-04-23T09:32:08.3169758Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_immutabletagrules.yaml
+2026-04-23T09:32:08.3171751Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_labels.yaml
+2026-04-23T09:32:08.3173596Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_members.yaml
+2026-04-23T09:32:08.3175471Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_projects.yaml
+2026-04-23T09:32:08.3177675Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_purgeauditschedules.yaml
+2026-04-23T09:32:08.3180070Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_quotas.yaml
+2026-04-23T09:32:08.3182037Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_registries.yaml
+2026-04-23T09:32:08.3184160Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_replicationpolicies.yaml
+2026-04-23T09:32:08.3186389Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_retentionpolicies.yaml
+2026-04-23T09:32:08.3188418Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_robots.yaml
+2026-04-23T09:32:08.3190694Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_scanallschedules.yaml
+2026-04-23T09:32:08.3192908Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_scannerregistrations.yaml
+2026-04-23T09:32:08.3195064Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_usergroups.yaml
+2026-04-23T09:32:08.3197000Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_users.yaml
+2026-04-23T09:32:08.3199523Z [modified] charts/harbor-operator/crds/harbor.harbor-operator.io_webhookpolicies.yaml
+2026-04-23T09:32:08.3201380Z [modified] charts/harbor-operator/templates/deployment.yaml
+2026-04-23T09:32:08.3202757Z [modified] charts/harbor-operator/values.schema.json
+2026-04-23T09:32:08.3203978Z [modified] charts/harbor-operator/values.yaml
+2026-04-23T09:32:08.3205023Z [modified] cmd/main.go
+2026-04-23T09:32:08.3206222Z [modified] config/crd/bases/harbor.harbor-operator.io_configurations.yaml
+2026-04-23T09:32:08.3207983Z [modified] config/crd/bases/harbor.harbor-operator.io_gcschedules.yaml
+2026-04-23T09:32:08.3209913Z [modified] config/crd/bases/harbor.harbor-operator.io_immutabletagrules.yaml
+2026-04-23T09:32:08.3211643Z [modified] config/crd/bases/harbor.harbor-operator.io_labels.yaml
+2026-04-23T09:32:08.3213224Z [modified] config/crd/bases/harbor.harbor-operator.io_members.yaml
+2026-04-23T09:32:08.3214856Z [modified] config/crd/bases/harbor.harbor-operator.io_projects.yaml
+2026-04-23T09:32:08.3216644Z [modified] config/crd/bases/harbor.harbor-operator.io_purgeauditschedules.yaml
+2026-04-23T09:32:08.3218417Z [modified] config/crd/bases/harbor.harbor-operator.io_quotas.yaml
+2026-04-23T09:32:08.3220172Z [modified] config/crd/bases/harbor.harbor-operator.io_registries.yaml
+2026-04-23T09:32:08.3221966Z [modified] config/crd/bases/harbor.harbor-operator.io_replicationpolicies.yaml
+2026-04-23T09:32:08.3223866Z [modified] config/crd/bases/harbor.harbor-operator.io_retentionpolicies.yaml
+2026-04-23T09:32:08.3225599Z [modified] config/crd/bases/harbor.harbor-operator.io_robots.yaml
+2026-04-23T09:32:08.3227285Z [modified] config/crd/bases/harbor.harbor-operator.io_scanallschedules.yaml
+2026-04-23T09:32:08.3229288Z [modified] config/crd/bases/harbor.harbor-operator.io_scannerregistrations.yaml
+2026-04-23T09:32:08.3231182Z [modified] config/crd/bases/harbor.harbor-operator.io_usergroups.yaml
+2026-04-23T09:32:08.3233111Z [modified] config/crd/bases/harbor.harbor-operator.io_users.yaml
+2026-04-23T09:32:08.3234790Z [modified] config/crd/bases/harbor.harbor-operator.io_webhookpolicies.yaml
+2026-04-23T09:32:08.3236352Z [modified] config/samples/harbor_v1alpha1_member.yaml
+2026-04-23T09:32:08.3237635Z [modified] config/samples/harbor_v1alpha1_project.yaml
+2026-04-23T09:32:08.3239234Z [modified] config/samples/harbor_v1alpha1_registry.yaml
+2026-04-23T09:32:08.3240696Z [modified] config/samples/harbor_v1alpha1_replicationpolicy.yaml
+2026-04-23T09:32:08.3242270Z [modified] config/samples/harbor_v1alpha1_scannerregistration.yaml
+2026-04-23T09:32:08.3243717Z [modified] config/samples/harbor_v1alpha1_user.yaml
+2026-04-23T09:32:08.3245021Z [modified] config/samples/harbor_v1alpha1_usergroup.yaml
+2026-04-23T09:32:08.3246227Z [modified] docs/crds/immutabletagrule.md
+2026-04-23T09:32:08.3247247Z [modified] docs/crds/label.md
+2026-04-23T09:32:08.3248131Z [modified] docs/crds/member.md
+2026-04-23T09:32:08.3249184Z [modified] docs/crds/project.md
+2026-04-23T09:32:08.3250097Z [modified] docs/crds/quota.md
+2026-04-23T09:32:08.3251003Z [modified] docs/crds/registry.md
+2026-04-23T09:32:08.3251995Z [modified] docs/crds/replicationpolicy.md
+2026-04-23T09:32:08.3253027Z [modified] docs/crds/robot.md
+2026-04-23T09:32:08.3253913Z [modified] docs/crds/user.md
+2026-04-23T09:32:08.3254812Z [modified] docs/crds/usergroup.md
+2026-04-23T09:32:08.3255780Z [modified] docs/crds/webhookpolicy.md
+2026-04-23T09:32:08.3256880Z [modified] docs/examples/connection-and-project.md
+2026-04-23T09:32:08.3258033Z [modified] docs/introduction/concepts.md
+2026-04-23T09:32:08.3259214Z [modified] docs/introduction/installation.md
+2026-04-23T09:32:08.3260284Z [modified] docs/reference/api.md
+2026-04-23T09:32:08.3261309Z [modified] docs/reference/common-spec-fields.md
+2026-04-23T09:32:08.3262502Z [modified] docs/reference/connection-patterns.md
+2026-04-23T09:32:08.3263614Z [modified] docs/reference/index.md
+2026-04-23T09:32:08.3264635Z [added] docs/reference/multi-tenancy.md
+2026-04-23T09:32:08.3265638Z [modified] hack/mkdocs.yml
+2026-04-23T09:32:08.3266534Z [modified] internal/controller/common.go
+2026-04-23T09:32:08.3267774Z [modified] internal/controller/conditions.go
+2026-04-23T09:32:08.3269162Z [modified] internal/controller/configuration_controller.go
+2026-04-23T09:32:08.3270628Z [modified] internal/controller/configuration_controller_test.go
+2026-04-23T09:32:08.3271956Z [modified] internal/controller/gc_controller.go
+2026-04-23T09:32:08.3273154Z [modified] internal/controller/gc_controller_test.go
+2026-04-23T09:32:08.3274494Z [modified] internal/controller/immutabletagrule_controller.go
+2026-04-23T09:32:08.3276028Z [modified] internal/controller/immutabletagrule_controller_test.go
+2026-04-23T09:32:08.3277433Z [modified] internal/controller/label_controller.go
+2026-04-23T09:32:08.3278907Z [modified] internal/controller/label_controller_test.go
+2026-04-23T09:32:08.3280214Z [modified] internal/controller/member_controller.go
+2026-04-23T09:32:08.3281492Z [modified] internal/controller/member_controller_test.go
+2026-04-23T09:32:08.3282699Z [added] internal/controller/options.go
+2026-04-23T09:32:08.3283817Z [modified] internal/controller/project_controller.go
+2026-04-23T09:32:08.3285129Z [modified] internal/controller/project_controller_test.go
+2026-04-23T09:32:08.5239375Z Received 29 items
+2026-04-23T09:32:08.5241372Z [modified] internal/controller/purgeaudit_controller.go
+2026-04-23T09:32:08.5243007Z [modified] internal/controller/purgeaudit_controller_test.go
+2026-04-23T09:32:08.5244405Z [modified] internal/controller/quota_controller.go
+2026-04-23T09:32:08.5245916Z [modified] internal/controller/quota_controller_test.go
+2026-04-23T09:32:08.5247625Z [modified] internal/controller/registry_controller.go
+2026-04-23T09:32:08.5249358Z [modified] internal/controller/registry_controller_test.go
+2026-04-23T09:32:08.5250915Z [modified] internal/controller/replicationpolicy_controller.go
+2026-04-23T09:32:08.5253080Z [modified] internal/controller/replicationpolicy_controller_test.go
+2026-04-23T09:32:08.5255521Z [modified] internal/controller/retention_controller.go
+2026-04-23T09:32:08.5257970Z [modified] internal/controller/retention_controller_test.go
+2026-04-23T09:32:08.5260443Z [modified] internal/controller/robot_controller.go
+2026-04-23T09:32:08.5262503Z [modified] internal/controller/robot_controller_test.go
+2026-04-23T09:32:08.5264742Z [modified] internal/controller/scanallschedule_controller.go
+2026-04-23T09:32:08.5266622Z [modified] internal/controller/scanallschedule_controller_test.go
+2026-04-23T09:32:08.5268215Z [modified] internal/controller/scannerregistration_controller.go
+2026-04-23T09:32:08.5270051Z [modified] internal/controller/scannerregistration_controller_test.go
+2026-04-23T09:32:08.5271394Z [modified] internal/controller/secrets.go
+2026-04-23T09:32:08.5272889Z [modified] internal/controller/singletons.go
+2026-04-23T09:32:08.5273995Z [modified] internal/controller/singletons_test.go
+2026-04-23T09:32:08.5275211Z [modified] internal/controller/user_controller.go
+2026-04-23T09:32:08.5276549Z [modified] internal/controller/user_controller_test.go
+2026-04-23T09:32:08.5277886Z [modified] internal/controller/usergroup_controller.go
+2026-04-23T09:32:08.5279516Z [modified] internal/controller/usergroup_controller_test.go
+2026-04-23T09:32:08.5280942Z [modified] internal/controller/validation_test.go
+2026-04-23T09:32:08.5282318Z [modified] internal/controller/webhookpolicy_controller.go
+2026-04-23T09:32:08.5283791Z [modified] internal/controller/webhookpolicy_controller_test.go
+2026-04-23T09:32:08.5285231Z [modified] internal/harborclient/immutable.go
+2026-04-23T09:32:08.5286438Z [modified] internal/harborclient/members.go
+2026-04-23T09:32:08.5287629Z [modified] internal/harborclient/webhook.go
+2026-04-23T09:32:08.5289928Z ##[endgroup]
+2026-04-23T09:32:08.5290716Z Detected 129 changed files
+2026-04-23T09:32:08.5291561Z Results:
+2026-04-23T09:32:08.5292843Z ##[group]Filter e2e = true
+2026-04-23T09:32:08.5293704Z Matching files:
+2026-04-23T09:32:08.5294470Z Makefile [modified]
+2026-04-23T09:32:08.5295310Z api/v1alpha1/common.go [modified]
+2026-04-23T09:32:08.5296425Z api/v1alpha1/immutabletagrule_types.go [modified]
+2026-04-23T09:32:08.5297872Z api/v1alpha1/label_types.go [modified]
+2026-04-23T09:32:08.5299235Z api/v1alpha1/member_types.go [modified]
+2026-04-23T09:32:08.5300293Z api/v1alpha1/project_types.go [modified]
+2026-04-23T09:32:08.5301792Z api/v1alpha1/quota_types.go [modified]
+2026-04-23T09:32:08.5303036Z api/v1alpha1/registry_types.go [modified]
+2026-04-23T09:32:08.5304322Z api/v1alpha1/replicationpolicy_types.go [modified]
+2026-04-23T09:32:08.5305438Z api/v1alpha1/robot_types.go [modified]
+2026-04-23T09:32:08.5306531Z api/v1alpha1/scannerregistration_types.go [modified]
+2026-04-23T09:32:08.5307655Z api/v1alpha1/user_types.go [modified]
+2026-04-23T09:32:08.5308903Z api/v1alpha1/usergroup_types.go [modified]
+2026-04-23T09:32:08.5310301Z api/v1alpha1/webhookpolicy_types.go [modified]
+2026-04-23T09:32:08.5312276Z api/v1alpha1/zz_generated.deepcopy.go [modified]
+2026-04-23T09:32:08.5314150Z charts/harbor-operator/README.md [modified]
+2026-04-23T09:32:08.5316759Z charts/harbor-operator/crds/harbor.harbor-operator.io_configurations.yaml [modified]
+2026-04-23T09:32:08.5320443Z charts/harbor-operator/crds/harbor.harbor-operator.io_gcschedules.yaml [modified]
+2026-04-23T09:32:08.5323876Z charts/harbor-operator/crds/harbor.harbor-operator.io_immutabletagrules.yaml [modified]
+2026-04-23T09:32:08.5327344Z charts/harbor-operator/crds/harbor.harbor-operator.io_labels.yaml [modified]
+2026-04-23T09:32:08.5330789Z charts/harbor-operator/crds/harbor.harbor-operator.io_members.yaml [modified]
+2026-04-23T09:32:08.5333857Z charts/harbor-operator/crds/harbor.harbor-operator.io_projects.yaml [modified]
+2026-04-23T09:32:08.5337223Z charts/harbor-operator/crds/harbor.harbor-operator.io_purgeauditschedules.yaml [modified]
+2026-04-23T09:32:08.5340891Z charts/harbor-operator/crds/harbor.harbor-operator.io_quotas.yaml [modified]
+2026-04-23T09:32:08.5344163Z charts/harbor-operator/crds/harbor.harbor-operator.io_registries.yaml [modified]
+2026-04-23T09:32:08.5347977Z charts/harbor-operator/crds/harbor.harbor-operator.io_replicationpolicies.yaml [modified]
+2026-04-23T09:32:08.5352297Z charts/harbor-operator/crds/harbor.harbor-operator.io_retentionpolicies.yaml [modified]
+2026-04-23T09:32:08.5355032Z charts/harbor-operator/crds/harbor.harbor-operator.io_robots.yaml [modified]
+2026-04-23T09:32:08.5357118Z charts/harbor-operator/crds/harbor.harbor-operator.io_scanallschedules.yaml [modified]
+2026-04-23T09:32:08.5359586Z charts/harbor-operator/crds/harbor.harbor-operator.io_scannerregistrations.yaml [modified]
+2026-04-23T09:32:08.5361691Z charts/harbor-operator/crds/harbor.harbor-operator.io_usergroups.yaml [modified]
+2026-04-23T09:32:08.5363556Z charts/harbor-operator/crds/harbor.harbor-operator.io_users.yaml [modified]
+2026-04-23T09:32:08.5365463Z charts/harbor-operator/crds/harbor.harbor-operator.io_webhookpolicies.yaml [modified]
+2026-04-23T09:32:08.5367204Z charts/harbor-operator/templates/deployment.yaml [modified]
+2026-04-23T09:32:08.5368561Z charts/harbor-operator/values.schema.json [modified]
+2026-04-23T09:32:08.5369992Z charts/harbor-operator/values.yaml [modified]
+2026-04-23T09:32:08.5370989Z cmd/main.go [modified]
+2026-04-23T09:32:08.5372168Z config/crd/bases/harbor.harbor-operator.io_configurations.yaml [modified]
+2026-04-23T09:32:08.5373877Z config/crd/bases/harbor.harbor-operator.io_gcschedules.yaml [modified]
+2026-04-23T09:32:08.5375617Z config/crd/bases/harbor.harbor-operator.io_immutabletagrules.yaml [modified]
+2026-04-23T09:32:08.5377313Z config/crd/bases/harbor.harbor-operator.io_labels.yaml [modified]
+2026-04-23T09:32:08.5379047Z config/crd/bases/harbor.harbor-operator.io_members.yaml [modified]
+2026-04-23T09:32:08.5380633Z config/crd/bases/harbor.harbor-operator.io_projects.yaml [modified]
+2026-04-23T09:32:08.5382354Z config/crd/bases/harbor.harbor-operator.io_purgeauditschedules.yaml [modified]
+2026-04-23T09:32:08.5384066Z config/crd/bases/harbor.harbor-operator.io_quotas.yaml [modified]
+2026-04-23T09:32:08.5385679Z config/crd/bases/harbor.harbor-operator.io_registries.yaml [modified]
+2026-04-23T09:32:08.5387595Z config/crd/bases/harbor.harbor-operator.io_replicationpolicies.yaml [modified]
+2026-04-23T09:32:08.5389720Z config/crd/bases/harbor.harbor-operator.io_retentionpolicies.yaml [modified]
+2026-04-23T09:32:08.5391395Z config/crd/bases/harbor.harbor-operator.io_robots.yaml [modified]
+2026-04-23T09:32:08.5393044Z config/crd/bases/harbor.harbor-operator.io_scanallschedules.yaml [modified]
+2026-04-23T09:32:08.5394860Z config/crd/bases/harbor.harbor-operator.io_scannerregistrations.yaml [modified]
+2026-04-23T09:32:08.5396618Z config/crd/bases/harbor.harbor-operator.io_usergroups.yaml [modified]
+2026-04-23T09:32:08.5398198Z config/crd/bases/harbor.harbor-operator.io_users.yaml [modified]
+2026-04-23T09:32:08.5400285Z config/crd/bases/harbor.harbor-operator.io_webhookpolicies.yaml [modified]
+2026-04-23T09:32:08.5401806Z config/samples/harbor_v1alpha1_member.yaml [modified]
+2026-04-23T09:32:08.5403063Z config/samples/harbor_v1alpha1_project.yaml [modified]
+2026-04-23T09:32:08.5404320Z config/samples/harbor_v1alpha1_registry.yaml [modified]
+2026-04-23T09:32:08.5405711Z config/samples/harbor_v1alpha1_replicationpolicy.yaml [modified]
+2026-04-23T09:32:08.5407244Z config/samples/harbor_v1alpha1_scannerregistration.yaml [modified]
+2026-04-23T09:32:08.5408612Z config/samples/harbor_v1alpha1_user.yaml [modified]
+2026-04-23T09:32:08.5410174Z config/samples/harbor_v1alpha1_usergroup.yaml [modified]
+2026-04-23T09:32:08.5411309Z hack/mkdocs.yml [modified]
+2026-04-23T09:32:08.5412176Z internal/controller/common.go [modified]
+2026-04-23T09:32:08.5413200Z internal/controller/conditions.go [modified]
+2026-04-23T09:32:08.5414412Z internal/controller/configuration_controller.go [modified]
+2026-04-23T09:32:08.5415837Z internal/controller/configuration_controller_test.go [modified]
+2026-04-23T09:32:08.5417147Z internal/controller/gc_controller.go [modified]
+2026-04-23T09:32:08.5418297Z internal/controller/gc_controller_test.go [modified]
+2026-04-23T09:32:08.5420042Z internal/controller/immutabletagrule_controller.go [modified]
+2026-04-23T09:32:08.5421561Z internal/controller/immutabletagrule_controller_test.go [modified]
+2026-04-23T09:32:08.5422927Z internal/controller/label_controller.go [modified]
+2026-04-23T09:32:08.5424138Z internal/controller/label_controller_test.go [modified]
+2026-04-23T09:32:08.5425361Z internal/controller/member_controller.go [modified]
+2026-04-23T09:32:08.5426603Z internal/controller/member_controller_test.go [modified]
+2026-04-23T09:32:08.5427761Z internal/controller/options.go [added]
+2026-04-23T09:32:08.5429366Z internal/controller/project_controller.go [modified]
+2026-04-23T09:32:08.5430737Z internal/controller/project_controller_test.go [modified]
+2026-04-23T09:32:08.5432057Z internal/controller/purgeaudit_controller.go [modified]
+2026-04-23T09:32:08.5433396Z internal/controller/purgeaudit_controller_test.go [modified]
+2026-04-23T09:32:08.5434684Z internal/controller/quota_controller.go [modified]
+2026-04-23T09:32:08.5435916Z internal/controller/quota_controller_test.go [modified]
+2026-04-23T09:32:08.5437181Z internal/controller/registry_controller.go [modified]
+2026-04-23T09:32:08.5438475Z internal/controller/registry_controller_test.go [modified]
+2026-04-23T09:32:08.5440154Z internal/controller/replicationpolicy_controller.go [modified]
+2026-04-23T09:32:08.5441680Z internal/controller/replicationpolicy_controller_test.go [modified]
+2026-04-23T09:32:08.5443119Z internal/controller/retention_controller.go [modified]
+2026-04-23T09:32:08.5444464Z internal/controller/retention_controller_test.go [modified]
+2026-04-23T09:32:08.5445776Z internal/controller/robot_controller.go [modified]
+2026-04-23T09:32:08.5447025Z internal/controller/robot_controller_test.go [modified]
+2026-04-23T09:32:08.5448395Z internal/controller/scanallschedule_controller.go [modified]
+2026-04-23T09:32:08.5450148Z internal/controller/scanallschedule_controller_test.go [modified]
+2026-04-23T09:32:08.5451714Z internal/controller/scannerregistration_controller.go [modified]
+2026-04-23T09:32:08.5453332Z internal/controller/scannerregistration_controller_test.go [modified]
+2026-04-23T09:32:08.5454862Z internal/controller/secrets.go [modified]
+2026-04-23T09:32:08.5455972Z internal/controller/singletons.go [modified]
+2026-04-23T09:32:08.5457096Z internal/controller/singletons_test.go [modified]
+2026-04-23T09:32:08.5458279Z internal/controller/user_controller.go [modified]
+2026-04-23T09:32:08.5459789Z internal/controller/user_controller_test.go [modified]
+2026-04-23T09:32:08.5461079Z internal/controller/usergroup_controller.go [modified]
+2026-04-23T09:32:08.5462420Z internal/controller/usergroup_controller_test.go [modified]
+2026-04-23T09:32:08.5463691Z internal/controller/validation_test.go [modified]
+2026-04-23T09:32:08.5464972Z internal/controller/webhookpolicy_controller.go [modified]
+2026-04-23T09:32:08.5466413Z internal/controller/webhookpolicy_controller_test.go [modified]
+2026-04-23T09:32:08.5467744Z internal/harborclient/immutable.go [modified]
+2026-04-23T09:32:08.5469062Z internal/harborclient/members.go [modified]
+2026-04-23T09:32:08.5470162Z internal/harborclient/webhook.go [modified]
+2026-04-23T09:32:08.5471681Z ##[endgroup]
+2026-04-23T09:32:08.5472412Z Changes output set to ["e2e"]
+2026-04-23T09:32:08.5654020Z ##[group]Run actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+2026-04-23T09:32:08.5655275Z with:
+2026-04-23T09:32:08.5655961Z   go-version-file: go.mod
+2026-04-23T09:32:08.5656782Z   check-latest: false
+2026-04-23T09:32:08.5657809Z   token: ***
+2026-04-23T09:32:08.5658472Z   cache: true
+2026-04-23T09:32:08.5659571Z ##[endgroup]
+2026-04-23T09:32:08.7010091Z Setup go version spec 1.26.0
+2026-04-23T09:32:08.7022665Z Attempting to download 1.26.0...
+2026-04-23T09:32:09.1052484Z matching 1.26.0...
+2026-04-23T09:32:09.1092577Z Acquiring 1.26.0 from https://github.com/actions/go-versions/releases/download/1.26.0-21889650668/go-1.26.0-linux-x64.tar.gz
+2026-04-23T09:32:09.5780993Z Extracting Go...
+2026-04-23T09:32:09.5935669Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/dc2e537a-d1ca-4e3e-a360-267587013585 -f /home/runner/work/_temp/08e6236a-1be9-45a5-9030-2d317df558d8
+2026-04-23T09:32:11.2157312Z Successfully extracted go to /home/runner/work/_temp/dc2e537a-d1ca-4e3e-a360-267587013585
+2026-04-23T09:32:11.2158293Z Adding to the cache ...
+2026-04-23T09:32:16.6666674Z Successfully cached go to /opt/hostedtoolcache/go/1.26.0/x64
+2026-04-23T09:32:16.6667376Z Added go to the path
+2026-04-23T09:32:16.6689541Z Successfully set up Go version 1.26.0
+2026-04-23T09:32:16.6882680Z [command]/opt/hostedtoolcache/go/1.26.0/x64/bin/go env GOMODCACHE
+2026-04-23T09:32:16.6912167Z [command]/opt/hostedtoolcache/go/1.26.0/x64/bin/go env GOCACHE
+2026-04-23T09:32:16.6941787Z /home/runner/go/pkg/mod
+2026-04-23T09:32:16.6956944Z /home/runner/.cache/go-build
+2026-04-23T09:32:16.7692281Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.26.0-a4d3b71d67b9cb469ca5b6adea693d34bdd736d3202a6c3faa841f2c5941d505
+2026-04-23T09:32:17.3339482Z Received 113952232 of 113952232 (100.0%), 212.7 MBs/sec
+2026-04-23T09:32:17.3340585Z Cache Size: ~109 MB (113952232 B)
+2026-04-23T09:32:17.3380193Z [command]/usr/bin/tar -xf /home/runner/work/_temp/f49a83aa-873e-4695-af35-75b4b623769b/cache.tzst -P -C /home/runner/work/harbor-operator/harbor-operator --use-compress-program unzstd
+2026-04-23T09:32:18.4576590Z Cache restored successfully
+2026-04-23T09:32:18.4632796Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.26.0-a4d3b71d67b9cb469ca5b6adea693d34bdd736d3202a6c3faa841f2c5941d505
+2026-04-23T09:32:18.4661476Z go version go1.26.0 linux/amd64
+2026-04-23T09:32:18.4661719Z 
+2026-04-23T09:32:18.4662025Z ##[group]go env
+2026-04-23T09:32:18.4800736Z AR='ar'
+2026-04-23T09:32:18.4801173Z CC='gcc'
+2026-04-23T09:32:18.4801517Z CGO_CFLAGS='-O2 -g'
+2026-04-23T09:32:18.4801936Z CGO_CPPFLAGS=''
+2026-04-23T09:32:18.4802376Z CGO_CXXFLAGS='-O2 -g'
+2026-04-23T09:32:18.4802843Z CGO_ENABLED='1'
+2026-04-23T09:32:18.4803263Z CGO_FFLAGS='-O2 -g'
+2026-04-23T09:32:18.4803734Z CGO_LDFLAGS='-O2 -g'
+2026-04-23T09:32:18.4804137Z CXX='g++'
+2026-04-23T09:32:18.4804513Z GCCGO='gccgo'
+2026-04-23T09:32:18.4804884Z GO111MODULE=''
+2026-04-23T09:32:18.4805297Z GOAMD64='v1'
+2026-04-23T09:32:18.4805678Z GOARCH='amd64'
+2026-04-23T09:32:18.4806105Z GOAUTH='netrc'
+2026-04-23T09:32:18.4806480Z GOBIN=''
+2026-04-23T09:32:18.4806895Z GOCACHE='/home/runner/.cache/go-build'
+2026-04-23T09:32:18.4807445Z GOCACHEPROG=''
+2026-04-23T09:32:18.4807824Z GODEBUG=''
+2026-04-23T09:32:18.4808228Z GOENV='/home/runner/.config/go/env'
+2026-04-23T09:32:18.4809044Z GOEXE=''
+2026-04-23T09:32:18.4809417Z GOEXPERIMENT=''
+2026-04-23T09:32:18.4809824Z GOFIPS140='off'
+2026-04-23T09:32:18.4810202Z GOFLAGS=''
+2026-04-23T09:32:18.4811375Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build1791183808=/tmp/go-build -gno-record-gcc-switches'
+2026-04-23T09:32:18.4812440Z GOHOSTARCH='amd64'
+2026-04-23T09:32:18.4812773Z GOHOSTOS='linux'
+2026-04-23T09:32:18.4813085Z GOINSECURE=''
+2026-04-23T09:32:18.4813573Z GOMOD='/home/runner/work/harbor-operator/harbor-operator/go.mod'
+2026-04-23T09:32:18.4814198Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-04-23T09:32:18.4814602Z GONOPROXY=''
+2026-04-23T09:32:18.4815175Z GONOSUMDB=''
+2026-04-23T09:32:18.4815503Z GOOS='linux'
+2026-04-23T09:32:18.4815838Z GOPATH='/home/runner/go'
+2026-04-23T09:32:18.4816182Z GOPRIVATE=''
+2026-04-23T09:32:18.4816704Z GOPROXY='https://proxy.golang.org,direct'
+2026-04-23T09:32:18.4817222Z GOROOT='/opt/hostedtoolcache/go/1.26.0/x64'
+2026-04-23T09:32:18.4817668Z GOSUMDB='sum.golang.org'
+2026-04-23T09:32:18.4818028Z GOTELEMETRY='local'
+2026-04-23T09:32:18.4818445Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-04-23T09:32:18.4819138Z GOTMPDIR=''
+2026-04-23T09:32:18.4819441Z GOTOOLCHAIN='local'
+2026-04-23T09:32:18.4819924Z GOTOOLDIR='/opt/hostedtoolcache/go/1.26.0/x64/pkg/tool/linux_amd64'
+2026-04-23T09:32:18.4820483Z GOVCS=''
+2026-04-23T09:32:18.4821039Z GOVERSION='go1.26.0'
+2026-04-23T09:32:18.4821641Z GOWORK=''
+2026-04-23T09:32:18.4821986Z PKG_CONFIG='pkg-config'
+2026-04-23T09:32:18.4822221Z 
+2026-04-23T09:32:18.4822588Z ##[endgroup]
+2026-04-23T09:32:18.5021785Z ##[group]Run curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+2026-04-23T09:32:18.5022449Z [36;1mcurl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64[0m
+2026-04-23T09:32:18.5022873Z [36;1mchmod +x ./kind[0m
+2026-04-23T09:32:18.5023124Z [36;1msudo mv ./kind /usr/local/bin/kind[0m
+2026-04-23T09:32:18.5150428Z shell: /usr/bin/bash -e {0}
+2026-04-23T09:32:18.5150750Z env:
+2026-04-23T09:32:18.5150981Z   GOTOOLCHAIN: local
+2026-04-23T09:32:18.5151254Z ##[endgroup]
+2026-04-23T09:32:18.5300791Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-04-23T09:32:18.5302364Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-04-23T09:32:18.5302770Z 
+2026-04-23T09:32:18.5836512Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-04-23T09:32:18.5931399Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-04-23T09:32:18.5932293Z 100    86  100    86    0     0   1360      0 --:--:-- --:--:-- --:--:--  1343
+2026-04-23T09:32:18.7141974Z 
+2026-04-23T09:32:18.7142642Z 100 9976k  100 9976k    0     0  52.8M      0 --:--:-- --:--:-- --:--:-- 52.8M
+2026-04-23T09:32:18.7343177Z ##[group]Run azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2
+2026-04-23T09:32:18.7343568Z with:
+2026-04-23T09:32:18.7343749Z   version: latest
+2026-04-23T09:32:18.7344048Z   token: ***
+2026-04-23T09:32:18.7344266Z   downloadBaseURL: https://get.helm.sh
+2026-04-23T09:32:18.7344531Z env:
+2026-04-23T09:32:18.7344703Z   GOTOOLCHAIN: local
+2026-04-23T09:32:18.7344925Z ##[endgroup]
+2026-04-23T09:32:18.8593394Z ##[group]Installing v4.1.4
+2026-04-23T09:32:18.8602316Z Downloading 'v4.1.4' from 'https://get.helm.sh'
+2026-04-23T09:32:19.0134273Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/fdd532ba-42e5-4bd5-bbd9-a4ea908ee2f5 -f /home/runner/work/_temp/b1a36024-0ed7-4a43-9b64-8958615d92de
+2026-04-23T09:32:19.4307407Z ##[endgroup]
+2026-04-23T09:32:19.4310625Z Helm tool version 'v4.1.4' has been cached at /opt/hostedtoolcache/helm/4.1.4/x64/linux-amd64/helm
+2026-04-23T09:32:19.4439117Z ##[group]Run kind version
+2026-04-23T09:32:19.4439417Z [36;1mkind version[0m
+2026-04-23T09:32:19.4493610Z shell: /usr/bin/bash -e {0}
+2026-04-23T09:32:19.4493872Z env:
+2026-04-23T09:32:19.4494069Z   GOTOOLCHAIN: local
+2026-04-23T09:32:19.4494290Z ##[endgroup]
+2026-04-23T09:32:19.4592050Z kind v0.32.0-alpha+2a0ee8aca75b91 go1.25.7 linux/amd64
+2026-04-23T09:32:19.4626120Z ##[group]Run make kind-up
+2026-04-23T09:32:19.4626385Z [36;1mmake kind-up[0m
+2026-04-23T09:32:19.4678952Z shell: /usr/bin/bash -e {0}
+2026-04-23T09:32:19.4679237Z env:
+2026-04-23T09:32:19.4679429Z   GOTOOLCHAIN: local
+2026-04-23T09:32:19.4679640Z ##[endgroup]
+2026-04-23T09:32:19.5054120Z kind create cluster --config hack/kind-configuration.yaml
+2026-04-23T09:32:23.1066285Z Creating cluster "kind" ...
+2026-04-23T09:32:23.1067127Z  • Ensuring node image (kindest/node:v1.35.1) 🖼  ...
+2026-04-23T09:32:32.2640515Z  ✓ Ensuring node image (kindest/node:v1.35.1) 🖼
+2026-04-23T09:32:32.2640984Z  • Preparing nodes 📦   ...
+2026-04-23T09:32:35.0171871Z  ✓ Preparing nodes 📦 
+2026-04-23T09:32:35.0413080Z  • Writing configuration 📜  ...
+2026-04-23T09:32:35.2183839Z  ✓ Writing configuration 📜
+2026-04-23T09:32:35.2184505Z  • Starting control-plane 🕹️  ...
+2026-04-23T09:32:43.3109571Z  ✓ Starting control-plane 🕹️
+2026-04-23T09:32:43.3110169Z  • Installing CNI 🔌  ...
+2026-04-23T09:32:43.6140201Z  ✓ Installing CNI 🔌
+2026-04-23T09:32:43.6140849Z  • Installing StorageClass 💾  ...
+2026-04-23T09:32:43.9348964Z  ✓ Installing StorageClass 💾
+2026-04-23T09:32:44.0869816Z Set kubectl context to "kind-kind"
+2026-04-23T09:32:44.0870674Z You can now use your cluster with:
+2026-04-23T09:32:44.0871092Z 
+2026-04-23T09:32:44.0871328Z kubectl cluster-info --context kind-kind
+2026-04-23T09:32:44.0871998Z 
+2026-04-23T09:32:44.0872835Z Have a question, bug, or feature request? Let us know! https://kind.sigs.k8s.io/#community 🙂
+2026-04-23T09:32:44.0873560Z make kind-install-stack
+2026-04-23T09:32:44.0903074Z make[1]: Entering directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:32:44.1190917Z helm upgrade --install traefik oci://ghcr.io/traefik/helm/traefik\
+2026-04-23T09:32:44.1191857Z 	--set service.type=NodePort \
+2026-04-23T09:32:44.1192811Z 	--set ports.web.nodePort=30080 \
+2026-04-23T09:32:44.1193578Z 	--set ports.websecure.nodePort=30443 \
+2026-04-23T09:32:44.1194318Z 	--wait
+2026-04-23T09:32:44.1639619Z Release "traefik" does not exist. Installing it now.
+2026-04-23T09:32:44.3896856Z Pulled: ghcr.io/traefik/helm/traefik:39.0.8
+2026-04-23T09:32:44.3898133Z Digest: sha256:baa910dec2c10f6e981e2c81d2c011b430f666ad92c3d96b2394209ebb66a96e
+2026-04-23T09:33:05.6106249Z NAME: traefik
+2026-04-23T09:33:05.6119682Z LAST DEPLOYED: Thu Apr 23 09:32:45 2026
+2026-04-23T09:33:05.6120383Z NAMESPACE: default
+2026-04-23T09:33:05.6120726Z STATUS: deployed
+2026-04-23T09:33:05.6121049Z REVISION: 1
+2026-04-23T09:33:05.6121383Z DESCRIPTION: Install complete
+2026-04-23T09:33:05.6121764Z TEST SUITE: None
+2026-04-23T09:33:05.6122045Z NOTES:
+2026-04-23T09:33:05.6122720Z traefik with docker.io/traefik:v3.6.13 has been deployed successfully on default namespace!
+2026-04-23T09:33:05.6125604Z helm repo add harbor https://helm.goharbor.io --force-update
+2026-04-23T09:33:05.7137816Z "harbor" has been added to your repositories
+2026-04-23T09:33:05.7145049Z helm upgrade --install harbor harbor/harbor --wait
+2026-04-23T09:33:05.7581384Z Release "harbor" does not exist. Installing it now.
+2026-04-23T09:34:14.7173272Z NAME: harbor
+2026-04-23T09:34:14.7179568Z LAST DEPLOYED: Thu Apr 23 09:33:05 2026
+2026-04-23T09:34:14.7180053Z NAMESPACE: default
+2026-04-23T09:34:14.7180364Z STATUS: deployed
+2026-04-23T09:34:14.7180560Z REVISION: 1
+2026-04-23T09:34:14.7180766Z DESCRIPTION: Install complete
+2026-04-23T09:34:14.7181029Z TEST SUITE: None
+2026-04-23T09:34:14.7181215Z NOTES:
+2026-04-23T09:34:14.7181510Z Please wait for several minutes for Harbor deployment to complete.
+2026-04-23T09:34:14.7183719Z Then you should be able to visit the Harbor portal at https://core.harbor.domain
+2026-04-23T09:34:14.7184701Z For more details, please visit https://github.com/goharbor/harbor
+2026-04-23T09:34:14.7189653Z make kind-deploy
+2026-04-23T09:34:14.7220215Z make[2]: Entering directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:34:14.7517482Z Building local image...
+2026-04-23T09:34:14.7519387Z make docker-build
+2026-04-23T09:34:14.7548019Z make[3]: Entering directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:34:14.7822923Z docker build -t harbor-operator:local .
+2026-04-23T09:34:15.4020252Z #0 building with "default" instance using docker driver
+2026-04-23T09:34:15.4020733Z 
+2026-04-23T09:34:15.4020983Z #1 [internal] load build definition from Dockerfile
+2026-04-23T09:34:15.4021679Z #1 transferring dockerfile: 595B 0.0s done
+2026-04-23T09:34:15.4022253Z #1 DONE 0.0s
+2026-04-23T09:34:15.4022462Z 
+2026-04-23T09:34:15.4022770Z #2 [auth] library/golang:pull token for registry-1.docker.io
+2026-04-23T09:34:15.4023270Z #2 DONE 0.0s
+2026-04-23T09:34:15.4023422Z 
+2026-04-23T09:34:15.4024261Z #3 [internal] load metadata for docker.io/library/golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36
+2026-04-23T09:34:15.5896421Z #3 DONE 0.4s
+2026-04-23T09:34:15.5896932Z 
+2026-04-23T09:34:15.5897993Z #4 [internal] load metadata for gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
+2026-04-23T09:34:15.7874074Z #4 DONE 0.6s
+2026-04-23T09:34:15.9499685Z 
+2026-04-23T09:34:15.9500266Z #5 [internal] load .dockerignore
+2026-04-23T09:34:15.9500682Z #5 transferring context: 160B done
+2026-04-23T09:34:15.9501005Z #5 DONE 0.0s
+2026-04-23T09:34:15.9501150Z 
+2026-04-23T09:34:15.9501278Z #6 [internal] load build context
+2026-04-23T09:34:15.9501948Z #6 transferring context: 528.12kB 0.0s done
+2026-04-23T09:34:15.9502286Z #6 DONE 0.0s
+2026-04-23T09:34:15.9502428Z 
+2026-04-23T09:34:15.9502956Z #7 [builder 1/8] FROM docker.io/library/golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36
+2026-04-23T09:34:15.9504196Z #7 resolve docker.io/library/golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36 done
+2026-04-23T09:34:15.9505235Z #7 sha256:827331d697aaa7923ff6b6c107edf772875f40b58cfca6c3ddfa155668ce0edd 3.04kB / 3.04kB done
+2026-04-23T09:34:15.9506196Z #7 sha256:b53c282df83967299380adbd6a2dc67e750a58217f39285d6240f6f80b19eaad 2.32kB / 2.32kB done
+2026-04-23T09:34:15.9507190Z #7 sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36 9.70kB / 9.70kB done
+2026-04-23T09:34:16.4502430Z #7 sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 0B / 49.30MB 0.6s
+2026-04-23T09:34:16.5513083Z #7 sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 12.58MB / 49.30MB 0.7s
+2026-04-23T09:34:16.5520201Z #7 sha256:f33970743aee750df25f6c661132b7401c8fefe930e5f4803f4c8b6f567a6b55 0B / 25.62MB 0.7s
+2026-04-23T09:34:16.6577066Z #7 ...
+2026-04-23T09:34:16.6579255Z 
+2026-04-23T09:34:16.6580836Z #8 [stage-1 1/2] FROM gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
+2026-04-23T09:34:16.6582590Z #8 resolve gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39 done
+2026-04-23T09:34:16.6584398Z #8 sha256:b4e6f1bfce0a1fba2b5421041552f4a897aada9cd5680926580f9e2c6247a7ae 288.21kB / 288.21kB 0.2s done
+2026-04-23T09:34:16.6585875Z #8 sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39 1.79kB / 1.79kB done
+2026-04-23T09:34:16.6587271Z #8 sha256:fa8ae93e2b3a7478248483e942ff665efa7219c6cd72d7a03c775372076e98dc 85.84kB / 85.84kB 0.1s done
+2026-04-23T09:34:16.6588882Z #8 sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 12.68kB / 12.68kB 0.2s done
+2026-04-23T09:34:16.6590720Z #8 sha256:64c43684e6d2b581d1eb362ea47b6a4defee6a9cac5f7ebbda3daa67e8c9b8e6 2.75kB / 2.75kB done
+2026-04-23T09:34:16.6592101Z #8 sha256:c548d896b58afc6f8b1234d10314f1108f3fc7ff8b356c31801d85d801b3b812 2.93kB / 2.93kB done
+2026-04-23T09:34:16.6592893Z #8 extracting sha256:fa8ae93e2b3a7478248483e942ff665efa7219c6cd72d7a03c775372076e98dc done
+2026-04-23T09:34:16.6593646Z #8 extracting sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+2026-04-23T09:34:16.6594707Z #8 extracting sha256:b4e6f1bfce0a1fba2b5421041552f4a897aada9cd5680926580f9e2c6247a7ae 0.0s done
+2026-04-23T09:34:16.6595563Z #8 sha256:b4242723c53fe4e094eb78569a2c15b6aafb8eb42aa9c3c2666130654a316ae2 254.10kB / 254.10kB 0.3s done
+2026-04-23T09:34:16.6596390Z #8 sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 32.09kB / 32.09kB 0.3s done
+2026-04-23T09:34:16.6597179Z #8 sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a 67B / 67B 0.3s done
+2026-04-23T09:34:16.6597969Z #8 sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 188B / 188B 0.4s done
+2026-04-23T09:34:16.6598945Z #8 sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 123B / 123B 0.5s done
+2026-04-23T09:34:16.6600288Z #8 sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 162B / 162B 0.4s done
+2026-04-23T09:34:16.6601425Z #8 extracting sha256:b4242723c53fe4e094eb78569a2c15b6aafb8eb42aa9c3c2666130654a316ae2 0.0s done
+2026-04-23T09:34:16.6602364Z #8 extracting sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+2026-04-23T09:34:16.6603485Z #8 sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 311B / 311B 0.6s done
+2026-04-23T09:34:16.6604449Z #8 sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 80B / 80B 0.5s done
+2026-04-23T09:34:16.6605105Z #8 sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a 351B / 351B 0.6s done
+2026-04-23T09:34:16.6605950Z #8 extracting sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a done
+2026-04-23T09:34:16.6606554Z #8 extracting sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+2026-04-23T09:34:16.6607155Z #8 extracting sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+2026-04-23T09:34:16.6607755Z #8 extracting sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 done
+2026-04-23T09:34:16.6608340Z #8 extracting sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+2026-04-23T09:34:16.6609127Z #8 extracting sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+2026-04-23T09:34:16.6609809Z #8 sha256:bdfd7f7e5bf6fc27e70b59101db21c3d8284d283884419dd5fe7020583bb79ca 136.99kB / 136.99kB 0.7s done
+2026-04-23T09:34:16.6610465Z #8 extracting sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+2026-04-23T09:34:16.6611254Z #8 extracting sha256:bdfd7f7e5bf6fc27e70b59101db21c3d8284d283884419dd5fe7020583bb79ca done
+2026-04-23T09:34:16.6611745Z #8 DONE 0.8s
+2026-04-23T09:34:16.6611858Z 
+2026-04-23T09:34:16.6612354Z #7 [builder 1/8] FROM docker.io/library/golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36
+2026-04-23T09:34:16.6613550Z #7 sha256:5397da1d1537c4d725f3090c5688a582e14eeaf7743d75d9b38bad1649554987 1.05MB / 67.78MB 0.8s
+2026-04-23T09:34:16.8497882Z #7 sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 40.89MB / 49.30MB 1.0s
+2026-04-23T09:34:16.8502172Z #7 sha256:f33970743aee750df25f6c661132b7401c8fefe930e5f4803f4c8b6f567a6b55 25.62MB / 25.62MB 0.8s done
+2026-04-23T09:34:16.8503416Z #7 sha256:5397da1d1537c4d725f3090c5688a582e14eeaf7743d75d9b38bad1649554987 66.06MB / 67.78MB 1.0s
+2026-04-23T09:34:16.8504999Z #7 sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a 34.60MB / 102.17MB 1.0s
+2026-04-23T09:34:16.9500944Z #7 sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 48.23MB / 49.30MB 1.1s
+2026-04-23T09:34:16.9502483Z #7 sha256:5397da1d1537c4d725f3090c5688a582e14eeaf7743d75d9b38bad1649554987 67.78MB / 67.78MB 1.0s done
+2026-04-23T09:34:16.9503740Z #7 sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a 68.16MB / 102.17MB 1.1s
+2026-04-23T09:34:16.9504954Z #7 sha256:b55da06e3b41084804b2e5dbba71d35d26478b19ba8055d07a393cae22e9935f 16.78MB / 67.22MB 1.1s
+2026-04-23T09:34:17.1484593Z #7 sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 49.30MB / 49.30MB 1.1s done
+2026-04-23T09:34:17.1487470Z #7 sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a 99.61MB / 102.17MB 1.2s
+2026-04-23T09:34:17.1491599Z #7 sha256:b55da06e3b41084804b2e5dbba71d35d26478b19ba8055d07a393cae22e9935f 55.57MB / 67.22MB 1.2s
+2026-04-23T09:34:17.1492794Z #7 extracting sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 0.1s
+2026-04-23T09:34:17.1494103Z #7 sha256:48e102291f75c96b251bde878d5163a895f883816bbf6de39810b683e3770bcd 124B / 124B 1.2s done
+2026-04-23T09:34:17.1495238Z #7 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0B / 32B 1.2s
+2026-04-23T09:34:17.2492775Z #7 sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a 102.17MB / 102.17MB 1.2s done
+2026-04-23T09:34:17.2494201Z #7 sha256:b55da06e3b41084804b2e5dbba71d35d26478b19ba8055d07a393cae22e9935f 67.22MB / 67.22MB 1.4s done
+2026-04-23T09:34:17.2495852Z #7 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 1.2s done
+2026-04-23T09:34:18.5826393Z #7 extracting sha256:a7730063fcfe708b222d34c4f07d633dfe087a28c05c4daaab2fa9943854c155 1.5s done
+2026-04-23T09:34:18.5827761Z #7 extracting sha256:f33970743aee750df25f6c661132b7401c8fefe930e5f4803f4c8b6f567a6b55
+2026-04-23T09:34:19.3560008Z #7 extracting sha256:f33970743aee750df25f6c661132b7401c8fefe930e5f4803f4c8b6f567a6b55 0.6s done
+2026-04-23T09:34:19.5012577Z #7 extracting sha256:5397da1d1537c4d725f3090c5688a582e14eeaf7743d75d9b38bad1649554987
+2026-04-23T09:34:21.8579799Z #7 extracting sha256:5397da1d1537c4d725f3090c5688a582e14eeaf7743d75d9b38bad1649554987 2.2s done
+2026-04-23T09:34:22.0135476Z #7 extracting sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a
+2026-04-23T09:34:24.3891896Z #7 extracting sha256:59c21dfbee0a20016b8b6053efb4c9a5743bb9373bbba6d9f2ee60ad9e53914a 2.2s done
+2026-04-23T09:34:24.7129774Z #7 extracting sha256:b55da06e3b41084804b2e5dbba71d35d26478b19ba8055d07a393cae22e9935f
+2026-04-23T09:34:29.1147479Z #7 extracting sha256:b55da06e3b41084804b2e5dbba71d35d26478b19ba8055d07a393cae22e9935f 4.4s done
+2026-04-23T09:34:29.7409408Z #7 extracting sha256:48e102291f75c96b251bde878d5163a895f883816bbf6de39810b683e3770bcd
+2026-04-23T09:34:29.9667531Z #7 extracting sha256:48e102291f75c96b251bde878d5163a895f883816bbf6de39810b683e3770bcd done
+2026-04-23T09:34:29.9669024Z #7 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 done
+2026-04-23T09:34:29.9669819Z #7 DONE 13.9s
+2026-04-23T09:34:29.9670046Z 
+2026-04-23T09:34:29.9670220Z #9 [builder 2/8] WORKDIR /workspace
+2026-04-23T09:34:29.9670631Z #9 DONE 0.0s
+2026-04-23T09:34:29.9670810Z 
+2026-04-23T09:34:29.9670992Z #10 [builder 3/8] COPY go.mod go.sum ./
+2026-04-23T09:34:29.9671437Z #10 DONE 0.0s
+2026-04-23T09:34:29.9671616Z 
+2026-04-23T09:34:29.9671783Z #11 [builder 4/8] RUN go mod download
+2026-04-23T09:34:34.0451054Z #11 DONE 4.2s
+2026-04-23T09:34:34.2390119Z 
+2026-04-23T09:34:34.2409761Z #12 [builder 5/8] COPY cmd/ cmd/
+2026-04-23T09:34:34.2410221Z #12 DONE 0.0s
+2026-04-23T09:34:34.2410387Z 
+2026-04-23T09:34:34.2410499Z #13 [builder 6/8] COPY api/ api/
+2026-04-23T09:34:34.2410771Z #13 DONE 0.0s
+2026-04-23T09:34:34.2410898Z 
+2026-04-23T09:34:34.2411015Z #14 [builder 7/8] COPY internal/ internal/
+2026-04-23T09:34:34.2411277Z #14 DONE 0.0s
+2026-04-23T09:34:34.2411376Z 
+2026-04-23T09:34:34.2411679Z #15 [builder 8/8] RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/main.go
+2026-04-23T09:35:51.6983268Z #15 DONE 77.6s
+2026-04-23T09:35:51.8829174Z 
+2026-04-23T09:35:51.8830018Z #16 [stage-1 2/2] COPY --from=builder /workspace/manager /manager
+2026-04-23T09:35:51.8830873Z #16 DONE 0.1s
+2026-04-23T09:35:52.0349546Z 
+2026-04-23T09:35:52.0349951Z #17 exporting to image
+2026-04-23T09:35:52.0350240Z #17 exporting layers
+2026-04-23T09:35:52.0691962Z #17 exporting layers 0.2s done
+2026-04-23T09:35:52.0887928Z #17 writing image sha256:70913088be0fb8240f1dbe37b748b2672644e505f19b6877e39e17adde6a73a7 done
+2026-04-23T09:35:52.0889496Z #17 naming to docker.io/library/harbor-operator:local done
+2026-04-23T09:35:52.0890043Z #17 DONE 0.2s
+2026-04-23T09:35:52.0937317Z make[3]: Leaving directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:35:52.0960417Z Loading image into Kind cluster...
+2026-04-23T09:35:52.0961879Z make kind-load-image
+2026-04-23T09:35:52.0991025Z make[3]: Entering directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:35:52.1273662Z kind load docker-image harbor-operator:local --name kind
+2026-04-23T09:35:52.2831974Z Image: "harbor-operator:local" with ID "sha256:70913088be0fb8240f1dbe37b748b2672644e505f19b6877e39e17adde6a73a7" not yet present on node "kind-control-plane", loading...
+2026-04-23T09:35:53.8737624Z make[3]: Leaving directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:35:53.8759240Z Deploying harbor-operator to the cluster...
+2026-04-23T09:35:53.8761124Z make deploy
+2026-04-23T09:35:53.8790178Z make[3]: Entering directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:35:53.9103195Z mkdir -p /home/runner/work/harbor-operator/harbor-operator/bin
+2026-04-23T09:35:53.9190796Z Downloading sigs.k8s.io/controller-tools/cmd/controller-gen@v0.20.1
+2026-04-23T09:35:53.9754109Z go: downloading sigs.k8s.io/controller-tools v0.20.1
+2026-04-23T09:35:54.1144351Z go: downloading golang.org/x/tools v0.40.0
+2026-04-23T09:35:54.1287872Z go: downloading k8s.io/code-generator v0.35.0
+2026-04-23T09:35:54.1289051Z go: downloading k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b
+2026-04-23T09:35:54.2312788Z go: downloading k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+2026-04-23T09:35:54.3129547Z go: downloading github.com/fatih/color v1.18.0
+2026-04-23T09:35:54.3240071Z go: downloading k8s.io/api v0.35.0
+2026-04-23T09:35:54.3243026Z go: downloading gopkg.in/yaml.v3 v3.0.1
+2026-04-23T09:35:54.3649784Z go: downloading sigs.k8s.io/yaml v1.6.0
+2026-04-23T09:35:54.6450451Z go: downloading k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
+2026-04-23T09:35:54.6483303Z go: downloading github.com/google/gnostic-models v0.7.0
+2026-04-23T09:35:54.7121743Z go: downloading golang.org/x/text v0.32.0
+2026-04-23T09:35:54.9067877Z go: downloading github.com/mattn/go-colorable v0.1.13
+2026-04-23T09:35:54.9070409Z go: downloading github.com/mattn/go-isatty v0.0.20
+2026-04-23T09:35:54.9647554Z go: downloading go.yaml.in/yaml/v3 v3.0.4
+2026-04-23T09:35:54.9648386Z go: downloading google.golang.org/protobuf v1.36.8
+2026-04-23T09:35:55.2405162Z go: downloading github.com/go-openapi/jsonreference v0.20.2
+2026-04-23T09:35:55.2408457Z go: downloading github.com/go-openapi/swag v0.23.0
+2026-04-23T09:35:55.2767498Z go: downloading golang.org/x/sys v0.39.0
+2026-04-23T09:35:55.2821033Z go: downloading golang.org/x/mod v0.31.0
+2026-04-23T09:35:55.3422518Z go: downloading golang.org/x/net v0.48.0
+2026-04-23T09:35:55.3512345Z go: downloading github.com/go-openapi/jsonpointer v0.21.0
+2026-04-23T09:35:55.3517486Z go: downloading github.com/mailru/easyjson v0.7.7
+2026-04-23T09:35:55.4499930Z go: downloading github.com/josharian/intern v1.0.0
+2026-04-23T09:36:08.4002088Z /home/runner/work/harbor-operator/harbor-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+2026-04-23T09:36:11.5867064Z /home/runner/work/harbor-operator/harbor-operator/bin/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+2026-04-23T09:36:12.7006727Z ./hack/sync-chart-crds.sh
+2026-04-23T09:36:12.7349629Z Synced CRDs from /home/runner/work/harbor-operator/harbor-operator/config/crd/bases to /home/runner/work/harbor-operator/harbor-operator/charts/harbor-operator/crds
+2026-04-23T09:36:12.7351660Z ./hack/sync-chart-rbac.sh
+2026-04-23T09:36:12.7835407Z Synced RBAC from /home/runner/work/harbor-operator/harbor-operator/config/rbac/role.yaml to /home/runner/work/harbor-operator/harbor-operator/charts/harbor-operator/templates/clusterrole.yaml
+2026-04-23T09:36:12.7837154Z kubectl apply -f charts/harbor-operator/crds
+2026-04-23T09:36:22.0172905Z Warning: unrecognized format "url"
+2026-04-23T09:36:22.0190362Z customresourcedefinition.apiextensions.k8s.io/clusterharborconnections.harbor.harbor-operator.io created
+2026-04-23T09:36:22.0295863Z customresourcedefinition.apiextensions.k8s.io/configurations.harbor.harbor-operator.io created
+2026-04-23T09:36:22.0436815Z customresourcedefinition.apiextensions.k8s.io/gcschedules.harbor.harbor-operator.io created
+2026-04-23T09:36:22.0586393Z customresourcedefinition.apiextensions.k8s.io/harborconnections.harbor.harbor-operator.io created
+2026-04-23T09:36:22.0716856Z customresourcedefinition.apiextensions.k8s.io/immutabletagrules.harbor.harbor-operator.io created
+2026-04-23T09:36:22.0838541Z customresourcedefinition.apiextensions.k8s.io/labels.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1059366Z customresourcedefinition.apiextensions.k8s.io/members.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1188386Z customresourcedefinition.apiextensions.k8s.io/projects.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1293737Z customresourcedefinition.apiextensions.k8s.io/purgeauditschedules.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1420269Z customresourcedefinition.apiextensions.k8s.io/quotas.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1540464Z customresourcedefinition.apiextensions.k8s.io/registries.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1678189Z customresourcedefinition.apiextensions.k8s.io/replicationpolicies.harbor.harbor-operator.io created
+2026-04-23T09:36:22.1964328Z customresourcedefinition.apiextensions.k8s.io/retentionpolicies.harbor.harbor-operator.io created
+2026-04-23T09:36:22.2250401Z customresourcedefinition.apiextensions.k8s.io/robots.harbor.harbor-operator.io created
+2026-04-23T09:36:22.2503296Z customresourcedefinition.apiextensions.k8s.io/scanallschedules.harbor.harbor-operator.io created
+2026-04-23T09:36:22.2691327Z customresourcedefinition.apiextensions.k8s.io/scannerregistrations.harbor.harbor-operator.io created
+2026-04-23T09:36:22.2836183Z customresourcedefinition.apiextensions.k8s.io/usergroups.harbor.harbor-operator.io created
+2026-04-23T09:36:22.3039237Z customresourcedefinition.apiextensions.k8s.io/users.harbor.harbor-operator.io created
+2026-04-23T09:36:22.3198321Z customresourcedefinition.apiextensions.k8s.io/webhookpolicies.harbor.harbor-operator.io created
+2026-04-23T09:36:22.3244073Z kubectl create namespace harbor-operator-system --dry-run=client -o yaml | kubectl apply -f -
+2026-04-23T09:36:22.6302602Z namespace/harbor-operator-system created
+2026-04-23T09:36:22.6351593Z IMG_REPO=$(echo harbor-operator:local | cut -d: -f1); \
+2026-04-23T09:36:22.6352319Z IMG_TAG=$(echo harbor-operator:local | cut -d: -f2); \
+2026-04-23T09:36:22.6352826Z helm upgrade --install harbor-operator ./charts/harbor-operator \
+2026-04-23T09:36:22.6353254Z 	--namespace harbor-operator-system \
+2026-04-23T09:36:22.6353582Z 	--set image.repository=${IMG_REPO} \
+2026-04-23T09:36:22.6354100Z 	--set image.tag=${IMG_TAG} \
+2026-04-23T09:36:22.6354358Z 	--wait
+2026-04-23T09:36:22.6843629Z Release "harbor-operator" does not exist. Installing it now.
+2026-04-23T09:36:35.0835207Z NAME: harbor-operator
+2026-04-23T09:36:35.0837097Z LAST DEPLOYED: Thu Apr 23 09:36:23 2026
+2026-04-23T09:36:35.0837626Z NAMESPACE: harbor-operator-system
+2026-04-23T09:36:35.0838067Z STATUS: deployed
+2026-04-23T09:36:35.0838377Z REVISION: 1
+2026-04-23T09:36:35.0838624Z DESCRIPTION: Install complete
+2026-04-23T09:36:35.0839361Z TEST SUITE: None
+2026-04-23T09:36:35.0849760Z kubectl rollout restart deployment/harbor-operator -n harbor-operator-system
+2026-04-23T09:36:35.1974651Z deployment.apps/harbor-operator restarted
+2026-04-23T09:36:35.2030311Z kubectl rollout status deployment/harbor-operator -n harbor-operator-system --timeout=180s
+2026-04-23T09:36:35.3302221Z Waiting for deployment "harbor-operator" rollout to finish: 1 old replicas are pending termination...
+2026-04-23T09:36:47.0905751Z Waiting for deployment "harbor-operator" rollout to finish: 1 old replicas are pending termination...
+2026-04-23T09:36:47.1085793Z deployment "harbor-operator" successfully rolled out
+2026-04-23T09:36:47.1127858Z make[3]: Leaving directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:36:47.1129178Z make[2]: Leaving directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:36:47.1130462Z make[1]: Leaving directory '/home/runner/work/harbor-operator/harbor-operator'
+2026-04-23T09:36:47.1185198Z ##[group]Run kubectl port-forward -n default svc/harbor-core 8088:80 >/tmp/harbor-port-forward.log 2>&1 &
+2026-04-23T09:36:47.1185996Z [36;1mkubectl port-forward -n default svc/harbor-core 8088:80 >/tmp/harbor-port-forward.log 2>&1 &[0m
+2026-04-23T09:36:47.1186577Z [36;1mexport HARBOR_BASE_URL=http://127.0.0.1:8088[0m
+2026-04-23T09:36:47.1187208Z [36;1mexport HARBOR_IN_CLUSTER_BASE_URL=http://harbor-core.default.svc[0m
+2026-04-23T09:36:47.1187611Z [36;1mexport HARBOR_ADMIN_USER=admin[0m
+2026-04-23T09:36:47.1188214Z [36;1mexport HARBOR_ADMIN_PASSWORD="$(kubectl get secret -n default harbor-core -o jsonpath='{.data.HARBOR_ADMIN_PASSWORD}' | base64 -d)"[0m
+2026-04-23T09:36:47.1189084Z [36;1mmake test-e2e[0m
+2026-04-23T09:36:47.1248464Z shell: /usr/bin/bash -e {0}
+2026-04-23T09:36:47.1249022Z env:
+2026-04-23T09:36:47.1249257Z   GOTOOLCHAIN: local
+2026-04-23T09:36:47.1249471Z ##[endgroup]
+2026-04-23T09:36:47.3666200Z /home/runner/work/harbor-operator/harbor-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+2026-04-23T09:36:48.2683172Z /home/runner/work/harbor-operator/harbor-operator/bin/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+2026-04-23T09:36:49.3310971Z go fmt ./...
+2026-04-23T09:36:49.4896811Z go vet ./...
+2026-04-23T09:36:49.5126202Z go: downloading github.com/onsi/gomega v1.39.1
+2026-04-23T09:36:49.6402486Z go: downloading github.com/google/go-cmp v0.7.0
+2026-04-23T09:38:13.3318464Z go test -tags=e2e ./test/e2e/ -v -ginkgo.v
+2026-04-23T09:38:17.3993648Z === RUN   TestE2E
+2026-04-23T09:38:17.3994037Z   Starting harbor-operator integration test suite
+2026-04-23T09:38:17.4001489Z Running Suite: e2e suite - /home/runner/work/harbor-operator/harbor-operator/test/e2e
+2026-04-23T09:38:17.4001991Z =====================================================================================
+2026-04-23T09:38:17.4002566Z Random Seed: [1m1776937097[0m
+2026-04-23T09:38:17.4002728Z 
+2026-04-23T09:38:17.4002909Z Will run [1m7[0m of [1m7[0m specs
+2026-04-23T09:38:17.4003244Z [38;5;243m------------------------------[0m
+2026-04-23T09:38:17.4003751Z [0m[1m[BeforeSuite] [0m
+2026-04-23T09:38:17.4004303Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_suite_test.go:58[0m
+2026-04-23T09:38:17.4005017Z   [1mSTEP:[0m building the manager(Operator) image [38;5;243m@ 04/23/26 09:38:17.4[0m
+2026-04-23T09:38:17.4005559Z   running: make docker-build IMG=example.com/harbor-operator:v0.0.1
+2026-04-23T09:38:17.6919408Z   [1mSTEP:[0m loading the manager(Operator) image on Kind [38;5;243m@ 04/23/26 09:38:17.691[0m
+2026-04-23T09:38:17.6920291Z   running: kind load docker-image example.com/harbor-operator:v0.0.1 --name kind
+2026-04-23T09:38:17.8481891Z   [1mSTEP:[0m checking if cert manager is installed already [38;5;243m@ 04/23/26 09:38:17.847[0m
+2026-04-23T09:38:17.8482739Z   running: kubectl get crds
+2026-04-23T09:38:17.9729013Z   Installing CertManager...
+2026-04-23T09:38:17.9730189Z   running: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
+2026-04-23T09:38:19.6863995Z   running: kubectl wait deployment.apps/cert-manager-webhook --for condition=Available --namespace cert-manager --timeout 5m
+2026-04-23T09:38:30.4478769Z [38;5;10m[BeforeSuite] PASSED [13.047 seconds][0m
+2026-04-23T09:38:30.4479712Z [38;5;243m------------------------------[0m
+2026-04-23T09:38:30.4480517Z [0mManager [38;5;243mManager [0m[1mshould run successfully[0m
+2026-04-23T09:38:30.4481694Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:162[0m
+2026-04-23T09:38:30.4482901Z   [1mSTEP:[0m creating manager namespace [38;5;243m@ 04/23/26 09:38:30.447[0m
+2026-04-23T09:38:30.4484116Z   running: bash -lc kubectl create namespace harbor-operator-system --dry-run=client -o yaml | kubectl apply -f -
+2026-04-23T09:38:31.0015466Z   [1mSTEP:[0m labeling the namespace to enforce the restricted security policy [38;5;243m@ 04/23/26 09:38:31.001[0m
+2026-04-23T09:38:31.0016860Z   running: kubectl label --overwrite ns harbor-operator-system pod-security.kubernetes.io/enforce=restricted
+2026-04-23T09:38:31.1000595Z   [1mSTEP:[0m deploying the controller-manager [38;5;243m@ 04/23/26 09:38:31.099[0m
+2026-04-23T09:38:31.1001200Z   running: make deploy IMG=example.com/harbor-operator:v0.0.1
+2026-04-23T09:38:58.5508480Z   [1mSTEP:[0m enabling metrics for the Helm deployment [38;5;243m@ 04/23/26 09:38:58.55[0m
+2026-04-23T09:38:58.5510841Z   running: helm upgrade --install harbor-operator ./charts/harbor-operator --namespace harbor-operator-system --set image.repository=example.com/harbor-operator --set image.tag=v0.0.1 --set metrics.enabled=true --wait
+2026-04-23T09:39:11.7584739Z   [1mSTEP:[0m validating that the controller-manager pod is running as expected [38;5;243m@ 04/23/26 09:39:11.757[0m
+2026-04-23T09:39:11.7586374Z   running: kubectl get pods -l app.kubernetes.io/name=harbor-operator,app.kubernetes.io/instance=harbor-operator -o go-template={{ range .items }}{{ if not .metadata.deletionTimestamp }}{{ .metadata.name }}{{ "\n" }}{{ end }}{{ end }} -n harbor-operator-system
+2026-04-23T09:39:11.8592764Z   running: kubectl get pods harbor-operator-65f9699687-qmq99 -o jsonpath={.status.phase} -n harbor-operator-system
+2026-04-23T09:39:11.9539224Z [38;5;10m• [41.506 seconds][0m
+2026-04-23T09:39:11.9539705Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:11.9540574Z [0mManager [38;5;243mManager [0m[1mshould ensure the metrics endpoint is serving metrics[0m
+2026-04-23T09:39:11.9541712Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:194[0m
+2026-04-23T09:39:11.9543516Z   [1mSTEP:[0m creating a ClusterRoleBinding for the service account to allow access to metrics [38;5;243m@ 04/23/26 09:39:11.953[0m
+2026-04-23T09:39:11.9545057Z   running: kubectl apply -f /tmp/harbor-e2e-3427588021.yaml
+2026-04-23T09:39:12.0896793Z   [1mSTEP:[0m validating that the metrics service is available [38;5;243m@ 04/23/26 09:39:12.089[0m
+2026-04-23T09:39:12.0898012Z   running: kubectl get service harbor-operator-metrics -n harbor-operator-system
+2026-04-23T09:39:12.1838163Z   [1mSTEP:[0m getting the service account token [38;5;243m@ 04/23/26 09:39:12.183[0m
+2026-04-23T09:39:12.2693923Z   [1mSTEP:[0m waiting for the metrics endpoint to be ready [38;5;243m@ 04/23/26 09:39:12.269[0m
+2026-04-23T09:39:12.2694952Z   running: kubectl get endpoints harbor-operator-metrics -n harbor-operator-system
+2026-04-23T09:39:12.3679372Z   [1mSTEP:[0m verifying that the controller manager is serving the metrics server [38;5;243m@ 04/23/26 09:39:12.367[0m
+2026-04-23T09:39:12.3680480Z   running: kubectl logs harbor-operator-65f9699687-qmq99 -n harbor-operator-system
+2026-04-23T09:39:12.5452836Z   [1mSTEP:[0m creating the curl-metrics pod to access the metrics endpoint [38;5;243m@ 04/23/26 09:39:12.544[0m
+2026-04-23T09:39:12.5454467Z   running: kubectl run curl-metrics --restart=Never --namespace harbor-operator-system --image=curlimages/curl:latest --overrides {
+2026-04-23T09:39:12.5455321Z   					"spec": {
+2026-04-23T09:39:12.5455855Z   						"containers": [{
+2026-04-23T09:39:12.5456261Z   							"name": "curl",
+2026-04-23T09:39:12.5456975Z   							"image": "curlimages/curl:latest",
+2026-04-23T09:39:12.5457610Z   							"command": ["/bin/sh", "-c"],
+2026-04-23T09:39:12.5481642Z   							"args": ["curl -v -k -H 'Authorization: ***' https://harbor-operator-metrics.harbor-operator-system.svc.cluster.local:8443/metrics"],
+2026-04-23T09:39:12.5482690Z   							"securityContext": {
+2026-04-23T09:39:12.5483271Z   								"allowPrivilegeEscalation": false,
+2026-04-23T09:39:12.5483617Z   								"capabilities": {
+2026-04-23T09:39:12.5483907Z   									"drop": ["ALL"]
+2026-04-23T09:39:12.5484310Z   								},
+2026-04-23T09:39:12.5484794Z   								"runAsNonRoot": true,
+2026-04-23T09:39:12.5485205Z   								"runAsUser": 1000,
+2026-04-23T09:39:12.5485682Z   								"seccompProfile": {
+2026-04-23T09:39:12.5486385Z   									"type": "RuntimeDefault"
+2026-04-23T09:39:12.5486799Z   								}
+2026-04-23T09:39:12.5487044Z   							}
+2026-04-23T09:39:12.5487221Z   						}],
+2026-04-23T09:39:12.5487494Z   						"serviceAccount": "harbor-operator"
+2026-04-23T09:39:12.5487759Z   					}
+2026-04-23T09:39:12.5488031Z   				}
+2026-04-23T09:39:12.6656696Z   [1mSTEP:[0m waiting for the curl-metrics pod to complete. [38;5;243m@ 04/23/26 09:39:12.665[0m
+2026-04-23T09:39:12.6666688Z   running: kubectl get pods curl-metrics -o jsonpath={.status.phase} -n harbor-operator-system
+2026-04-23T09:39:13.7653902Z   running: kubectl get pods curl-metrics -o jsonpath={.status.phase} -n harbor-operator-system
+2026-04-23T09:39:14.9076989Z   running: kubectl get pods curl-metrics -o jsonpath={.status.phase} -n harbor-operator-system
+2026-04-23T09:39:16.0082025Z   running: kubectl get pods curl-metrics -o jsonpath={.status.phase} -n harbor-operator-system
+2026-04-23T09:39:16.1000200Z   [1mSTEP:[0m getting the metrics by checking curl-metrics logs [38;5;243m@ 04/23/26 09:39:16.099[0m
+2026-04-23T09:39:16.1001446Z   [1mSTEP:[0m getting the curl-metrics logs [38;5;243m@ 04/23/26 09:39:16.099[0m
+2026-04-23T09:39:16.1002895Z   running: kubectl logs curl-metrics -n harbor-operator-system
+2026-04-23T09:39:16.2122732Z [38;5;10m• [4.259 seconds][0m
+2026-04-23T09:39:16.2123322Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:16.2124178Z [0mManager [38;5;243mManager [0mHarbor Flow [0m[1mshould reconcile Harbor resources end-to-end[0m
+2026-04-23T09:39:16.2125198Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:300[0m
+2026-04-23T09:39:16.2126176Z   [1mSTEP:[0m applying Harbor CRs [38;5;243m@ 04/23/26 09:39:16.212[0m
+2026-04-23T09:39:16.2126647Z   running: kubectl apply -f /tmp/harbor-e2e-1988790755.yaml
+2026-04-23T09:39:16.7161111Z   [38;5;9m[FAILED][0m in [It] - /home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:443 [38;5;243m@ 04/23/26 09:39:16.715[0m
+2026-04-23T09:39:16.7162470Z   [1mSTEP:[0m Fetching controller manager pod logs [38;5;243m@ 04/23/26 09:39:16.715[0m
+2026-04-23T09:39:16.7163173Z   running: kubectl logs harbor-operator-65f9699687-qmq99 -n harbor-operator-system
+2026-04-23T09:39:16.8089025Z   Controller logs:
+2026-04-23T09:39:16.8089543Z    2026-04-23T09:38:59Z	INFO	setup	starting manager
+2026-04-23T09:39:16.8090234Z   2026-04-23T09:38:59Z	INFO	controller-runtime.metrics	Starting metrics server
+2026-04-23T09:39:16.8090997Z   2026-04-23T09:38:59Z	INFO	setup	disabling http/2
+2026-04-23T09:39:16.8091748Z   2026-04-23T09:38:59Z	INFO	starting server	{"name": "health probe", "addr": "[::]:8081"}
+2026-04-23T09:39:16.8094956Z   I0423 09:38:59.750311       1 leaderelection.go:258] "Attempting to acquire leader lease..." lock="harbor-operator-system/1dd96f58.harbor-operator.io"
+2026-04-23T09:39:16.8096658Z   2026-04-23T09:38:59Z	INFO	controller-runtime.metrics	Serving metrics server	{"bindAddress": ":8443", "secure": true}
+2026-04-23T09:39:16.8098194Z   [1mSTEP:[0m Fetching Kubernetes events [38;5;243m@ 04/23/26 09:39:16.808[0m
+2026-04-23T09:39:16.8099516Z   running: kubectl get events -n harbor-operator-system --sort-by=.lastTimestamp
+2026-04-23T09:39:16.9134169Z   Kubernetes events:
+2026-04-23T09:39:16.9135134Z   LAST SEEN   TYPE     REASON              OBJECT                                  MESSAGE
+2026-04-23T09:39:16.9136633Z   2m53s       Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled up replica set harbor-operator-788b54999 from 0 to 1
+2026-04-23T09:39:16.9138287Z   2m53s       Normal   SuccessfulCreate    replicaset/harbor-operator-788b54999    Created pod: harbor-operator-788b54999-zgmxd
+2026-04-23T09:39:16.9139923Z   2m53s       Normal   Started             pod/harbor-operator-788b54999-zgmxd     Container started
+2026-04-23T09:39:16.9141036Z   2m53s       Normal   Created             pod/harbor-operator-788b54999-zgmxd     Container created
+2026-04-23T09:39:16.9143144Z   2m53s       Normal   Pulled              pod/harbor-operator-788b54999-zgmxd     Container image "harbor-operator:local" already present on machine and can be accessed by the pod
+2026-04-23T09:39:16.9145489Z   2m53s       Normal   Scheduled           pod/harbor-operator-788b54999-zgmxd     Successfully assigned harbor-operator-system/harbor-operator-788b54999-zgmxd to kind-control-plane
+2026-04-23T09:39:16.9147722Z   2m51s       Normal   LeaderElection      lease/1dd96f58.harbor-operator.io       harbor-operator-788b54999-zgmxd_093f8a0f-a090-476d-9979-a70aa66a0032 became leader
+2026-04-23T09:39:16.9150399Z   2m41s       Normal   SuccessfulCreate    replicaset/harbor-operator-64995f88     Created pod: harbor-operator-64995f88-cg2nb
+2026-04-23T09:39:16.9152246Z   2m41s       Normal   Scheduled           pod/harbor-operator-64995f88-cg2nb      Successfully assigned harbor-operator-system/harbor-operator-64995f88-cg2nb to kind-control-plane
+2026-04-23T09:39:16.9154325Z   2m41s       Normal   Pulled              pod/harbor-operator-64995f88-cg2nb      Container image "harbor-operator:local" already present on machine and can be accessed by the pod
+2026-04-23T09:39:16.9156153Z   2m41s       Normal   Created             pod/harbor-operator-64995f88-cg2nb      Container created
+2026-04-23T09:39:16.9157287Z   2m41s       Normal   Started             pod/harbor-operator-64995f88-cg2nb      Container started
+2026-04-23T09:39:16.9159005Z   2m41s       Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled up replica set harbor-operator-64995f88 from 0 to 1
+2026-04-23T09:39:16.9160762Z   2m29s       Normal   SuccessfulDelete    replicaset/harbor-operator-788b54999    Deleted pod: harbor-operator-788b54999-zgmxd
+2026-04-23T09:39:16.9161894Z   2m29s       Normal   Killing             pod/harbor-operator-788b54999-zgmxd     Stopping container manager
+2026-04-23T09:39:16.9163496Z   2m29s       Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled down replica set harbor-operator-788b54999 from 1 to 0
+2026-04-23T09:39:16.9165431Z   2m13s       Normal   LeaderElection      lease/1dd96f58.harbor-operator.io       harbor-operator-64995f88-cg2nb_82dcbe79-5ecf-4348-b464-00a36d767597 became leader
+2026-04-23T09:39:16.9167699Z   42s         Normal   Scheduled           pod/harbor-operator-789b68c6d8-9gnth    Successfully assigned harbor-operator-system/harbor-operator-789b68c6d8-9gnth to kind-control-plane
+2026-04-23T09:39:16.9169962Z   42s         Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled up replica set harbor-operator-789b68c6d8 from 0 to 1
+2026-04-23T09:39:16.9171591Z   42s         Normal   SuccessfulCreate    replicaset/harbor-operator-789b68c6d8   Created pod: harbor-operator-789b68c6d8-9gnth
+2026-04-23T09:39:16.9172931Z   42s         Normal   Created             pod/harbor-operator-789b68c6d8-9gnth    Container created
+2026-04-23T09:39:16.9174692Z   42s         Normal   Pulled              pod/harbor-operator-789b68c6d8-9gnth    Container image "example.com/harbor-operator:v0.0.1" already present on machine and can be accessed by the pod
+2026-04-23T09:39:16.9176380Z   41s         Normal   Started             pod/harbor-operator-789b68c6d8-9gnth    Container started
+2026-04-23T09:39:16.9177589Z   30s         Normal   Killing             pod/harbor-operator-64995f88-cg2nb      Stopping container manager
+2026-04-23T09:39:16.9179277Z   30s         Normal   SuccessfulDelete    replicaset/harbor-operator-64995f88     Deleted pod: harbor-operator-64995f88-cg2nb
+2026-04-23T09:39:16.9180901Z   30s         Normal   SuccessfulCreate    replicaset/harbor-operator-fb5c87796    Created pod: harbor-operator-fb5c87796-ktvwv
+2026-04-23T09:39:16.9182576Z   30s         Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled down replica set harbor-operator-64995f88 from 1 to 0
+2026-04-23T09:39:16.9184336Z   30s         Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled up replica set harbor-operator-fb5c87796 from 0 to 1
+2026-04-23T09:39:16.9186724Z   30s         Normal   Scheduled           pod/harbor-operator-fb5c87796-ktvwv     Successfully assigned harbor-operator-system/harbor-operator-fb5c87796-ktvwv to kind-control-plane
+2026-04-23T09:39:16.9188490Z   29s         Normal   Created             pod/harbor-operator-fb5c87796-ktvwv     Container created
+2026-04-23T09:39:16.9190712Z   29s         Normal   Pulled              pod/harbor-operator-fb5c87796-ktvwv     Container image "example.com/harbor-operator:v0.0.1" already present on machine and can be accessed by the pod
+2026-04-23T09:39:16.9192464Z   29s         Normal   Started             pod/harbor-operator-fb5c87796-ktvwv     Container started
+2026-04-23T09:39:16.9193684Z   18s         Normal   Killing             pod/harbor-operator-789b68c6d8-9gnth    Stopping container manager
+2026-04-23T09:39:16.9195257Z   18s         Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled down replica set harbor-operator-789b68c6d8 from 1 to 0
+2026-04-23T09:39:16.9197047Z   18s         Normal   SuccessfulDelete    replicaset/harbor-operator-789b68c6d8   Deleted pod: harbor-operator-789b68c6d8-9gnth
+2026-04-23T09:39:16.9198439Z   17s         Normal   Started             pod/harbor-operator-65f9699687-qmq99    Container started
+2026-04-23T09:39:16.9200758Z   17s         Normal   Scheduled           pod/harbor-operator-65f9699687-qmq99    Successfully assigned harbor-operator-system/harbor-operator-65f9699687-qmq99 to kind-control-plane
+2026-04-23T09:39:16.9202887Z   17s         Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled up replica set harbor-operator-65f9699687 from 0 to 1
+2026-04-23T09:39:16.9204622Z   17s         Normal   SuccessfulCreate    replicaset/harbor-operator-65f9699687   Created pod: harbor-operator-65f9699687-qmq99
+2026-04-23T09:39:16.9206011Z   17s         Normal   Created             pod/harbor-operator-65f9699687-qmq99    Container created
+2026-04-23T09:39:16.9207884Z   17s         Normal   Pulled              pod/harbor-operator-65f9699687-qmq99    Container image "example.com/harbor-operator:v0.0.1" already present on machine and can be accessed by the pod
+2026-04-23T09:39:16.9210506Z   13s         Normal   LeaderElection      lease/1dd96f58.harbor-operator.io       harbor-operator-fb5c87796-ktvwv_e500f4c7-12c0-4d84-826e-bec8dca527a1 became leader
+2026-04-23T09:39:16.9212166Z   5s          Normal   Killing             pod/harbor-operator-fb5c87796-ktvwv     Stopping container manager
+2026-04-23T09:39:16.9213620Z   5s          Normal   SuccessfulDelete    replicaset/harbor-operator-fb5c87796    Deleted pod: harbor-operator-fb5c87796-ktvwv
+2026-04-23T09:39:16.9215394Z   5s          Normal   ScalingReplicaSet   deployment/harbor-operator              Scaled down replica set harbor-operator-fb5c87796 from 1 to 0
+2026-04-23T09:39:16.9217253Z   4s          Normal   Scheduled           pod/curl-metrics                        Successfully assigned harbor-operator-system/curl-metrics to kind-control-plane
+2026-04-23T09:39:16.9219125Z   3s          Normal   Pulling             pod/curl-metrics                        Pulling image "curlimages/curl:latest"
+2026-04-23T09:39:16.9220317Z   3s          Normal   Started             pod/curl-metrics                        Container started
+2026-04-23T09:39:16.9221405Z   3s          Normal   Created             pod/curl-metrics                        Container created
+2026-04-23T09:39:16.9223159Z   3s          Normal   Pulled              pod/curl-metrics                        Successfully pulled image "curlimages/curl:latest" in 669ms (669ms including waiting). Image size: 10605753 bytes.
+2026-04-23T09:39:16.9225029Z   [1mSTEP:[0m Fetching curl-metrics logs [38;5;243m@ 04/23/26 09:39:16.913[0m
+2026-04-23T09:39:16.9225939Z   running: kubectl logs curl-metrics -n harbor-operator-system
+2026-04-23T09:39:17.0228484Z   Metrics logs:
+2026-04-23T09:39:17.0229580Z      % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+2026-04-23T09:39:17.0232258Z                                    Dload  Upload  Total   Spent   Left   Speed
+2026-04-23T09:39:17.0232923Z   
+2026-04-23T09:39:17.0234153Z   0      0   0      0   0      0      0      0                              0* Host harbor-operator-metrics.harbor-operator-system.svc.cluster.local:8443 was resolved.
+2026-04-23T09:39:17.0235286Z   * IPv6: (none)
+2026-04-23T09:39:17.0235634Z   * IPv4: 10.96.24.8
+2026-04-23T09:39:17.0236013Z   *   Trying 10.96.24.8:8443...
+2026-04-23T09:39:17.0236452Z   * ALPN: curl offers h2,http/1.1
+2026-04-23T09:39:17.0236874Z   } [5 bytes data]
+2026-04-23T09:39:17.0237329Z   * TLSv1.3 (OUT), TLS handshake, Client hello (1):
+2026-04-23T09:39:17.0237835Z   } [1610 bytes data]
+2026-04-23T09:39:17.0238254Z   * SSL Trust: peer verification disabled
+2026-04-23T09:39:17.0239013Z   { [5 bytes data]
+2026-04-23T09:39:17.0239483Z   * TLSv1.3 (IN), TLS handshake, Server hello (2):
+2026-04-23T09:39:17.0239985Z   { [1210 bytes data]
+2026-04-23T09:39:17.0240509Z   * TLSv1.3 (IN), TLS change cipher, Change cipher spec (1):
+2026-04-23T09:39:17.0241047Z   { [1 bytes data]
+2026-04-23T09:39:17.0241534Z   * TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+2026-04-23T09:39:17.0242066Z   { [25 bytes data]
+2026-04-23T09:39:17.0242723Z   * TLSv1.3 (IN), TLS handshake, Certificate (11):
+2026-04-23T09:39:17.0243222Z   { [1623 bytes data]
+2026-04-23T09:39:17.0243668Z   * TLSv1.3 (IN), TLS handshake, CERT verify (15):
+2026-04-23T09:39:17.0244154Z   { [264 bytes data]
+2026-04-23T09:39:17.0244595Z   * TLSv1.3 (IN), TLS handshake, Finished (20):
+2026-04-23T09:39:17.0245064Z   { [36 bytes data]
+2026-04-23T09:39:17.0245568Z   * TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+2026-04-23T09:39:17.0246108Z   } [1 bytes data]
+2026-04-23T09:39:17.0246528Z   * TLSv1.3 (OUT), TLS handshake, Finished (20):
+2026-04-23T09:39:17.0247007Z   } [36 bytes data]
+2026-04-23T09:39:17.0247680Z   * SSL connection using TLSv1.3 / TLS_AES_128_GCM_SHA256 / X25519MLKEM768 / RSASSA-PSS
+2026-04-23T09:39:17.0248397Z   * ALPN: server accepted http/1.1
+2026-04-23T09:39:17.0249423Z   * Server certificate:
+2026-04-23T09:39:17.0249869Z   *   subject: CN=localhost@1776937139
+2026-04-23T09:39:17.0250764Z   *   start date: Apr 23 08:38:59 2026 GMT
+2026-04-23T09:39:17.0251295Z   *   expire date: Apr 23 08:38:59 2027 GMT
+2026-04-23T09:39:17.0251979Z   *   issuer: CN=localhost-ca@1776937139
+2026-04-23T09:39:17.0252835Z   *   Certificate level 0: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+2026-04-23T09:39:17.0254116Z   *   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+2026-04-23T09:39:17.0255073Z   * OpenSSL verify result: 13
+2026-04-23T09:39:17.0255652Z   *  SSL certificate verification failed, continuing anyway!
+2026-04-23T09:39:17.0257062Z   * Established connection to harbor-operator-metrics.harbor-operator-system.svc.cluster.local (10.96.24.8 port 8443) from 10.244.0.26 port 38140 
+2026-04-23T09:39:17.0258205Z   * using HTTP/1.x
+2026-04-23T09:39:17.0258545Z   } [5 bytes data]
+2026-04-23T09:39:17.0259196Z   > GET /metrics HTTP/1.1
+2026-04-23T09:39:17.0259875Z   > Host: harbor-operator-metrics.harbor-operator-system.svc.cluster.local:8443
+2026-04-23T09:39:17.0260345Z   > User-Agent: curl/8.19.0
+2026-04-23T09:39:17.0260587Z   > Accept: */*
+2026-04-23T09:39:17.0274179Z   > Authorization: ***
+2026-04-23T09:39:17.0274413Z   > 
+2026-04-23T09:39:17.0274762Z   * Request completely sent off
+2026-04-23T09:39:17.0275022Z   { [5 bytes data]
+2026-04-23T09:39:17.0275303Z   * TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+2026-04-23T09:39:17.0275608Z   { [122 bytes data]
+2026-04-23T09:39:17.0275950Z   < HTTP/1.1 200 OK
+2026-04-23T09:39:17.0276509Z   < Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
+2026-04-23T09:39:17.0277251Z   < Date: Thu, 23 Apr 2026 09:39:13 GMT
+2026-04-23T09:39:17.0277777Z   < Transfer-Encoding: chunked
+2026-04-23T09:39:17.0278181Z   < 
+2026-04-23T09:39:17.0278480Z   { [1024 bytes data]
+2026-04-23T09:39:17.0280129Z   # HELP certwatcher_read_certificate_errors_total Total number of certificate read errors
+2026-04-23T09:39:17.0281096Z   # TYPE certwatcher_read_certificate_errors_total counter
+2026-04-23T09:39:17.0281754Z   certwatcher_read_certificate_errors_total 0
+2026-04-23T09:39:17.0282553Z   # HELP certwatcher_read_certificate_total Total number of certificate reads
+2026-04-23T09:39:17.0283367Z   # TYPE certwatcher_read_certificate_total counter
+2026-04-23T09:39:17.0283920Z   certwatcher_read_certificate_total 0
+2026-04-23T09:39:17.0284867Z   # HELP controller_runtime_conversion_webhook_panics_total Total number of conversion webhook panics
+2026-04-23T09:39:17.0285905Z   # TYPE controller_runtime_conversion_webhook_panics_total counter
+2026-04-23T09:39:17.0286663Z   controller_runtime_conversion_webhook_panics_total 0
+2026-04-23T09:39:17.0287499Z   # HELP controller_runtime_webhook_panics_total Total number of webhook panics
+2026-04-23T09:39:17.0288356Z   # TYPE controller_runtime_webhook_panics_total counter
+2026-04-23T09:39:17.0289274Z   controller_runtime_webhook_panics_total 0
+2026-04-23T09:39:17.0290436Z   # HELP go_cgo_go_to_c_calls_calls_total Count of calls made from Go to C by the current process. Sourced from /cgo/go-to-c-calls:calls.
+2026-04-23T09:39:17.0291748Z   # TYPE go_cgo_go_to_c_calls_calls_total counter
+2026-04-23T09:39:17.0292291Z   go_cgo_go_to_c_calls_calls_total 0
+2026-04-23T09:39:17.0295288Z   # HELP go_cpu_classes_gc_mark_assist_cpu_seconds_total Estimated total CPU time goroutines spent performing GC tasks to assist the GC and prevent it from falling behind the application. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/gc/mark/assist:cpu-seconds.
+2026-04-23T09:39:17.0298106Z   # TYPE go_cpu_classes_gc_mark_assist_cpu_seconds_total counter
+2026-04-23T09:39:17.0299254Z   go_cpu_classes_gc_mark_assist_cpu_seconds_total 0.002115618
+2026-04-23T09:39:17.0302431Z   # HELP go_cpu_classes_gc_mark_dedicated_cpu_seconds_total Estimated total CPU time spent performing GC tasks on processors (as defined by GOMAXPROCS) dedicated to those tasks. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/gc/mark/dedicated:cpu-seconds.
+2026-04-23T09:39:17.0305181Z   # TYPE go_cpu_classes_gc_mark_dedicated_cpu_seconds_total counter
+2026-04-23T09:39:17.0305996Z   go_cpu_classes_gc_mark_dedicated_cpu_seconds_total 0.004266471
+2026-04-23T09:39:17.0310076Z   # HELP go_cpu_classes_gc_mark_idle_cpu_seconds_total Estimated total CPU time spent performing GC tasks on spare CPU resources that the Go scheduler could not otherwise find a use for. This should be subtracted from the total GC CPU time to obtain a measure of compulsory GC CPU time. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/gc/mark/idle:cpu-seconds.
+2026-04-23T09:39:17.0313415Z   # TYPE go_cpu_classes_gc_mark_idle_cpu_seconds_total counter
+2026-04-23T09:39:17.0314160Z   go_cpu_classes_gc_mark_idle_cpu_seconds_total 0.003136521
+2026-04-23T09:39:17.0318978Z   # HELP go_cpu_classes_gc_pause_cpu_seconds_total Estimated total CPU time spent with the application paused by the GC. Even if only one thread is running during the pause, this is computed as GOMAXPROCS times the pause latency because nothing else can be executing. This is the exact sum of samples in /sched/pauses/total/gc:seconds if each sample is multiplied by GOMAXPROCS at the time it is taken. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/gc/pause:cpu-seconds.
+2026-04-23T09:39:17.0322948Z   # TYPE go_cpu_classes_gc_pause_cpu_seconds_total counter
+2026-04-23T09:39:17.0323674Z   go_cpu_classes_gc_pause_cpu_seconds_total 0.000383767
+2026-04-23T09:39:17.0326545Z   # HELP go_cpu_classes_gc_total_cpu_seconds_total Estimated total CPU time spent performing GC tasks. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sum of all metrics in /cpu/classes/gc. Sourced from /cpu/classes/gc/total:cpu-seconds.
+2026-04-23T09:39:17.0329212Z   # TYPE go_cpu_classes_gc_total_cpu_seconds_total counter
+2026-04-23T09:39:17.0329929Z   go_cpu_classes_gc_total_cpu_seconds_total 0.009902377
+2026-04-23T09:39:17.0333117Z   # HELP go_cpu_classes_idle_cpu_seconds_total Estimated total available CPU time not spent executing any Go or Go runtime code. In other words, the part of /cpu/classes/total:cpu-seconds that was unused. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/idle:cpu-seconds.
+2026-04-23T09:39:17.0335843Z   # TYPE go_cpu_classes_idle_cpu_seconds_total counter
+2026-04-23T09:39:17.0336506Z   go_cpu_classes_idle_cpu_seconds_total 0.039896104
+2026-04-23T09:39:17.0339920Z   # HELP go_cpu_classes_scavenge_assist_cpu_seconds_total Estimated total CPU time spent returning unused memory to the underlying platform in response eagerly to memory pressure. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/scavenge/assist:cpu-seconds.
+2026-04-23T09:39:17.0343055Z   # TYPE go_cpu_classes_scavenge_assist_cpu_seconds_total counter
+2026-04-23T09:39:17.0343836Z   go_cpu_classes_scavenge_assist_cpu_seconds_total 2.11e-07
+2026-04-23T09:39:17.0346839Z   # HELP go_cpu_classes_scavenge_background_cpu_seconds_total Estimated total CPU time spent performing background tasks to return unused memory to the underlying platform. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/scavenge/background:cpu-seconds.
+2026-04-23T09:39:17.0349688Z   # TYPE go_cpu_classes_scavenge_background_cpu_seconds_total counter
+2026-04-23T09:39:17.0350485Z   go_cpu_classes_scavenge_background_cpu_seconds_total 2.1e-07
+2026-04-23T09:39:17.0353667Z   # HELP go_cpu_classes_scavenge_total_cpu_seconds_total Estimated total CPU time spent performing tasks that return unused memory to the underlying platform. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sum of all metrics in /cpu/classes/scavenge. Sourced from /cpu/classes/scavenge/total:cpu-seconds.
+2026-04-23T09:39:17.0356465Z   # TYPE go_cpu_classes_scavenge_total_cpu_seconds_total counter
+2026-04-23T09:39:17.0357161Z   go_cpu_classes_scavenge_total_cpu_seconds_total 4.21e-07
+2026-04-23T09:39:17.0361045Z   # HELP go_cpu_classes_total_cpu_seconds_total Estimated total available CPU time for user Go code or the Go runtime, as defined by GOMAXPROCS. In other words, GOMAXPROCS integrated over the wall-clock duration this process has been executing for. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sum of all metrics in /cpu/classes. Sourced from /cpu/classes/total:cpu-seconds.
+2026-04-23T09:39:17.0364138Z   # TYPE go_cpu_classes_total_cpu_seconds_total counter
+2026-04-23T09:39:17.0364784Z   go_cpu_classes_total_cpu_seconds_total 0.156937128
+2026-04-23T09:39:17.0367692Z   # HELP go_cpu_classes_user_cpu_seconds_total Estimated total CPU time spent running user Go code. This may also include some small amount of time spent in the Go runtime. This metric is an overestimate, and not directly comparable to system CPU time measurements. Compare only with other /cpu/classes metrics. Sourced from /cpu/classes/user:cpu-seconds.
+2026-04-23T09:39:17.0370422Z   # TYPE go_cpu_classes_user_cpu_seconds_total counter
+2026-04-23T09:39:17.0371079Z   go_cpu_classes_user_cpu_seconds_total 0.107138226
+2026-04-23T09:39:17.0374021Z   # HELP go_gc_cleanups_executed_cleanups_total Approximate total count of cleanup functions (created by runtime.AddCleanup) executed by the runtime. Subtract /gc/cleanups/queued:cleanups to approximate cleanup queue length. Useful for detecting slow cleanups holding up the queue. Sourced from /gc/cleanups/executed:cleanups.
+2026-04-23T09:39:17.0376408Z   # TYPE go_gc_cleanups_executed_cleanups_total counter
+2026-04-23T09:39:17.0377037Z   go_gc_cleanups_executed_cleanups_total 0
+2026-04-23T09:39:17.0380047Z   # HELP go_gc_cleanups_queued_cleanups_total Approximate total count of cleanup functions (created by runtime.AddCleanup) queued by the runtime for execution. Subtract from /gc/cleanups/executed:cleanups to approximate cleanup queue length. Useful for detecting slow cleanups holding up the queue. Sourced from /gc/cleanups/queued:cleanups.
+2026-04-23T09:39:17.0382582Z   # TYPE go_gc_cleanups_queued_cleanups_total counter
+2026-04-23T09:39:17.0383194Z   go_gc_cleanups_queued_cleanups_total 0
+2026-04-23T09:39:17.0384506Z   # HELP go_gc_cycles_automatic_gc_cycles_total Count of completed GC cycles generated by the Go runtime. Sourced from /gc/cycles/automatic:gc-cycles.
+2026-04-23T09:39:17.0385956Z   # TYPE go_gc_cycles_automatic_gc_cycles_total counter
+2026-04-23T09:39:17.0386543Z   go_gc_cycles_automatic_gc_cycles_total 4
+2026-04-23T09:39:17.0387696Z   # HELP go_gc_cycles_forced_gc_cycles_total Count of completed GC cycles forced by the application. Sourced from /gc/cycles/forced:gc-cycles.
+2026-04-23T09:39:17.0389122Z   # TYPE go_gc_cycles_forced_gc_cycles_total counter
+2026-04-23T09:39:17.0389697Z   go_gc_cycles_forced_gc_cycles_total 0
+2026-04-23T09:39:17.0390731Z   # HELP go_gc_cycles_total_gc_cycles_total Count of all completed GC cycles. Sourced from /gc/cycles/total:gc-cycles.
+2026-04-23T09:39:17.0391751Z   # TYPE go_gc_cycles_total_gc_cycles_total counter
+2026-04-23T09:39:17.0392335Z   go_gc_cycles_total_gc_cycles_total 4
+2026-04-23T09:39:17.0393423Z   # HELP go_gc_duration_seconds A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles.
+2026-04-23T09:39:17.0394418Z   # TYPE go_gc_duration_seconds summary
+2026-04-23T09:39:17.0394986Z   go_gc_duration_seconds{quantile="0"} 4.4163e-05
+2026-04-23T09:39:17.0395610Z   go_gc_duration_seconds{quantile="0.25"} 5.2978e-05
+2026-04-23T09:39:17.0396234Z   go_gc_duration_seconds{quantile="0.5"} 6.6554e-05
+2026-04-23T09:39:17.0396838Z   go_gc_duration_seconds{quantile="0.75"} 9.9124e-05
+2026-04-23T09:39:17.0397502Z   go_gc_duration_seconds{quantile="1"} 9.9124e-05
+2026-04-23T09:39:17.0398056Z   go_gc_duration_seconds_sum 0.000262819
+2026-04-23T09:39:17.0398551Z   go_gc_duration_seconds_count 4
+2026-04-23T09:39:17.0401876Z   # HELP go_gc_finalizers_executed_finalizers_total Total count of finalizer functions (created by runtime.SetFinalizer) executed by the runtime. Subtract /gc/finalizers/queued:finalizers to approximate finalizer queue length. Useful for detecting finalizers overwhelming the queue, either by being too slow, or by there being too many of them. Sourced from /gc/finalizers/executed:finalizers.
+2026-04-23T09:39:17.0404708Z   # TYPE go_gc_finalizers_executed_finalizers_total counter
+2026-04-23T09:39:17.0405396Z   go_gc_finalizers_executed_finalizers_total 0
+2026-04-23T09:39:17.0408301Z   # HELP go_gc_finalizers_queued_finalizers_total Total count of finalizer functions (created by runtime.SetFinalizer) and queued by the runtime for execution. Subtract from /gc/finalizers/executed:finalizers to approximate finalizer queue length. Useful for detecting slow finalizers holding up the queue. Sourced from /gc/finalizers/queued:finalizers.
+2026-04-23T09:39:17.0411052Z   # TYPE go_gc_finalizers_queued_finalizers_total counter
+2026-04-23T09:39:17.0411692Z   go_gc_finalizers_queued_finalizers_total 0
+2026-04-23T09:39:17.0414032Z   # HELP go_gc_gogc_percent Heap size target percentage configured by the user, otherwise 100. This value is set by the GOGC environment variable, and the runtime/debug.SetGCPercent function. Sourced from /gc/gogc:percent.
+2026-04-23T09:39:17.0416533Z   # TYPE go_gc_gogc_percent gauge
+2026-04-23T09:39:17.0417032Z   go_gc_gogc_percent 100
+2026-04-23T09:39:17.0419943Z   # HELP go_gc_gomemlimit_bytes Go runtime memory limit configured by the user, otherwise math.MaxInt64. This value is set by the GOMEMLIMIT environment variable, and the runtime/debug.SetMemoryLimit function. Sourced from /gc/gomemlimit:bytes.
+2026-04-23T09:39:17.0421919Z   # TYPE go_gc_gomemlimit_bytes gauge
+2026-04-23T09:39:17.0422639Z   go_gc_gomemlimit_bytes 9.223372036854776e+18
+2026-04-23T09:39:17.0425470Z   # HELP go_gc_heap_allocs_by_size_bytes Distribution of heap allocations by approximate size. Bucket counts increase monotonically. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks. Sourced from /gc/heap/allocs-by-size:bytes.
+2026-04-23T09:39:17.0427174Z   # TYPE go_gc_heap_allocs_by_size_bytes histogram
+2026-04-23T09:39:17.0427597Z   go_gc_heap_allocs_by_size_bytes_bucket{le="8.999999999999998"} 5378
+2026-04-23T09:39:17.0428237Z   go_gc_heap_allocs_by_size_bytes_bucket{le="24.999999999999996"} 26185
+2026-04-23T09:39:17.0428793Z   go_gc_heap_allocs_by_size_bytes_bucket{le="64.99999999999999"} 51178
+2026-04-23T09:39:17.0430194Z   go_gc_heap_allocs_by_size_bytes_bucket{le="144.99999999999997"} 64981
+2026-04-23T09:39:17.0431422Z   go_gc_heap_allocs_by_size_bytes_bucket{le="320.99999999999994"} 72570
+2026-04-23T09:39:17.0432616Z   go_gc_heap_allocs_by_size_bytes_bucket{le="704.9999999999999"} 74367
+2026-04-23T09:39:17.0433732Z   go_gc_heap_allocs_by_size_bytes_bucket{le="1536.9999999999998"} 75179
+2026-04-23T09:39:17.0434873Z   go_gc_heap_allocs_by_size_bytes_bucket{le="3200.9999999999995"} 75554
+2026-04-23T09:39:17.0435982Z   go_gc_heap_allocs_by_size_bytes_bucket{le="6528.999999999999"} 75706
+2026-04-23T09:39:17.0437081Z   go_gc_heap_allocs_by_size_bytes_bucket{le="13568.999999999998"} 75752
+2026-04-23T09:39:17.0438200Z   go_gc_heap_allocs_by_size_bytes_bucket{le="27264.999999999996"} 75780
+2026-04-23T09:39:17.0439339Z   go_gc_heap_allocs_by_size_bytes_bucket{le="+Inf"} 75794
+2026-04-23T09:39:17.0440061Z   go_gc_heap_allocs_by_size_bytes_sum 1.0013984e+07
+2026-04-23T09:39:17.0440964Z   go_gc_heap_allocs_by_size_bytes_count 75794
+2026-04-23T09:39:17.0442240Z   # HELP go_gc_heap_allocs_bytes_total Cumulative sum of memory allocated to the heap by the application. Sourced from /gc/heap/allocs:bytes.
+2026-04-23T09:39:17.0443239Z   # TYPE go_gc_heap_allocs_bytes_total counter
+2026-04-23T09:39:17.0443575Z   go_gc_heap_allocs_bytes_total 1.0013984e+07
+2026-04-23T09:39:17.0444757Z   # HELP go_gc_heap_allocs_objects_total Cumulative count of heap allocations triggered by the application. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks. Sourced from /gc/heap/allocs:objects.
+2026-04-23T09:39:17.0446523Z   # TYPE go_gc_heap_allocs_objects_total counter
+2026-04-23T09:39:17.0447110Z   go_gc_heap_allocs_objects_total 75794
+2026-04-23T09:39:17.0449711Z   # HELP go_gc_heap_frees_by_size_bytes Distribution of freed heap allocations by approximate size. Bucket counts increase monotonically. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks. Sourced from /gc/heap/frees-by-size:bytes.
+2026-04-23T09:39:17.0452163Z   # TYPE go_gc_heap_frees_by_size_bytes histogram
+2026-04-23T09:39:17.0452916Z   go_gc_heap_frees_by_size_bytes_bucket{le="8.999999999999998"} 3758
+2026-04-23T09:39:17.0453747Z   go_gc_heap_frees_by_size_bytes_bucket{le="24.999999999999996"} 12106
+2026-04-23T09:39:17.0454526Z   go_gc_heap_frees_by_size_bytes_bucket{le="64.99999999999999"} 22963
+2026-04-23T09:39:17.0455299Z   go_gc_heap_frees_by_size_bytes_bucket{le="144.99999999999997"} 30293
+2026-04-23T09:39:17.0456085Z   go_gc_heap_frees_by_size_bytes_bucket{le="320.99999999999994"} 31750
+2026-04-23T09:39:17.0456871Z   go_gc_heap_frees_by_size_bytes_bucket{le="704.9999999999999"} 32522
+2026-04-23T09:39:17.0457648Z   go_gc_heap_frees_by_size_bytes_bucket{le="1536.9999999999998"} 32919
+2026-04-23T09:39:17.0458931Z   go_gc_heap_frees_by_size_bytes_bucket{le="3200.9999999999995"} 33100
+2026-04-23T09:39:17.0459832Z   go_gc_heap_frees_by_size_bytes_bucket{le="6528.999999999999"} 33163
+2026-04-23T09:39:17.0460644Z   go_gc_heap_frees_by_size_bytes_bucket{le="13568.999999999998"} 33187
+2026-04-23T09:39:17.0461436Z   go_gc_heap_frees_by_size_bytes_bucket{le="27264.999999999996"} 33193
+2026-04-23T09:39:17.0462166Z   go_gc_heap_frees_by_size_bytes_bucket{le="+Inf"} 33202
+2026-04-23T09:39:17.0463244Z   go_gc_heap_frees_by_size_bytes_sum 4.051584e+06
+2026-04-23T09:39:17.0463831Z   go_gc_heap_frees_by_size_bytes_count 33202
+2026-04-23T09:39:17.0464991Z   # HELP go_gc_heap_frees_bytes_total Cumulative sum of heap memory freed by the garbage collector. Sourced from /gc/heap/frees:bytes.
+2026-04-23T09:39:17.0466034Z   # TYPE go_gc_heap_frees_bytes_total counter
+2026-04-23T09:39:17.0466584Z   go_gc_heap_frees_bytes_total 4.051584e+06
+2026-04-23T09:39:17.0468948Z   # HELP go_gc_heap_frees_objects_total Cumulative count of heap allocations whose storage was freed by the garbage collector. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks. Sourced from /gc/heap/frees:objects.
+2026-04-23T09:39:17.0471114Z   # TYPE go_gc_heap_frees_objects_total counter
+2026-04-23T09:39:17.0471674Z   go_gc_heap_frees_objects_total 33202
+2026-04-23T09:39:17.0472619Z   # HELP go_gc_heap_goal_bytes Heap size target for the end of the GC cycle. Sourced from /gc/heap/goal:bytes.
+2026-04-23T09:39:17.0476552Z   # TYPE go_gc_heap_goal_bytes gauge
+2026-04-23T09:39:17.0477099Z   go_gc_heap_goal_bytes 9.995714e+06
+2026-04-23T09:39:17.0478467Z   # HELP go_gc_heap_live_bytes Heap memory occupied by live objects that were marked by the previous GC. Sourced from /gc/heap/live:bytes.
+2026-04-23T09:39:17.0479866Z   # TYPE go_gc_heap_live_bytes gauge
+2026-04-23T09:39:17.0480378Z   go_gc_heap_live_bytes 4.680976e+06
+2026-04-23T09:39:17.0481545Z   # HELP go_gc_heap_objects_objects Number of objects, live or unswept, occupying heap memory. Sourced from /gc/heap/objects:objects.
+2026-04-23T09:39:17.0482615Z   # TYPE go_gc_heap_objects_objects gauge
+2026-04-23T09:39:17.0483144Z   go_gc_heap_objects_objects 42592
+2026-04-23T09:39:17.0486105Z   # HELP go_gc_heap_tiny_allocs_objects_total Count of small allocations that are packed together into blocks. These allocations are counted separately from other allocations because each individual allocation is not tracked by the runtime, only their block. Each block is already accounted for in allocs-by-size and frees-by-size. Sourced from /gc/heap/tiny/allocs:objects.
+2026-04-23T09:39:17.0489985Z   # TYPE go_gc_heap_tiny_allocs_objects_total counter
+2026-04-23T09:39:17.0490666Z   go_gc_heap_tiny_allocs_objects_total 3464
+2026-04-23T09:39:17.0494065Z   # HELP go_gc_limiter_last_enabled_gc_cycle GC cycle the last time the GC CPU limiter was enabled. This metric is useful for diagnosing the root cause of an out-of-memory error, because the limiter trades memory for CPU time when the GC's CPU time gets too high. This is most likely to occur with use of SetMemoryLimit. The first GC cycle is cycle 1, so a value of 0 indicates that it was never enabled. Sourced from /gc/limiter/last-enabled:gc-cycle.
+2026-04-23T09:39:17.0497008Z   # TYPE go_gc_limiter_last_enabled_gc_cycle gauge
+2026-04-23T09:39:17.0497604Z   go_gc_limiter_last_enabled_gc_cycle 0
+2026-04-23T09:39:17.0498954Z   # HELP go_gc_pauses_seconds Deprecated. Prefer the identical /sched/pauses/total/gc:seconds. Sourced from /gc/pauses:seconds.
+2026-04-23T09:39:17.0500024Z   # TYPE go_gc_pauses_seconds histogram
+2026-04-23T09:39:17.0500641Z   go_gc_pauses_seconds_bucket{le="6.399999999999999e-08"} 0
+2026-04-23T09:39:17.0501486Z   go_gc_pauses_seconds_bucket{le="6.399999999999999e-07"} 0
+2026-04-23T09:39:17.0502208Z   go_gc_pauses_seconds_bucket{le="7.167999999999999e-06"} 1
+2026-04-23T09:39:17.0502865Z   go_gc_pauses_seconds_bucket{le="8.191999999999999e-05"} 8
+2026-04-23T09:39:17.0503826Z   go_gc_pauses_seconds_bucket{le="0.0009175039999999999"} 8
+2026-04-23T09:39:17.0504540Z   go_gc_pauses_seconds_bucket{le="0.010485759999999998"} 8
+2026-04-23T09:39:17.0505209Z   go_gc_pauses_seconds_bucket{le="0.11744051199999998"} 8
+2026-04-23T09:39:17.0505819Z   go_gc_pauses_seconds_bucket{le="+Inf"} 8
+2026-04-23T09:39:17.0506347Z   go_gc_pauses_seconds_sum 5.0816e-05
+2026-04-23T09:39:17.0506836Z   go_gc_pauses_seconds_count 8
+2026-04-23T09:39:17.0507938Z   # HELP go_gc_scan_globals_bytes The total amount of global variable space that is scannable. Sourced from /gc/scan/globals:bytes.
+2026-04-23T09:39:17.0509364Z   # TYPE go_gc_scan_globals_bytes gauge
+2026-04-23T09:39:17.0509883Z   go_gc_scan_globals_bytes 428074
+2026-04-23T09:39:17.0510857Z   # HELP go_gc_scan_heap_bytes The total amount of heap space that is scannable. Sourced from /gc/scan/heap:bytes.
+2026-04-23T09:39:17.0511786Z   # TYPE go_gc_scan_heap_bytes gauge
+2026-04-23T09:39:17.0512301Z   go_gc_scan_heap_bytes 3.683744e+06
+2026-04-23T09:39:17.0513419Z   # HELP go_gc_scan_stack_bytes The number of bytes of stack that were scanned last GC cycle. Sourced from /gc/scan/stack:bytes.
+2026-04-23T09:39:17.0514434Z   # TYPE go_gc_scan_stack_bytes gauge
+2026-04-23T09:39:17.0515188Z   go_gc_scan_stack_bytes 205688
+2026-04-23T09:39:17.0516170Z   # HELP go_gc_scan_total_bytes The total amount space that is scannable. Sum of all metrics in /gc/scan. Sourced from /gc/scan/total:bytes.
+2026-04-23T09:39:17.0517228Z   # TYPE go_gc_scan_total_bytes gauge
+2026-04-23T09:39:17.0517692Z   go_gc_scan_total_bytes 4.317506e+06
+2026-04-23T09:39:17.0518893Z   # HELP go_gc_stack_starting_size_bytes The stack size of new goroutines. Sourced from /gc/stack/starting-size:bytes.
+2026-04-23T09:39:17.0519948Z   # TYPE go_gc_stack_starting_size_bytes gauge
+2026-04-23T09:39:17.0520498Z   go_gc_stack_starting_size_bytes 4096
+2026-04-23T09:39:17.0522657Z   # HELP go_godebug_non_default_behavior_allowmultiplevcs_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=allowmultiplevcs=... setting. Sourced from /godebug/non-default-behavior/allowmultiplevcs:events.
+2026-04-23T09:39:17.0524792Z   # TYPE go_godebug_non_default_behavior_allowmultiplevcs_events_total counter
+2026-04-23T09:39:17.0525718Z   go_godebug_non_default_behavior_allowmultiplevcs_events_total 0
+2026-04-23T09:39:17.0527993Z   # HELP go_godebug_non_default_behavior_asynctimerchan_events_total The number of non-default behaviors executed by the time package due to a non-default GODEBUG=asynctimerchan=... setting. Sourced from /godebug/non-default-behavior/asynctimerchan:events.
+2026-04-23T09:39:17.0535199Z   # TYPE go_godebug_non_default_behavior_asynctimerchan_events_total counter
+2026-04-23T09:39:17.0536487Z   go_godebug_non_default_behavior_asynctimerchan_events_total 0
+2026-04-23T09:39:17.0539320Z   # HELP go_godebug_non_default_behavior_containermaxprocs_events_total The number of non-default behaviors executed by the runtime package due to a non-default GODEBUG=containermaxprocs=... setting. Sourced from /godebug/non-default-behavior/containermaxprocs:events.
+2026-04-23T09:39:17.0542088Z   # TYPE go_godebug_non_default_behavior_containermaxprocs_events_total counter
+2026-04-23T09:39:17.0543034Z   go_godebug_non_default_behavior_containermaxprocs_events_total 0
+2026-04-23T09:39:17.0545399Z   # HELP go_godebug_non_default_behavior_cryptocustomrand_events_total The number of non-default behaviors executed by the crypto package due to a non-default GODEBUG=cryptocustomrand=... setting. Sourced from /godebug/non-default-behavior/cryptocustomrand:events.
+2026-04-23T09:39:17.0547548Z   # TYPE go_godebug_non_default_behavior_cryptocustomrand_events_total counter
+2026-04-23T09:39:17.0548425Z   go_godebug_non_default_behavior_cryptocustomrand_events_total 0
+2026-04-23T09:39:17.0551231Z   # HELP go_godebug_non_default_behavior_embedfollowsymlinks_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=embedfollowsymlinks=... setting. Sourced from /godebug/non-default-behavior/embedfollowsymlinks:events.
+2026-04-23T09:39:17.0554215Z   # TYPE go_godebug_non_default_behavior_embedfollowsymlinks_events_total counter
+2026-04-23T09:39:17.0555153Z   go_godebug_non_default_behavior_embedfollowsymlinks_events_total 0
+2026-04-23T09:39:17.0557280Z   # HELP go_godebug_non_default_behavior_execerrdot_events_total The number of non-default behaviors executed by the os/exec package due to a non-default GODEBUG=execerrdot=... setting. Sourced from /godebug/non-default-behavior/execerrdot:events.
+2026-04-23T09:39:17.0559402Z   # TYPE go_godebug_non_default_behavior_execerrdot_events_total counter
+2026-04-23T09:39:17.0560190Z   go_godebug_non_default_behavior_execerrdot_events_total 0
+2026-04-23T09:39:17.0562326Z   # HELP go_godebug_non_default_behavior_gocachehash_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=gocachehash=... setting. Sourced from /godebug/non-default-behavior/gocachehash:events.
+2026-04-23T09:39:17.0564377Z   # TYPE go_godebug_non_default_behavior_gocachehash_events_total counter
+2026-04-23T09:39:17.0565209Z   go_godebug_non_default_behavior_gocachehash_events_total 0
+2026-04-23T09:39:17.0567567Z   # HELP go_godebug_non_default_behavior_gocachetest_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=gocachetest=... setting. Sourced from /godebug/non-default-behavior/gocachetest:events.
+2026-04-23T09:39:17.0569809Z   # TYPE go_godebug_non_default_behavior_gocachetest_events_total counter
+2026-04-23T09:39:17.0570639Z   go_godebug_non_default_behavior_gocachetest_events_total 0
+2026-04-23T09:39:17.0572854Z   # HELP go_godebug_non_default_behavior_gocacheverify_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=gocacheverify=... setting. Sourced from /godebug/non-default-behavior/gocacheverify:events.
+2026-04-23T09:39:17.0574904Z   # TYPE go_godebug_non_default_behavior_gocacheverify_events_total counter
+2026-04-23T09:39:17.0575773Z   go_godebug_non_default_behavior_gocacheverify_events_total 0
+2026-04-23T09:39:17.0578188Z   # HELP go_godebug_non_default_behavior_gotestjsonbuildtext_events_total The number of non-default behaviors executed by the cmd/go package due to a non-default GODEBUG=gotestjsonbuildtext=... setting. Sourced from /godebug/non-default-behavior/gotestjsonbuildtext:events.
+2026-04-23T09:39:17.0580428Z   # TYPE go_godebug_non_default_behavior_gotestjsonbuildtext_events_total counter
+2026-04-23T09:39:17.0581429Z   go_godebug_non_default_behavior_gotestjsonbuildtext_events_total 0
+2026-04-23T09:39:17.0583692Z   # HELP go_godebug_non_default_behavior_gotypesalias_events_total The number of non-default behaviors executed by the go/types package due to a non-default GODEBUG=gotypesalias=... setting. Sourced from /godebug/non-default-behavior/gotypesalias:events.
+2026-04-23T09:39:17.0584850Z   # TYPE go_godebug_non_default_behavior_gotypesalias_events_total counter
+2026-04-23T09:39:17.0585335Z   go_godebug_non_default_behavior_gotypesalias_events_total 0
+2026-04-23T09:39:17.0587070Z   # HELP go_godebug_non_default_behavior_htmlmetacontenturlescape_events_total The number of non-default behaviors executed by the html/template package due to a non-default GODEBUG=htmlmetacontenturlescape=... setting. Sourced from /godebug/non-default-behavior/htmlmetacontenturlescape:events.
+2026-04-23T09:39:17.0589873Z   # TYPE go_godebug_non_default_behavior_htmlmetacontenturlescape_events_total counter
+2026-04-23T09:39:17.0590952Z   go_godebug_non_default_behavior_htmlmetacontenturlescape_events_total 0
+2026-04-23T09:39:17.0593286Z   # HELP go_godebug_non_default_behavior_http2client_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=http2client=... setting. Sourced from /godebug/non-default-behavior/http2client:events.
+2026-04-23T09:39:17.0595297Z   # TYPE go_godebug_non_default_behavior_http2client_events_total counter
+2026-04-23T09:39:17.0596351Z   go_godebug_non_default_behavior_http2client_events_total 0
+2026-04-23T09:39:17.0598599Z   # HELP go_godebug_non_default_behavior_http2server_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=http2server=... setting. Sourced from /godebug/non-default-behavior/http2server:events.
+2026-04-23T09:39:17.0600849Z   # TYPE go_godebug_non_default_behavior_http2server_events_total counter
+2026-04-23T09:39:17.0601687Z   go_godebug_non_default_behavior_http2server_events_total 0
+2026-04-23T09:39:17.0604353Z   # HELP go_godebug_non_default_behavior_httpcookiemaxnum_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=httpcookiemaxnum=... setting. Sourced from /godebug/non-default-behavior/httpcookiemaxnum:events.
+2026-04-23T09:39:17.0606519Z   # TYPE go_godebug_non_default_behavior_httpcookiemaxnum_events_total counter
+2026-04-23T09:39:17.0607449Z   go_godebug_non_default_behavior_httpcookiemaxnum_events_total 0
+2026-04-23T09:39:17.0610206Z   # HELP go_godebug_non_default_behavior_httplaxcontentlength_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=httplaxcontentlength=... setting. Sourced from /godebug/non-default-behavior/httplaxcontentlength:events.
+2026-04-23T09:39:17.0612690Z   # TYPE go_godebug_non_default_behavior_httplaxcontentlength_events_total counter
+2026-04-23T09:39:17.0613628Z   go_godebug_non_default_behavior_httplaxcontentlength_events_total 0
+2026-04-23T09:39:17.0616066Z   # HELP go_godebug_non_default_behavior_httpmuxgo121_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=httpmuxgo121=... setting. Sourced from /godebug/non-default-behavior/httpmuxgo121:events.
+2026-04-23T09:39:17.0618061Z   # TYPE go_godebug_non_default_behavior_httpmuxgo121_events_total counter
+2026-04-23T09:39:17.0619087Z   go_godebug_non_default_behavior_httpmuxgo121_events_total 0
+2026-04-23T09:39:17.0621664Z   # HELP go_godebug_non_default_behavior_httpservecontentkeepheaders_events_total The number of non-default behaviors executed by the net/http package due to a non-default GODEBUG=httpservecontentkeepheaders=... setting. Sourced from /godebug/non-default-behavior/httpservecontentkeepheaders:events.
+2026-04-23T09:39:17.0624153Z   # TYPE go_godebug_non_default_behavior_httpservecontentkeepheaders_events_total counter
+2026-04-23T09:39:17.0625381Z   go_godebug_non_default_behavior_httpservecontentkeepheaders_events_total 0
+2026-04-23T09:39:17.0627685Z   # HELP go_godebug_non_default_behavior_installgoroot_events_total The number of non-default behaviors executed by the go/build package due to a non-default GODEBUG=installgoroot=... setting. Sourced from /godebug/non-default-behavior/installgoroot:events.
+2026-04-23T09:39:17.0630165Z   # TYPE go_godebug_non_default_behavior_installgoroot_events_total counter
+2026-04-23T09:39:17.0631006Z   go_godebug_non_default_behavior_installgoroot_events_total 0
+2026-04-23T09:39:17.0633430Z   # HELP go_godebug_non_default_behavior_multipartmaxheaders_events_total The number of non-default behaviors executed by the mime/multipart package due to a non-default GODEBUG=multipartmaxheaders=... setting. Sourced from /godebug/non-default-behavior/multipartmaxheaders:events.
+2026-04-23T09:39:17.0635706Z   # TYPE go_godebug_non_default_behavior_multipartmaxheaders_events_total counter
+2026-04-23T09:39:17.0636625Z   go_godebug_non_default_behavior_multipartmaxheaders_events_total 0
+2026-04-23T09:39:17.0639331Z   # HELP go_godebug_non_default_behavior_multipartmaxparts_events_total The number of non-default behaviors executed by the mime/multipart package due to a non-default GODEBUG=multipartmaxparts=... setting. Sourced from /godebug/non-default-behavior/multipartmaxparts:events.
+2026-04-23T09:39:17.0642032Z   # TYPE go_godebug_non_default_behavior_multipartmaxparts_events_total counter
+2026-04-23T09:39:17.0642939Z   go_godebug_non_default_behavior_multipartmaxparts_events_total 0
+2026-04-23T09:39:17.0645294Z   # HELP go_godebug_non_default_behavior_multipathtcp_events_total The number of non-default behaviors executed by the net package due to a non-default GODEBUG=multipathtcp=... setting. Sourced from /godebug/non-default-behavior/multipathtcp:events.
+2026-04-23T09:39:17.0647287Z   # TYPE go_godebug_non_default_behavior_multipathtcp_events_total counter
+2026-04-23T09:39:17.0648117Z   go_godebug_non_default_behavior_multipathtcp_events_total 0
+2026-04-23T09:39:17.0650337Z   # HELP go_godebug_non_default_behavior_netedns0_events_total The number of non-default behaviors executed by the net package due to a non-default GODEBUG=netedns0=... setting. Sourced from /godebug/non-default-behavior/netedns0:events.
+2026-04-23T09:39:17.0652210Z   # TYPE go_godebug_non_default_behavior_netedns0_events_total counter
+2026-04-23T09:39:17.0652964Z   go_godebug_non_default_behavior_netedns0_events_total 0
+2026-04-23T09:39:17.0655005Z   # HELP go_godebug_non_default_behavior_panicnil_events_total The number of non-default behaviors executed by the runtime package due to a non-default GODEBUG=panicnil=... setting. Sourced from /godebug/non-default-behavior/panicnil:events.
+2026-04-23T09:39:17.0657066Z   # TYPE go_godebug_non_default_behavior_panicnil_events_total counter
+2026-04-23T09:39:17.0657821Z   go_godebug_non_default_behavior_panicnil_events_total 0
+2026-04-23T09:39:17.0660176Z   # HELP go_godebug_non_default_behavior_randautoseed_events_total The number of non-default behaviors executed by the math/rand package due to a non-default GODEBUG=randautoseed=... setting. Sourced from /godebug/non-default-behavior/randautoseed:events.
+2026-04-23T09:39:17.0662189Z   # TYPE go_godebug_non_default_behavior_randautoseed_events_total counter
+2026-04-23T09:39:17.0663010Z   go_godebug_non_default_behavior_randautoseed_events_total 0
+2026-04-23T09:39:17.0665177Z   # HELP go_godebug_non_default_behavior_randseednop_events_total The number of non-default behaviors executed by the math/rand package due to a non-default GODEBUG=randseednop=... setting. Sourced from /godebug/non-default-behavior/randseednop:events.
+2026-04-23T09:39:17.0667170Z   # TYPE go_godebug_non_default_behavior_randseednop_events_total counter
+2026-04-23T09:39:17.0667989Z   go_godebug_non_default_behavior_randseednop_events_total 0
+2026-04-23T09:39:17.0670261Z   # HELP go_godebug_non_default_behavior_rsa1024min_events_total The number of non-default behaviors executed by the crypto/rsa package due to a non-default GODEBUG=rsa1024min=... setting. Sourced from /godebug/non-default-behavior/rsa1024min:events.
+2026-04-23T09:39:17.0672216Z   # TYPE go_godebug_non_default_behavior_rsa1024min_events_total counter
+2026-04-23T09:39:17.0672994Z   go_godebug_non_default_behavior_rsa1024min_events_total 0
+2026-04-23T09:39:17.0675270Z   # HELP go_godebug_non_default_behavior_tarinsecurepath_events_total The number of non-default behaviors executed by the archive/tar package due to a non-default GODEBUG=tarinsecurepath=... setting. Sourced from /godebug/non-default-behavior/tarinsecurepath:events.
+2026-04-23T09:39:17.0677401Z   # TYPE go_godebug_non_default_behavior_tarinsecurepath_events_total counter
+2026-04-23T09:39:17.0678277Z   go_godebug_non_default_behavior_tarinsecurepath_events_total 0
+2026-04-23T09:39:17.0680620Z   # HELP go_godebug_non_default_behavior_tls10server_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tls10server=... setting. Sourced from /godebug/non-default-behavior/tls10server:events.
+2026-04-23T09:39:17.0682621Z   # TYPE go_godebug_non_default_behavior_tls10server_events_total counter
+2026-04-23T09:39:17.0683432Z   go_godebug_non_default_behavior_tls10server_events_total 0
+2026-04-23T09:39:17.0685493Z   # HELP go_godebug_non_default_behavior_tls3des_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tls3des=... setting. Sourced from /godebug/non-default-behavior/tls3des:events.
+2026-04-23T09:39:17.0687535Z   # TYPE go_godebug_non_default_behavior_tls3des_events_total counter
+2026-04-23T09:39:17.0688289Z   go_godebug_non_default_behavior_tls3des_events_total 0
+2026-04-23T09:39:17.0690790Z   # HELP go_godebug_non_default_behavior_tlsmaxrsasize_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tlsmaxrsasize=... setting. Sourced from /godebug/non-default-behavior/tlsmaxrsasize:events.
+2026-04-23T09:39:17.0692812Z   # TYPE go_godebug_non_default_behavior_tlsmaxrsasize_events_total counter
+2026-04-23T09:39:17.0693655Z   go_godebug_non_default_behavior_tlsmaxrsasize_events_total 0
+2026-04-23T09:39:17.0695777Z   # HELP go_godebug_non_default_behavior_tlsrsakex_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tlsrsakex=... setting. Sourced from /godebug/non-default-behavior/tlsrsakex:events.
+2026-04-23T09:39:17.0697708Z   # TYPE go_godebug_non_default_behavior_tlsrsakex_events_total counter
+2026-04-23T09:39:17.0698497Z   go_godebug_non_default_behavior_tlsrsakex_events_total 0
+2026-04-23T09:39:17.0700119Z   # HELP go_godebug_non_default_behavior_tlssha1_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tlssha1=... setting. Sourced from /godebug/non-default-behavior/tlssha1:events.
+2026-04-23T09:39:17.0701328Z   # TYPE go_godebug_non_default_behavior_tlssha1_events_total counter
+2026-04-23T09:39:17.0701746Z   go_godebug_non_default_behavior_tlssha1_events_total 0
+2026-04-23T09:39:17.0703007Z   # HELP go_godebug_non_default_behavior_tlsunsafeekm_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=tlsunsafeekm=... setting. Sourced from /godebug/non-default-behavior/tlsunsafeekm:events.
+2026-04-23T09:39:17.0703932Z   
+2026-04-23T09:39:17.0704185Z 100  55954   0  55954   0      0  1.68M      0                              0
+2026-04-23T09:39:17.0704584Z 100  55954   0  55954   0      0  1.67M      0                              0
+2026-04-23T09:39:17.0704967Z 100  55954   0  55954   0      0  1.67M      0                              0
+2026-04-23T09:39:17.0705606Z   * Connection #0 to host harbor-operator-metrics.harbor-operator-system.svc.cluster.local:8443 left intact
+2026-04-23T09:39:17.0706276Z   # TYPE go_godebug_non_default_behavior_tlsunsafeekm_events_total counter
+2026-04-23T09:39:17.0706736Z   go_godebug_non_default_behavior_tlsunsafeekm_events_total 0
+2026-04-23T09:39:17.0707998Z   # HELP go_godebug_non_default_behavior_updatemaxprocs_events_total The number of non-default behaviors executed by the runtime package due to a non-default GODEBUG=updatemaxprocs=... setting. Sourced from /godebug/non-default-behavior/updatemaxprocs:events.
+2026-04-23T09:39:17.0709433Z   # TYPE go_godebug_non_default_behavior_updatemaxprocs_events_total counter
+2026-04-23T09:39:17.0709908Z   go_godebug_non_default_behavior_updatemaxprocs_events_total 0
+2026-04-23T09:39:17.0711951Z   # HELP go_godebug_non_default_behavior_urlmaxqueryparams_events_total The number of non-default behaviors executed by the net/url package due to a non-default GODEBUG=urlmaxqueryparams=... setting. Sourced from /godebug/non-default-behavior/urlmaxqueryparams:events.
+2026-04-23T09:39:17.0713654Z   # TYPE go_godebug_non_default_behavior_urlmaxqueryparams_events_total counter
+2026-04-23T09:39:17.0714195Z   go_godebug_non_default_behavior_urlmaxqueryparams_events_total 0
+2026-04-23T09:39:17.0715475Z   # HELP go_godebug_non_default_behavior_urlstrictcolons_events_total The number of non-default behaviors executed by the net/url package due to a non-default GODEBUG=urlstrictcolons=... setting. Sourced from /godebug/non-default-behavior/urlstrictcolons:events.
+2026-04-23T09:39:17.0716609Z   # TYPE go_godebug_non_default_behavior_urlstrictcolons_events_total counter
+2026-04-23T09:39:17.0717110Z   go_godebug_non_default_behavior_urlstrictcolons_events_total 0
+2026-04-23T09:39:17.0718518Z   # HELP go_godebug_non_default_behavior_winreadlinkvolume_events_total The number of non-default behaviors executed by the os package due to a non-default GODEBUG=winreadlinkvolume=... setting. Sourced from /godebug/non-default-behavior/winreadlinkvolume:events.
+2026-04-23T09:39:17.0720002Z   # TYPE go_godebug_non_default_behavior_winreadlinkvolume_events_total counter
+2026-04-23T09:39:17.0720509Z   go_godebug_non_default_behavior_winreadlinkvolume_events_total 0
+2026-04-23T09:39:17.0721705Z   # HELP go_godebug_non_default_behavior_winsymlink_events_total The number of non-default behaviors executed by the os package due to a non-default GODEBUG=winsymlink=... setting. Sourced from /godebug/non-default-behavior/winsymlink:events.
+2026-04-23T09:39:17.0722747Z   # TYPE go_godebug_non_default_behavior_winsymlink_events_total counter
+2026-04-23T09:39:17.0723190Z   go_godebug_non_default_behavior_winsymlink_events_total 0
+2026-04-23T09:39:17.0724414Z   # HELP go_godebug_non_default_behavior_x509keypairleaf_events_total The number of non-default behaviors executed by the crypto/tls package due to a non-default GODEBUG=x509keypairleaf=... setting. Sourced from /godebug/non-default-behavior/x509keypairleaf:events.
+2026-04-23T09:39:17.0725686Z   # TYPE go_godebug_non_default_behavior_x509keypairleaf_events_total counter
+2026-04-23T09:39:17.0726172Z   go_godebug_non_default_behavior_x509keypairleaf_events_total 0
+2026-04-23T09:39:17.0727453Z   # HELP go_godebug_non_default_behavior_x509negativeserial_events_total The number of non-default behaviors executed by the crypto/x509 package due to a non-default GODEBUG=x509negativeserial=... setting. Sourced from /godebug/non-default-behavior/x509negativeserial:events.
+2026-04-23T09:39:17.0728764Z   # TYPE go_godebug_non_default_behavior_x509negativeserial_events_total counter
+2026-04-23T09:39:17.0729273Z   go_godebug_non_default_behavior_x509negativeserial_events_total 0
+2026-04-23T09:39:17.0730515Z   # HELP go_godebug_non_default_behavior_x509rsacrt_events_total The number of non-default behaviors executed by the crypto/x509 package due to a non-default GODEBUG=x509rsacrt=... setting. Sourced from /godebug/non-default-behavior/x509rsacrt:events.
+2026-04-23T09:39:17.0731582Z   # TYPE go_godebug_non_default_behavior_x509rsacrt_events_total counter
+2026-04-23T09:39:17.0732020Z   go_godebug_non_default_behavior_x509rsacrt_events_total 0
+2026-04-23T09:39:17.0733280Z   # HELP go_godebug_non_default_behavior_x509sha256skid_events_total The number of non-default behaviors executed by the crypto/x509 package due to a non-default GODEBUG=x509sha256skid=... setting. Sourced from /godebug/non-default-behavior/x509sha256skid:events.
+2026-04-23T09:39:17.0734393Z   # TYPE go_godebug_non_default_behavior_x509sha256skid_events_total counter
+2026-04-23T09:39:17.0734872Z   go_godebug_non_default_behavior_x509sha256skid_events_total 0
+2026-04-23T09:39:17.0736171Z   # HELP go_godebug_non_default_behavior_x509usefallbackroots_events_total The number of non-default behaviors executed by the crypto/x509 package due to a non-default GODEBUG=x509usefallbackroots=... setting. Sourced from /godebug/non-default-behavior/x509usefallbackroots:events.
+2026-04-23T09:39:17.0737387Z   # TYPE go_godebug_non_default_behavior_x509usefallbackroots_events_total counter
+2026-04-23T09:39:17.0737904Z   go_godebug_non_default_behavior_x509usefallbackroots_events_total 0
+2026-04-23T09:39:17.0739367Z   # HELP go_godebug_non_default_behavior_x509usepolicies_events_total The number of non-default behaviors executed by the crypto/x509 package due to a non-default GODEBUG=x509usepolicies=... setting. Sourced from /godebug/non-default-behavior/x509usepolicies:events.
+2026-04-23T09:39:17.0740515Z   # TYPE go_godebug_non_default_behavior_x509usepolicies_events_total counter
+2026-04-23T09:39:17.0740991Z   go_godebug_non_default_behavior_x509usepolicies_events_total 0
+2026-04-23T09:39:17.0742416Z   # HELP go_godebug_non_default_behavior_zipinsecurepath_events_total The number of non-default behaviors executed by the archive/zip package due to a non-default GODEBUG=zipinsecurepath=... setting. Sourced from /godebug/non-default-behavior/zipinsecurepath:events.
+2026-04-23T09:39:17.0743581Z   # TYPE go_godebug_non_default_behavior_zipinsecurepath_events_total counter
+2026-04-23T09:39:17.0744059Z   go_godebug_non_default_behavior_zipinsecurepath_events_total 0
+2026-04-23T09:39:17.0744499Z   # HELP go_goroutines Number of goroutines that currently exist.
+2026-04-23T09:39:17.0744864Z   # TYPE go_goroutines gauge
+2026-04-23T09:39:17.0745097Z   go_goroutines 173
+2026-04-23T09:39:17.0745380Z   # HELP go_info Information about the Go environment.
+2026-04-23T09:39:17.0745688Z   # TYPE go_info gauge
+2026-04-23T09:39:17.0745919Z   go_info{version="go1.26.2"} 1
+2026-04-23T09:39:17.0747117Z   # HELP go_memory_classes_heap_free_bytes Memory that is completely free and eligible to be returned to the underlying system, but has not been. This metric is the runtime's estimate of free address space that is backed by physical memory. Sourced from /memory/classes/heap/free:bytes.
+2026-04-23T09:39:17.0748206Z   # TYPE go_memory_classes_heap_free_bytes gauge
+2026-04-23T09:39:17.0748520Z   go_memory_classes_heap_free_bytes 0
+2026-04-23T09:39:17.0749544Z   # HELP go_memory_classes_heap_objects_bytes Memory occupied by live objects and dead objects that have not yet been marked free by the garbage collector. Sourced from /memory/classes/heap/objects:bytes.
+2026-04-23T09:39:17.0750509Z   # TYPE go_memory_classes_heap_objects_bytes gauge
+2026-04-23T09:39:17.0750853Z   go_memory_classes_heap_objects_bytes 5.9624e+06
+2026-04-23T09:39:17.0752192Z   # HELP go_memory_classes_heap_released_bytes Memory that is completely free and has been returned to the underlying system. This metric is the runtime's estimate of free address space that is still mapped into the process, but is not backed by physical memory. Sourced from /memory/classes/heap/released:bytes.
+2026-04-23T09:39:17.0753375Z   # TYPE go_memory_classes_heap_released_bytes gauge
+2026-04-23T09:39:17.0753727Z   go_memory_classes_heap_released_bytes 2.924544e+06
+2026-04-23T09:39:17.0755405Z   # HELP go_memory_classes_heap_stacks_bytes Memory allocated from the heap that is reserved for stack space, whether or not it is currently in-use. Currently, this represents all stack memory for goroutines. It also includes all OS thread stacks in non-cgo programs. Note that stacks may be allocated differently in the future, and this may change. Sourced from /memory/classes/heap/stacks:bytes.
+2026-04-23T09:39:17.0757087Z   # TYPE go_memory_classes_heap_stacks_bytes gauge
+2026-04-23T09:39:17.0757436Z   go_memory_classes_heap_stacks_bytes 1.47456e+06
+2026-04-23T09:39:17.0758277Z   # HELP go_memory_classes_heap_unused_bytes Memory that is reserved for heap objects but is not currently used to hold heap objects. Sourced from /memory/classes/heap/unused:bytes.
+2026-04-23T09:39:17.0759356Z   # TYPE go_memory_classes_heap_unused_bytes gauge
+2026-04-23T09:39:17.0759709Z   go_memory_classes_heap_unused_bytes 2.221408e+06
+2026-04-23T09:39:17.0760600Z   # HELP go_memory_classes_metadata_mcache_free_bytes Memory that is reserved for runtime mcache structures, but not in-use. Sourced from /memory/classes/metadata/mcache/free:bytes.
+2026-04-23T09:39:17.0761425Z   # TYPE go_memory_classes_metadata_mcache_free_bytes gauge
+2026-04-23T09:39:17.0761808Z   go_memory_classes_metadata_mcache_free_bytes 11480
+2026-04-23T09:39:17.0762738Z   # HELP go_memory_classes_metadata_mcache_inuse_bytes Memory that is occupied by runtime mcache structures that are currently being used. Sourced from /memory/classes/metadata/mcache/inuse:bytes.
+2026-04-23T09:39:17.0763593Z   # TYPE go_memory_classes_metadata_mcache_inuse_bytes gauge
+2026-04-23T09:39:17.0763964Z   go_memory_classes_metadata_mcache_inuse_bytes 4592
+2026-04-23T09:39:17.0764795Z   # HELP go_memory_classes_metadata_mspan_free_bytes Memory that is reserved for runtime mspan structures, but not in-use. Sourced from /memory/classes/metadata/mspan/free:bytes.
+2026-04-23T09:39:17.0765595Z   # TYPE go_memory_classes_metadata_mspan_free_bytes gauge
+2026-04-23T09:39:17.0766105Z   go_memory_classes_metadata_mspan_free_bytes 16000
+2026-04-23T09:39:17.0767450Z   # HELP go_memory_classes_metadata_mspan_inuse_bytes Memory that is occupied by runtime mspan structures that are currently being used. Sourced from /memory/classes/metadata/mspan/inuse:bytes.
+2026-04-23T09:39:17.0768416Z   # TYPE go_memory_classes_metadata_mspan_inuse_bytes gauge
+2026-04-23T09:39:17.0768999Z   go_memory_classes_metadata_mspan_inuse_bytes 147200
+2026-04-23T09:39:17.0769777Z   # HELP go_memory_classes_metadata_other_bytes Memory that is reserved for or used to hold runtime metadata. Sourced from /memory/classes/metadata/other:bytes.
+2026-04-23T09:39:17.0770471Z   # TYPE go_memory_classes_metadata_other_bytes gauge
+2026-04-23T09:39:17.0770826Z   go_memory_classes_metadata_other_bytes 3.66872e+06
+2026-04-23T09:39:17.0772887Z   # HELP go_memory_classes_os_stacks_bytes Stack memory allocated by the underlying operating system. In non-cgo programs this metric is currently zero. This may change in the future.In cgo programs this metric includes OS thread stacks allocated directly from the OS. Currently, this only accounts for one stack in c-shared and c-archive build modes, and other sources of stacks from the OS are not measured. This too may change in the future. Sourced from /memory/classes/os-stacks:bytes.
+2026-04-23T09:39:17.0774847Z   # TYPE go_memory_classes_os_stacks_bytes gauge
+2026-04-23T09:39:17.0775161Z   go_memory_classes_os_stacks_bytes 0
+2026-04-23T09:39:17.0776096Z   # HELP go_memory_classes_other_bytes Memory used by execution trace buffers, structures for debugging the runtime, finalizer and profiler specials, and more. Sourced from /memory/classes/other:bytes.
+2026-04-23T09:39:17.0776922Z   # TYPE go_memory_classes_other_bytes gauge
+2026-04-23T09:39:17.0777226Z   go_memory_classes_other_bytes 572028
+2026-04-23T09:39:17.0778028Z   # HELP go_memory_classes_profiling_buckets_bytes Memory that is used by the stack trace hash map used for profiling. Sourced from /memory/classes/profiling/buckets:bytes.
+2026-04-23T09:39:17.0778928Z   # TYPE go_memory_classes_profiling_buckets_bytes gauge
+2026-04-23T09:39:17.0779305Z   go_memory_classes_profiling_buckets_bytes 1.45186e+06
+2026-04-23T09:39:17.0780581Z   # HELP go_memory_classes_total_bytes All memory mapped by the Go runtime into the current process as read-write. Note that this does not include memory mapped by code called via cgo or via the syscall package. Sum of all metrics in /memory/classes. Sourced from /memory/classes/total:bytes.
+2026-04-23T09:39:17.0781647Z   # TYPE go_memory_classes_total_bytes gauge
+2026-04-23T09:39:17.0781959Z   go_memory_classes_total_bytes 1.8454792e+07
+2026-04-23T09:39:17.0782601Z   # HELP go_memstats_alloc_bytes Number of bytes allocated in heap and currently in use. Equals to /memory/classes/heap/objects:bytes.
+2026-04-23T09:39:17.0783180Z   # TYPE go_memstats_alloc_bytes gauge
+2026-04-23T09:39:17.0783458Z   go_memstats_alloc_bytes 5.9624e+06
+2026-04-23T09:39:17.0784134Z   # HELP go_memstats_alloc_bytes_total Total number of bytes allocated in heap until now, even if released already. Equals to /gc/heap/allocs:bytes.
+2026-04-23T09:39:17.0784776Z   # TYPE go_memstats_alloc_bytes_total counter
+2026-04-23T09:39:17.0785092Z   go_memstats_alloc_bytes_total 1.0013984e+07
+2026-04-23T09:39:17.0785800Z   # HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table. Equals to /memory/classes/profiling/buckets:bytes.
+2026-04-23T09:39:17.0786439Z   # TYPE go_memstats_buck_hash_sys_bytes gauge
+2026-04-23T09:39:17.0786755Z   go_memstats_buck_hash_sys_bytes 1.45186e+06
+2026-04-23T09:39:17.0787399Z   # HELP go_memstats_frees_total Total number of heap objects frees. Equals to /gc/heap/frees:objects + /gc/heap/tiny/allocs:objects.
+2026-04-23T09:39:17.0787968Z   # TYPE go_memstats_frees_total counter
+2026-04-23T09:39:17.0788249Z   go_memstats_frees_total 36666
+2026-04-23T09:39:17.0789003Z   # HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata. Equals to /memory/classes/metadata/other:bytes.
+2026-04-23T09:39:17.0789738Z   # TYPE go_memstats_gc_sys_bytes gauge
+2026-04-23T09:39:17.0790031Z   go_memstats_gc_sys_bytes 3.66872e+06
+2026-04-23T09:39:17.0790817Z   # HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and currently in use, same as go_memstats_alloc_bytes. Equals to /memory/classes/heap/objects:bytes.
+2026-04-23T09:39:17.0791516Z   # TYPE go_memstats_heap_alloc_bytes gauge
+2026-04-23T09:39:17.0791813Z   go_memstats_heap_alloc_bytes 5.9624e+06
+2026-04-23T09:39:17.0792536Z   # HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used. Equals to /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
+2026-04-23T09:39:17.0793191Z   # TYPE go_memstats_heap_idle_bytes gauge
+2026-04-23T09:39:17.0793486Z   go_memstats_heap_idle_bytes 2.924544e+06
+2026-04-23T09:39:17.0794217Z   # HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes
+2026-04-23T09:39:17.0794870Z   # TYPE go_memstats_heap_inuse_bytes gauge
+2026-04-23T09:39:17.0795169Z   go_memstats_heap_inuse_bytes 8.183808e+06
+2026-04-23T09:39:17.0795821Z   # HELP go_memstats_heap_objects Number of currently allocated objects. Equals to /gc/heap/objects:objects.
+2026-04-23T09:39:17.0796322Z   # TYPE go_memstats_heap_objects gauge
+2026-04-23T09:39:17.0796602Z   go_memstats_heap_objects 42592
+2026-04-23T09:39:17.0797172Z   # HELP go_memstats_heap_released_bytes Number of heap bytes released to OS. Equals to /memory/classes/heap/released:bytes.
+2026-04-23T09:39:17.0797744Z   # TYPE go_memstats_heap_released_bytes gauge
+2026-04-23T09:39:17.0798072Z   go_memstats_heap_released_bytes 2.924544e+06
+2026-04-23T09:39:17.0799238Z   # HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes + /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
+2026-04-23T09:39:17.0800143Z   # TYPE go_memstats_heap_sys_bytes gauge
+2026-04-23T09:39:17.0800443Z   go_memstats_heap_sys_bytes 1.1108352e+07
+2026-04-23T09:39:17.0800951Z   # HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
+2026-04-23T09:39:17.0801434Z   # TYPE go_memstats_last_gc_time_seconds gauge
+2026-04-23T09:39:17.0801825Z   go_memstats_last_gc_time_seconds 1.7769371396727433e+09
+2026-04-23T09:39:17.0802908Z   # HELP go_memstats_mallocs_total Total number of heap objects allocated, both live and gc-ed. Semantically a counter version for go_memstats_heap_objects gauge. Equals to /gc/heap/allocs:objects + /gc/heap/tiny/allocs:objects.
+2026-04-23T09:39:17.0803792Z   # TYPE go_memstats_mallocs_total counter
+2026-04-23T09:39:17.0804069Z   go_memstats_mallocs_total 79258
+2026-04-23T09:39:17.0804741Z   # HELP go_memstats_mcache_inuse_bytes Number of bytes in use by mcache structures. Equals to /memory/classes/metadata/mcache/inuse:bytes.
+2026-04-23T09:39:17.0805356Z   # TYPE go_memstats_mcache_inuse_bytes gauge
+2026-04-23T09:39:17.0805667Z   go_memstats_mcache_inuse_bytes 4592
+2026-04-23T09:39:17.0806718Z   # HELP go_memstats_mcache_sys_bytes Number of bytes used for mcache structures obtained from system. Equals to /memory/classes/metadata/mcache/inuse:bytes + /memory/classes/metadata/mcache/free:bytes.
+2026-04-23T09:39:17.0808179Z   # TYPE go_memstats_mcache_sys_bytes gauge
+2026-04-23T09:39:17.0808839Z   go_memstats_mcache_sys_bytes 16072
+2026-04-23T09:39:17.0809963Z   # HELP go_memstats_mspan_inuse_bytes Number of bytes in use by mspan structures. Equals to /memory/classes/metadata/mspan/inuse:bytes.
+2026-04-23T09:39:17.0811008Z   # TYPE go_memstats_mspan_inuse_bytes gauge
+2026-04-23T09:39:17.0811516Z   go_memstats_mspan_inuse_bytes 147200
+2026-04-23T09:39:17.0813123Z   # HELP go_memstats_mspan_sys_bytes Number of bytes used for mspan structures obtained from system. Equals to /memory/classes/metadata/mspan/inuse:bytes + /memory/classes/metadata/mspan/free:bytes.
+2026-04-23T09:39:17.0814552Z   # TYPE go_memstats_mspan_sys_bytes gauge
+2026-04-23T09:39:17.0815214Z   go_memstats_mspan_sys_bytes 163200
+2026-04-23T09:39:17.0816334Z   # HELP go_memstats_next_gc_bytes Number of heap bytes when next garbage collection will take place. Equals to /gc/heap/goal:bytes.
+2026-04-23T09:39:17.0817361Z   # TYPE go_memstats_next_gc_bytes gauge
+2026-04-23T09:39:17.0817844Z   go_memstats_next_gc_bytes 9.995714e+06
+2026-04-23T09:39:17.0819104Z   # HELP go_memstats_other_sys_bytes Number of bytes used for other system allocations. Equals to /memory/classes/other:bytes.
+2026-04-23T09:39:17.0820124Z   # TYPE go_memstats_other_sys_bytes gauge
+2026-04-23T09:39:17.0820625Z   go_memstats_other_sys_bytes 572028
+2026-04-23T09:39:17.0822057Z   # HELP go_memstats_stack_inuse_bytes Number of bytes obtained from system for stack allocator in non-CGO environments. Equals to /memory/classes/heap/stacks:bytes.
+2026-04-23T09:39:17.0823390Z   # TYPE go_memstats_stack_inuse_bytes gauge
+2026-04-23T09:39:17.0823922Z   go_memstats_stack_inuse_bytes 1.47456e+06
+2026-04-23T09:39:17.0825354Z   # HELP go_memstats_stack_sys_bytes Number of bytes obtained from system for stack allocator. Equals to /memory/classes/heap/stacks:bytes + /memory/classes/os-stacks:bytes.
+2026-04-23T09:39:17.0826597Z   # TYPE go_memstats_stack_sys_bytes gauge
+2026-04-23T09:39:17.0827164Z   go_memstats_stack_sys_bytes 1.47456e+06
+2026-04-23T09:39:17.0827845Z   # HELP go_memstats_sys_bytes Number of bytes obtained from system. Equals to /memory/classes/total:byte.
+2026-04-23T09:39:17.0828339Z   # TYPE go_memstats_sys_bytes gauge
+2026-04-23T09:39:17.0828619Z   go_memstats_sys_bytes 1.8454792e+07
+2026-04-23T09:39:17.0830018Z   # HELP go_sched_gomaxprocs_threads The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously. Sourced from /sched/gomaxprocs:threads.
+2026-04-23T09:39:17.0831047Z   # TYPE go_sched_gomaxprocs_threads gauge
+2026-04-23T09:39:17.0831355Z   go_sched_gomaxprocs_threads 2
+2026-04-23T09:39:17.0832104Z   # HELP go_sched_goroutines_created_goroutines_total Count of goroutines created since program start. Sourced from /sched/goroutines-created:goroutines.
+2026-04-23T09:39:17.0832849Z   # TYPE go_sched_goroutines_created_goroutines_total counter
+2026-04-23T09:39:17.0833231Z   go_sched_goroutines_created_goroutines_total 321
+2026-04-23T09:39:17.0833816Z   # HELP go_sched_goroutines_goroutines Count of live goroutines. Sourced from /sched/goroutines:goroutines.
+2026-04-23T09:39:17.0834338Z   # TYPE go_sched_goroutines_goroutines gauge
+2026-04-23T09:39:17.0834640Z   go_sched_goroutines_goroutines 182
+2026-04-23T09:39:17.0835859Z   # HELP go_sched_goroutines_not_in_go_goroutines Approximate count of goroutines running or blocked in a system call or cgo call. Not guaranteed to add up to /sched/goroutines:goroutines with other goroutine metrics. Sourced from /sched/goroutines/not-in-go:goroutines.
+2026-04-23T09:39:17.0836929Z   # TYPE go_sched_goroutines_not_in_go_goroutines gauge
+2026-04-23T09:39:17.0837271Z   go_sched_goroutines_not_in_go_goroutines 1
+2026-04-23T09:39:17.0838441Z   # HELP go_sched_goroutines_runnable_goroutines Approximate count of goroutines ready to execute, but not executing. Not guaranteed to add up to /sched/goroutines:goroutines with other goroutine metrics. Sourced from /sched/goroutines/runnable:goroutines.
+2026-04-23T09:39:17.0839840Z   # TYPE go_sched_goroutines_runnable_goroutines gauge
+2026-04-23T09:39:17.0840181Z   go_sched_goroutines_runnable_goroutines 3
+2026-04-23T09:39:17.0841431Z   # HELP go_sched_goroutines_running_goroutines Approximate count of goroutines executing. Always less than or equal to /sched/gomaxprocs:threads. Not guaranteed to add up to /sched/goroutines:goroutines with other goroutine metrics. Sourced from /sched/goroutines/running:goroutines.
+2026-04-23T09:39:17.0842551Z   # TYPE go_sched_goroutines_running_goroutines gauge
+2026-04-23T09:39:17.0842885Z   go_sched_goroutines_running_goroutines 1
+2026-04-23T09:39:17.0844202Z   # HELP go_sched_goroutines_waiting_goroutines Approximate count of goroutines waiting on a resource (I/O or sync primitives). Not guaranteed to add up to /sched/goroutines:goroutines with other goroutine metrics. Sourced from /sched/goroutines/waiting:goroutines.
+2026-04-23T09:39:17.0845270Z   # TYPE go_sched_goroutines_waiting_goroutines gauge
+2026-04-23T09:39:17.0845618Z   go_sched_goroutines_waiting_goroutines 177
+2026-04-23T09:39:17.0846668Z   # HELP go_sched_latencies_seconds Distribution of the time goroutines have spent in the scheduler in a runnable state before actually running. Bucket counts increase monotonically. Sourced from /sched/latencies:seconds.
+2026-04-23T09:39:17.0847558Z   # TYPE go_sched_latencies_seconds histogram
+2026-04-23T09:39:17.0847957Z   go_sched_latencies_seconds_bucket{le="6.399999999999999e-08"} 39
+2026-04-23T09:39:17.0848398Z   go_sched_latencies_seconds_bucket{le="6.399999999999999e-07"} 66
+2026-04-23T09:39:17.0848974Z   go_sched_latencies_seconds_bucket{le="7.167999999999999e-06"} 89
+2026-04-23T09:39:17.0849423Z   go_sched_latencies_seconds_bucket{le="8.191999999999999e-05"} 126
+2026-04-23T09:39:17.0849870Z   go_sched_latencies_seconds_bucket{le="0.0009175039999999999"} 139
+2026-04-23T09:39:17.0850427Z   go_sched_latencies_seconds_bucket{le="0.010485759999999998"} 151
+2026-04-23T09:39:17.0850859Z   go_sched_latencies_seconds_bucket{le="0.11744051199999998"} 151
+2026-04-23T09:39:17.0851327Z   go_sched_latencies_seconds_bucket{le="+Inf"} 151
+2026-04-23T09:39:17.0851744Z   go_sched_latencies_seconds_sum 0.012356671999999999
+2026-04-23T09:39:17.0852153Z   go_sched_latencies_seconds_count 151
+2026-04-23T09:39:17.0854260Z   # HELP go_sched_pauses_stopping_gc_seconds Distribution of individual GC-related stop-the-world stopping latencies. This is the time it takes from deciding to stop the world until all Ps are stopped. This is a subset of the total GC-related stop-the-world time (/sched/pauses/total/gc:seconds). During this time, some threads may be executing. Bucket counts increase monotonically. Sourced from /sched/pauses/stopping/gc:seconds.
+2026-04-23T09:39:17.0855975Z   # TYPE go_sched_pauses_stopping_gc_seconds histogram
+2026-04-23T09:39:17.0856479Z   go_sched_pauses_stopping_gc_seconds_bucket{le="6.399999999999999e-08"} 0
+2026-04-23T09:39:17.0857136Z   go_sched_pauses_stopping_gc_seconds_bucket{le="6.399999999999999e-07"} 4
+2026-04-23T09:39:17.0870191Z   go_sched_pauses_stopping_gc_seconds_bucket{le="7.167999999999999e-06"} 4
+2026-04-23T09:39:17.0871096Z   go_sched_pauses_stopping_gc_seconds_bucket{le="8.191999999999999e-05"} 8
+2026-04-23T09:39:17.0871824Z   go_sched_pauses_stopping_gc_seconds_bucket{le="0.0009175039999999999"} 8
+2026-04-23T09:39:17.0872347Z   go_sched_pauses_stopping_gc_seconds_bucket{le="0.010485759999999998"} 8
+2026-04-23T09:39:17.0872850Z   go_sched_pauses_stopping_gc_seconds_bucket{le="0.11744051199999998"} 8
+2026-04-23T09:39:17.0873284Z   go_sched_pauses_stopping_gc_seconds_bucket{le="+Inf"} 8
+2026-04-23T09:39:17.0873712Z   go_sched_pauses_stopping_gc_seconds_sum 2.8927999999999998e-05
+2026-04-23T09:39:17.0874106Z   go_sched_pauses_stopping_gc_seconds_count 8
+2026-04-23T09:39:17.0876048Z   # HELP go_sched_pauses_stopping_other_seconds Distribution of individual non-GC-related stop-the-world stopping latencies. This is the time it takes from deciding to stop the world until all Ps are stopped. This is a subset of the total non-GC-related stop-the-world time (/sched/pauses/total/other:seconds). During this time, some threads may be executing. Bucket counts increase monotonically. Sourced from /sched/pauses/stopping/other:seconds.
+2026-04-23T09:39:17.0877721Z   # TYPE go_sched_pauses_stopping_other_seconds histogram
+2026-04-23T09:39:17.0878191Z   go_sched_pauses_stopping_other_seconds_bucket{le="6.399999999999999e-08"} 0
+2026-04-23T09:39:17.0879036Z   go_sched_pauses_stopping_other_seconds_bucket{le="6.399999999999999e-07"} 0
+2026-04-23T09:39:17.0879583Z   go_sched_pauses_stopping_other_seconds_bucket{le="7.167999999999999e-06"} 0
+2026-04-23T09:39:17.0880081Z   go_sched_pauses_stopping_other_seconds_bucket{le="8.191999999999999e-05"} 0
+2026-04-23T09:39:17.0880769Z   go_sched_pauses_stopping_other_seconds_bucket{le="0.0009175039999999999"} 0
+2026-04-23T09:39:17.0881299Z   go_sched_pauses_stopping_other_seconds_bucket{le="0.010485759999999998"} 0
+2026-04-23T09:39:17.0881808Z   go_sched_pauses_stopping_other_seconds_bucket{le="0.11744051199999998"} 0
+2026-04-23T09:39:17.0882266Z   go_sched_pauses_stopping_other_seconds_bucket{le="+Inf"} 0
+2026-04-23T09:39:17.0882641Z   go_sched_pauses_stopping_other_seconds_sum 0
+2026-04-23T09:39:17.0882979Z   go_sched_pauses_stopping_other_seconds_count 0
+2026-04-23T09:39:17.0884860Z   # HELP go_sched_pauses_total_gc_seconds Distribution of individual GC-related stop-the-world pause latencies. This is the time from deciding to stop the world until the world is started again. Some of this time is spent getting all threads to stop (this is measured directly in /sched/pauses/stopping/gc:seconds), during which some threads may still be running. Bucket counts increase monotonically. Sourced from /sched/pauses/total/gc:seconds.
+2026-04-23T09:39:17.0886476Z   # TYPE go_sched_pauses_total_gc_seconds histogram
+2026-04-23T09:39:17.0886898Z   go_sched_pauses_total_gc_seconds_bucket{le="6.399999999999999e-08"} 0
+2026-04-23T09:39:17.0887486Z   go_sched_pauses_total_gc_seconds_bucket{le="6.399999999999999e-07"} 0
+2026-04-23T09:39:17.0887947Z   go_sched_pauses_total_gc_seconds_bucket{le="7.167999999999999e-06"} 1
+2026-04-23T09:39:17.0888395Z   go_sched_pauses_total_gc_seconds_bucket{le="8.191999999999999e-05"} 8
+2026-04-23T09:39:17.0888991Z   go_sched_pauses_total_gc_seconds_bucket{le="0.0009175039999999999"} 8
+2026-04-23T09:39:17.0889443Z   go_sched_pauses_total_gc_seconds_bucket{le="0.010485759999999998"} 8
+2026-04-23T09:39:17.0889901Z   go_sched_pauses_total_gc_seconds_bucket{le="0.11744051199999998"} 8
+2026-04-23T09:39:17.0890310Z   go_sched_pauses_total_gc_seconds_bucket{le="+Inf"} 8
+2026-04-23T09:39:17.0890664Z   go_sched_pauses_total_gc_seconds_sum 5.0816e-05
+2026-04-23T09:39:17.0890995Z   go_sched_pauses_total_gc_seconds_count 8
+2026-04-23T09:39:17.0892714Z   # HELP go_sched_pauses_total_other_seconds Distribution of individual non-GC-related stop-the-world pause latencies. This is the time from deciding to stop the world until the world is started again. Some of this time is spent getting all threads to stop (measured directly in /sched/pauses/stopping/other:seconds). Bucket counts increase monotonically. Sourced from /sched/pauses/total/other:seconds.
+2026-04-23T09:39:17.0894214Z   # TYPE go_sched_pauses_total_other_seconds histogram
+2026-04-23T09:39:17.0894653Z   go_sched_pauses_total_other_seconds_bucket{le="6.399999999999999e-08"} 0
+2026-04-23T09:39:17.0895143Z   go_sched_pauses_total_other_seconds_bucket{le="6.399999999999999e-07"} 0
+2026-04-23T09:39:17.0895628Z   go_sched_pauses_total_other_seconds_bucket{le="7.167999999999999e-06"} 0
+2026-04-23T09:39:17.0896115Z   go_sched_pauses_total_other_seconds_bucket{le="8.191999999999999e-05"} 0
+2026-04-23T09:39:17.0896602Z   go_sched_pauses_total_other_seconds_bucket{le="0.0009175039999999999"} 0
+2026-04-23T09:39:17.0897084Z   go_sched_pauses_total_other_seconds_bucket{le="0.010485759999999998"} 0
+2026-04-23T09:39:17.0897570Z   go_sched_pauses_total_other_seconds_bucket{le="0.11744051199999998"} 0
+2026-04-23T09:39:17.0898008Z   go_sched_pauses_total_other_seconds_bucket{le="+Inf"} 0
+2026-04-23T09:39:17.0898360Z   go_sched_pauses_total_other_seconds_sum 0
+2026-04-23T09:39:17.0898803Z   go_sched_pauses_total_other_seconds_count 0
+2026-04-23T09:39:17.0899519Z   # HELP go_sched_threads_total_threads The current count of live threads that are owned by the Go runtime. Sourced from /sched/threads/total:threads.
+2026-04-23T09:39:17.0900153Z   # TYPE go_sched_threads_total_threads gauge
+2026-04-23T09:39:17.0900451Z   go_sched_threads_total_threads 7
+2026-04-23T09:39:17.0902232Z   # HELP go_sync_mutex_wait_total_seconds_total Approximate cumulative time goroutines have spent blocked on a sync.Mutex, sync.RWMutex, or runtime-internal lock. This metric is useful for identifying global changes in lock contention. Collect a mutex or block profile using the runtime/pprof package for more detailed contention data. Sourced from /sync/mutex/wait/total:seconds.
+2026-04-23T09:39:17.0903673Z   # TYPE go_sync_mutex_wait_total_seconds_total counter
+2026-04-23T09:39:17.0904017Z   go_sync_mutex_wait_total_seconds_total 0
+2026-04-23T09:39:17.0904336Z   # HELP go_threads Number of OS threads created.
+2026-04-23T09:39:17.0904636Z   # TYPE go_threads gauge
+2026-04-23T09:39:17.0904856Z   go_threads 7
+2026-04-23T09:39:17.0905826Z   # HELP leader_election_master_status Gauge of if the reporting system is master of the relevant lease, 0 indicates backup, 1 indicates master. 'name' is the string used to identify the lease. Please make sure to group by name.
+2026-04-23T09:39:17.0906702Z   # TYPE leader_election_master_status gauge
+2026-04-23T09:39:17.0907127Z   leader_election_master_status{name="1dd96f58.harbor-operator.io"} 0
+2026-04-23T09:39:17.0907669Z   # HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+2026-04-23T09:39:17.0908105Z   # TYPE process_cpu_seconds_total counter
+2026-04-23T09:39:17.0908396Z   process_cpu_seconds_total 0.22
+2026-04-23T09:39:17.0909090Z   # HELP process_max_fds Maximum number of open file descriptors.
+2026-04-23T09:39:17.0909452Z   # TYPE process_max_fds gauge
+2026-04-23T09:39:17.0909712Z   process_max_fds 1.073741816e+09
+2026-04-23T09:39:17.0910233Z   # HELP process_network_receive_bytes_total Number of bytes received by the process over the network.
+2026-04-23T09:39:17.0910769Z   # TYPE process_network_receive_bytes_total counter
+2026-04-23T09:39:17.0911107Z   process_network_receive_bytes_total 69682
+2026-04-23T09:39:17.0911620Z   # HELP process_network_transmit_bytes_total Number of bytes sent by the process over the network.
+2026-04-23T09:39:17.0912138Z   # TYPE process_network_transmit_bytes_total counter
+2026-04-23T09:39:17.0912474Z   process_network_transmit_bytes_total 16583
+2026-04-23T09:39:17.0912834Z   # HELP process_open_fds Number of open file descriptors.
+2026-04-23T09:39:17.0913171Z   # TYPE process_open_fds gauge
+2026-04-23T09:39:17.0913418Z   process_open_fds 10
+2026-04-23T09:39:17.0913767Z   # HELP process_resident_memory_bytes Resident memory size in bytes.
+2026-04-23T09:39:17.0914167Z   # TYPE process_resident_memory_bytes gauge
+2026-04-23T09:39:17.0914493Z   process_resident_memory_bytes 5.2359168e+07
+2026-04-23T09:39:17.0914980Z   # HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+2026-04-23T09:39:17.0915430Z   # TYPE process_start_time_seconds gauge
+2026-04-23T09:39:17.0915749Z   process_start_time_seconds 1.77693713939e+09
+2026-04-23T09:39:17.0916139Z   # HELP process_virtual_memory_bytes Virtual memory size in bytes.
+2026-04-23T09:39:17.0916510Z   # TYPE process_virtual_memory_bytes gauge
+2026-04-23T09:39:17.0916821Z   process_virtual_memory_bytes 1.343545344e+09
+2026-04-23T09:39:17.0917337Z   # HELP process_virtual_memory_max_bytes Maximum amount of virtual memory available in bytes.
+2026-04-23T09:39:17.0917820Z   # TYPE process_virtual_memory_max_bytes gauge
+2026-04-23T09:39:17.0918183Z   process_virtual_memory_max_bytes 1.8446744073709552e+19
+2026-04-23T09:39:17.0918901Z   # HELP rest_client_requests_total Number of HTTP requests, partitioned by status code, method, and host.
+2026-04-23T09:39:17.0919438Z   # TYPE rest_client_requests_total counter
+2026-04-23T09:39:17.0919866Z   rest_client_requests_total{code="200",host="10.96.0.1:443",method="GET"} 24
+2026-04-23T09:39:17.0920391Z   rest_client_requests_total{code="201",host="10.96.0.1:443",method="POST"} 2
+2026-04-23T09:39:17.0921253Z   [1mSTEP:[0m Fetching controller manager pod description [38;5;243m@ 04/23/26 09:39:17.024[0m
+2026-04-23T09:39:17.0921915Z   running: kubectl describe pod harbor-operator-65f9699687-qmq99 -n harbor-operator-system
+2026-04-23T09:39:17.2285433Z Pod description:
+2026-04-23T09:39:17.2286006Z  Name:             harbor-operator-65f9699687-qmq99
+2026-04-23T09:39:17.2286628Z Namespace:        harbor-operator-system
+2026-04-23T09:39:17.2287292Z Priority:         0
+2026-04-23T09:39:17.2287664Z Service Account:  harbor-operator
+2026-04-23T09:39:17.2288095Z Node:             kind-control-plane/172.18.0.2
+2026-04-23T09:39:17.2288866Z Start Time:       Thu, 23 Apr 2026 09:38:59 +0000
+2026-04-23T09:39:17.2289379Z Labels:           app.kubernetes.io/instance=harbor-operator
+2026-04-23T09:39:17.2290384Z                   app.kubernetes.io/name=harbor-operator
+2026-04-23T09:39:17.2290975Z                   pod-template-hash=65f9699687
+2026-04-23T09:39:17.2291540Z Annotations:      kubectl.kubernetes.io/default-container: manager
+2026-04-23T09:39:17.2292644Z                   kubectl.kubernetes.io/restartedAt: 2026-04-23T09:38:46Z
+2026-04-23T09:39:17.2293062Z Status:           Running
+2026-04-23T09:39:17.2293341Z SeccompProfile:   RuntimeDefault
+2026-04-23T09:39:17.2293700Z IP:               10.244.0.25
+2026-04-23T09:39:17.2293994Z IPs:
+2026-04-23T09:39:17.2294217Z   IP:           10.244.0.25
+2026-04-23T09:39:17.2294560Z Controlled By:  ReplicaSet/harbor-operator-65f9699687
+2026-04-23T09:39:17.2295032Z Containers:
+2026-04-23T09:39:17.2295247Z   manager:
+2026-04-23T09:39:17.2296175Z     Container ID:  containerd://7395820179d3f8b3d9f9696b4e05a65b5e177ea0485e21126db248b6d6ac65de
+2026-04-23T09:39:17.2296879Z     Image:         example.com/harbor-operator:v0.0.1
+2026-04-23T09:39:17.2297658Z     Image ID:      sha256:70913088be0fb8240f1dbe37b748b2672644e505f19b6877e39e17adde6a73a7
+2026-04-23T09:39:17.2298181Z     Port:          <none>
+2026-04-23T09:39:17.2298579Z     Host Port:     <none>
+2026-04-23T09:39:17.2298993Z     Command:
+2026-04-23T09:39:17.2299221Z       /manager
+2026-04-23T09:39:17.2299454Z     Args:
+2026-04-23T09:39:17.2299848Z       --leader-elect=true
+2026-04-23T09:39:17.2300169Z       --health-probe-bind-address=:8081
+2026-04-23T09:39:17.2300494Z       --metrics-bind-address=:8443
+2026-04-23T09:39:17.2300821Z       --metrics-secure=true
+2026-04-23T09:39:17.2301172Z     State:          Running
+2026-04-23T09:39:17.2301490Z       Started:      Thu, 23 Apr 2026 09:38:59 +0000
+2026-04-23T09:39:17.2301785Z     Ready:          True
+2026-04-23T09:39:17.2302099Z     Restart Count:  0
+2026-04-23T09:39:17.2302354Z     Limits:
+2026-04-23T09:39:17.2302554Z       cpu:     500m
+2026-04-23T09:39:17.2302770Z       memory:  512Mi
+2026-04-23T09:39:17.2302976Z     Requests:
+2026-04-23T09:39:17.2303262Z       cpu:        100m
+2026-04-23T09:39:17.2303650Z       memory:     128Mi
+2026-04-23T09:39:17.2304153Z     Liveness:     http-get http://:8081/healthz delay=15s timeout=1s period=20s #success=1 #failure=3
+2026-04-23T09:39:17.2305013Z     Readiness:    http-get http://:8081/readyz delay=5s timeout=1s period=10s #success=1 #failure=3
+2026-04-23T09:39:17.2305505Z     Environment:  <none>
+2026-04-23T09:39:17.2305831Z     Mounts:
+2026-04-23T09:39:17.2306282Z       /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-bn57l (ro)
+2026-04-23T09:39:17.2306701Z Conditions:
+2026-04-23T09:39:17.2306999Z   Type                        Status
+2026-04-23T09:39:17.2307290Z   PodReadyToStartContainers   True 
+2026-04-23T09:39:17.2307567Z   Initialized                 True 
+2026-04-23T09:39:17.2307843Z   Ready                       True 
+2026-04-23T09:39:17.2308191Z   ContainersReady             True 
+2026-04-23T09:39:17.2308454Z   PodScheduled                True 
+2026-04-23T09:39:17.2308901Z Volumes:
+2026-04-23T09:39:17.2309264Z   kube-api-access-bn57l:
+2026-04-23T09:39:17.2309760Z     Type:                    Projected (a volume that contains injected data from multiple sources)
+2026-04-23T09:39:17.2310295Z     TokenExpirationSeconds:  3607
+2026-04-23T09:39:17.2310811Z     ConfigMapName:           kube-root-ca.crt
+2026-04-23T09:39:17.2311157Z     Optional:                false
+2026-04-23T09:39:17.2311653Z     DownwardAPI:             true
+2026-04-23T09:39:17.2312117Z QoS Class:                   Burstable
+2026-04-23T09:39:17.2312491Z Node-Selectors:              <none>
+2026-04-23T09:39:17.2313202Z Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+2026-04-23T09:39:17.2315161Z                              node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+2026-04-23T09:39:17.2315542Z Events:
+2026-04-23T09:39:17.2315953Z   Type    Reason     Age   From               Message
+2026-04-23T09:39:17.2316314Z   ----    ------     ----  ----               -------
+2026-04-23T09:39:17.2317234Z   Normal  Scheduled  18s   default-scheduler  Successfully assigned harbor-operator-system/harbor-operator-65f9699687-qmq99 to kind-control-plane
+2026-04-23T09:39:17.2318749Z   Normal  Pulled     18s   kubelet            spec.containers{manager}: Container image "example.com/harbor-operator:v0.0.1" already present on machine and can be accessed by the pod
+2026-04-23T09:39:17.2319898Z   Normal  Created    18s   kubelet            spec.containers{manager}: Container created
+2026-04-23T09:39:17.2320611Z   Normal  Started    18s   kubelet            spec.containers{manager}: Container started
+2026-04-23T09:39:17.2320913Z 
+2026-04-23T09:39:17.2321455Z   [1mSTEP:[0m cleaning up the curl pod for metrics [38;5;243m@ 04/23/26 09:39:17.228[0m
+2026-04-23T09:39:17.2322143Z   running: kubectl delete pod curl-metrics -n harbor-operator-system
+2026-04-23T09:39:17.3303373Z   running: kubectl delete clusterrolebinding harbor-operator-metrics-binding
+2026-04-23T09:39:17.4292650Z   running: kubectl delete clusterrole harbor-operator-metrics-reader
+2026-04-23T09:39:17.5312425Z   [1mSTEP:[0m undeploying the controller-manager [38;5;243m@ 04/23/26 09:39:17.53[0m
+2026-04-23T09:39:17.5312911Z   running: make undeploy
+2026-04-23T09:39:17.7518327Z   [1mSTEP:[0m uninstalling CRDs [38;5;243m@ 04/23/26 09:39:17.751[0m
+2026-04-23T09:39:17.7519125Z   running: make uninstall
+2026-04-23T09:39:20.0239209Z   [1mSTEP:[0m removing manager namespace [38;5;243m@ 04/23/26 09:39:20.023[0m
+2026-04-23T09:39:20.0240454Z   running: kubectl delete ns harbor-operator-system
+2026-04-23T09:39:25.4057929Z [38;5;9m• [FAILED] [9.193 seconds][0m
+2026-04-23T09:39:25.4059411Z [0mManager [38;5;243mManager [0mHarbor Flow [38;5;9m[1m[It] should reconcile Harbor resources end-to-end[0m
+2026-04-23T09:39:25.4061230Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:300[0m
+2026-04-23T09:39:25.4061838Z 
+2026-04-23T09:39:25.4062142Z   [38;5;9m[FAILED] Unexpected error:
+2026-04-23T09:39:25.4062957Z       <*errors.errorString | 0xc862f152250>: 
+2026-04-23T09:39:25.4064662Z       kubectl apply -f /tmp/harbor-e2e-1988790755.yaml failed with error: (exit status 1) secret/harbor-e2e-admin-pass-1776937156212143403 created
+2026-04-23T09:39:25.4066204Z       harborconnection.harbor.harbor-operator.io/harbor-e2e-conn-1776937156212143403 created
+2026-04-23T09:39:25.4067593Z       secret/harbor-e2e-user-pass-1776937156212143403 created
+2026-04-23T09:39:25.4069199Z       retentionpolicy.harbor.harbor-operator.io/e2e-retention-1776937156212143403 created
+2026-04-23T09:39:25.4071641Z       Error from server (BadRequest): error when creating "/tmp/harbor-e2e-1988790755.yaml": Registry in version "v1alpha1" cannot be handled as a Registry: strict decoding error: unknown field "spec.name"
+2026-04-23T09:39:25.4074681Z       Error from server (BadRequest): error when creating "/tmp/harbor-e2e-1988790755.yaml": Project in version "v1alpha1" cannot be handled as a Project: strict decoding error: unknown field "spec.registryName"
+2026-04-23T09:39:25.4077662Z       Error from server (BadRequest): error when creating "/tmp/harbor-e2e-1988790755.yaml": User in version "v1alpha1" cannot be handled as a User: strict decoding error: unknown field "spec.username"
+2026-04-23T09:39:25.4079356Z       
+2026-04-23T09:39:25.4079685Z       {
+2026-04-23T09:39:25.4091305Z           s: "kubectl apply -f /tmp/harbor-e2e-1988790755.yaml failed with error: (exit status 1) secret/harbor-e2e-admin-pass-1776937156212143403 created\nharborconnection.harbor.harbor-operator.io/harbor-e2e-conn-1776937156212143403 created\nsecret/harbor-e2e-user-pass-1776937156212143403 created\nretentionpolicy.harbor.harbor-operator.io/e2e-retention-1776937156212143403 created\nError from server (BadRequest): error when creating \"/tmp/harbor-e2e-1988790755.yaml\": Registry in version \"v1alpha1\" cannot be handled as a Registry: strict decoding error: unknown field \"spec.name\"\nError from server (BadRequest): error when creating \"/tmp/harbor-e2e-1988790755.yaml\": Project in version \"v1alpha1\" cannot be handled as a Project: strict decoding error: unknown field \"spec.registryName\"\nError from server (BadRequest): error when creating \"/tmp/harbor-e2e-1988790755.yaml\": User in version \"v1alpha1\" cannot be handled as a User: strict decoding error: unknown field \"spec.username\"\n",
+2026-04-23T09:39:25.4097425Z       }
+2026-04-23T09:39:25.4097831Z   occurred[0m
+2026-04-23T09:39:25.4099911Z   [38;5;9mIn [1m[It][0m[38;5;9m at: [1m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:443[0m [38;5;243m@ 04/23/26 09:39:16.715[0m
+2026-04-23T09:39:25.4101234Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:25.4101777Z [38;5;14mS [SKIPPED] [0.000 seconds][0m
+2026-04-23T09:39:25.4102462Z [0mManager [38;5;243mManager [0mHarbor Flow [38;5;14m[1m[It] should reconcile resources through a ClusterHarborConnection[0m
+2026-04-23T09:39:25.4103726Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:472[0m
+2026-04-23T09:39:25.4104094Z 
+2026-04-23T09:39:25.4104479Z   [38;5;14m[SKIPPED] Spec skipped because an earlier spec in an ordered container failed[0m
+2026-04-23T09:39:25.4105534Z   [38;5;14mIn [1m[It][0m[38;5;14m at: [1m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:472[0m [38;5;243m@ 04/23/26 09:39:25.405[0m
+2026-04-23T09:39:25.4106215Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:25.4106575Z [38;5;14mS [SKIPPED] [0.000 seconds][0m
+2026-04-23T09:39:25.4107299Z [0mManager [38;5;243mManager [0mHarbor Flow [38;5;14m[1m[It] should honor deletionPolicy Orphan when the Harbor connection is deleted first[0m
+2026-04-23T09:39:25.4108401Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:546[0m
+2026-04-23T09:39:25.4109033Z 
+2026-04-23T09:39:25.4109589Z   [38;5;14m[SKIPPED] Spec skipped because an earlier spec in an ordered container failed[0m
+2026-04-23T09:39:25.4110608Z   [38;5;14mIn [1m[It][0m[38;5;14m at: [1m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:546[0m [38;5;243m@ 04/23/26 09:39:25.405[0m
+2026-04-23T09:39:25.4111268Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:25.4111588Z [38;5;14mS [SKIPPED] [0.000 seconds][0m
+2026-04-23T09:39:25.4112327Z [0mManager [38;5;243mManager [0mHarbor Flow [38;5;14m[1m[It] should report a conflict for singleton resources targeting the same Harbor instance[0m
+2026-04-23T09:39:25.4113161Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:624[0m
+2026-04-23T09:39:25.4113494Z 
+2026-04-23T09:39:25.4113881Z   [38;5;14m[SKIPPED] Spec skipped because an earlier spec in an ordered container failed[0m
+2026-04-23T09:39:25.4115309Z   [38;5;14mIn [1m[It][0m[38;5;14m at: [1m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:624[0m [38;5;243m@ 04/23/26 09:39:25.405[0m
+2026-04-23T09:39:25.4115990Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:25.4116311Z [38;5;14mS [SKIPPED] [0.000 seconds][0m
+2026-04-23T09:39:25.4116988Z [0mManager [38;5;243mManager [0mHarbor Flow [38;5;14m[1m[It] should reconcile dependents when the backing HarborConnection changes[0m
+2026-04-23T09:39:25.4118062Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:735[0m
+2026-04-23T09:39:25.4118402Z 
+2026-04-23T09:39:25.4119378Z   [38;5;14m[SKIPPED] Spec skipped because an earlier spec in an ordered container failed[0m
+2026-04-23T09:39:25.4120559Z   [38;5;14mIn [1m[It][0m[38;5;14m at: [1m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:735[0m [38;5;243m@ 04/23/26 09:39:25.406[0m
+2026-04-23T09:39:25.4121420Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:25.4121740Z [0m[1m[AfterSuite] [0m
+2026-04-23T09:39:25.4122238Z [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_suite_test.go:86[0m
+2026-04-23T09:39:25.4122708Z   Uninstalling CertManager...
+2026-04-23T09:39:25.4123315Z   running: kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
+2026-04-23T09:39:38.3898544Z [38;5;10m[AfterSuite] PASSED [12.983 seconds][0m
+2026-04-23T09:39:38.3899427Z [38;5;243m------------------------------[0m
+2026-04-23T09:39:38.3899726Z 
+2026-04-23T09:39:38.3899954Z [38;5;9m[1mSummarizing 1 Failure:[0m
+2026-04-23T09:39:38.3901089Z   [38;5;9m[FAIL][0m [0mManager [38;5;243mManager [0mHarbor Flow [38;5;9m[1m[It] should reconcile Harbor resources end-to-end[0m
+2026-04-23T09:39:38.3902483Z   [38;5;243m/home/runner/work/harbor-operator/harbor-operator/test/e2e/e2e_test.go:443[0m
+2026-04-23T09:39:38.3903080Z 
+2026-04-23T09:39:38.3903393Z [38;5;9m[1mRan 3 of 7 Specs in 80.990 seconds[0m
+2026-04-23T09:39:38.3904575Z [38;5;9m[1mFAIL![0m -- [38;5;10m[1m2 Passed[0m | [38;5;9m[1m1 Failed[0m | [38;5;11m[1m0 Pending[0m | [38;5;14m[1m4 Skipped[0m
+2026-04-23T09:39:38.3905789Z --- FAIL: TestE2E (80.99s)
+2026-04-23T09:39:38.3906124Z FAIL
+2026-04-23T09:39:38.3908670Z FAIL	github.com/rkthtrifork/harbor-operator/test/e2e	80.995s
+2026-04-23T09:39:38.3924544Z FAIL
+2026-04-23T09:39:38.4230426Z make: *** [Makefile:59: test-e2e] Error 1
+2026-04-23T09:39:38.4249549Z ##[error]Process completed with exit code 2.
+2026-04-23T09:39:38.4340729Z Post job cleanup.
+2026-04-23T09:39:38.5164057Z [command]/usr/bin/git version
+2026-04-23T09:39:38.5200538Z git version 2.53.0
+2026-04-23T09:39:38.5242366Z Temporarily overriding HOME='/home/runner/work/_temp/d7c52055-3e46-4bd6-8858-714d62c0bd43' before making global git config changes
+2026-04-23T09:39:38.5243561Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-23T09:39:38.5249230Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/harbor-operator/harbor-operator
+2026-04-23T09:39:38.5282676Z Removing SSH command configuration
+2026-04-23T09:39:38.5290876Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-23T09:39:38.5327569Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-23T09:39:38.5600203Z Removing HTTP extra header
+2026-04-23T09:39:38.5605967Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-23T09:39:38.5642242Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-23T09:39:38.5860365Z Removing includeIf entries pointing to credentials config files
+2026-04-23T09:39:38.5866010Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-23T09:39:38.5890486Z includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git.path
+2026-04-23T09:39:38.5891617Z includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git/worktrees/*.path
+2026-04-23T09:39:38.5892538Z includeif.gitdir:/github/workspace/.git.path
+2026-04-23T09:39:38.5893210Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-04-23T09:39:38.5900571Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git.path
+2026-04-23T09:39:38.5922024Z /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.5933423Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git.path /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.5969859Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git/worktrees/*.path
+2026-04-23T09:39:38.5994764Z /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6005461Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/harbor-operator/harbor-operator/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6054558Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-04-23T09:39:38.6070921Z /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6079068Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6112421Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-04-23T09:39:38.6136035Z /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6145021Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config
+2026-04-23T09:39:38.6178518Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-23T09:39:38.6414798Z Removing credentials config '/home/runner/work/_temp/git-credentials-fcc634d2-2356-4575-9e68-f71731f517e7.config'
+2026-04-23T09:39:38.6600425Z Cleaning up orphan processes
+2026-04-23T09:39:38.7589893Z Terminate orphan process: pid (16658) (kubectl)
