@@ -119,6 +119,7 @@ Pull request titles must follow conventional-commit format: `type(scope): summar
 The `pr-title` workflow enforces this on every PR.
 
 Renovate is configured to emit semantic commit titles for dependency PRs and to use strict PR titles so base-branch suffixes like `(main)` are not appended.
+Release branches only receive patch-level dependency update PRs automatically; minor and major dependency bumps remain manual so patch releases do not unexpectedly widen the dependency baseline.
 
 When a GitHub Actions workflow only applies to a subset of the repository, prefer trigger-level `paths` filters unless the pull request check is required for merging.
 For required PR checks, let the workflow start and use lightweight changed-file detection inside the workflow to skip unnecessary work.
@@ -221,6 +222,7 @@ CI verifies both are in sync.
 - `main` remains the development branch; maintenance patch releases are cut from release branches.
 - Support only the latest 3 release branches by semver for routine maintenance automation.
 - Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
+- Only patch-level dependency updates should be merged to release branches automatically. Minor and major dependency updates should be made manually with explicit review and release intent.
 - Any non-dependency change on a release branch should be released manually.
 
 ### Chart Packaging on Release Branches

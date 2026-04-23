@@ -44,6 +44,20 @@
       enabled: false,
     },
     {
+      description: "Release branches only receive patch-level Go dependency updates.",
+      matchBaseBranches: [
+        "/^release\\/.+$/",
+      ],
+      matchManagers: [
+        "gomod",
+      ],
+      matchUpdateTypes: [
+        "minor",
+        "major",
+      ],
+      enabled: false,
+    },
+    {
       description: "Group Kubernetes ecosystem updates in Go modules.",
       matchManagers: [
         "gomod",
