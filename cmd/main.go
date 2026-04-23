@@ -88,7 +88,8 @@ func main() {
 	flag.StringVar(&watchNamespaces, "watch-namespaces", "",
 		"Comma-separated list of namespaces to watch. Leave empty to watch all namespaces.")
 	flag.StringVar(&harborConnection, "harbor-connection", "",
-		"ClusterHarborConnection name to use for all Harbor-backed resources. Leave empty to use each resource's spec.harborConnectionRef.")
+		"ClusterHarborConnection name to use for all Harbor-backed resources. "+
+			"Leave empty to use each resource's spec.harborConnectionRef.")
 	opts := zap.Options{
 		Development: true,
 	}

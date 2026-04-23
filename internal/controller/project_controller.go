@@ -75,7 +75,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Desired payload
-	createReq, err := r.buildCreateReq(ctx, hc, &cr)
+	createReq, err := r.buildCreateReq(ctx, &cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -150,7 +150,7 @@ func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.
 	return false, nil
 }
 
-func (r *ProjectReconciler) buildCreateReq(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
+func (r *ProjectReconciler) buildCreateReq(ctx context.Context, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
 	var meta harborclient.ProjectMetadata
 	if m := cr.Spec.Metadata; m != nil {
 		meta = harborclient.ProjectMetadata{

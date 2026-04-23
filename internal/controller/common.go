@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -363,11 +366,33 @@ func hashParts(parts ...string) string {
 	return hashSecret(strings.Join(parts, "\n"))
 }
 
-func defaultString(value, fallback string) string {
-	if value == "" {
-		return fallback
+func scheduleParameters(in map[string]apiextensionsv1.JSON, kind string) (map[string]any, string, error) {
+	if in == nil {
+		return nil, "", nil
 	}
-	return value
+	out := map[string]any{}
+	keys := make([]string, 0, len(in))
+	for key, raw := range in {
+		if len(raw.Raw) == 0 {
+			continue
+		}
+		var value any
+		if err := json.Unmarshal(raw.Raw, &value); err != nil {
+			return nil, "", fmt.Errorf("invalid %s parameters for %s: %w", kind, key, err)
+		}
+		out[key] = value
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		raw := in[key]
+		if len(raw.Raw) == 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", key, strings.TrimSpace(string(raw.Raw))))
+	}
+	return out, strings.Join(parts, "&"), nil
 }
 
 func finalizeIfDeleting(ctx context.Context, c client.Client, obj client.Object, deletionPolicy harborv1alpha1.DeletionPolicy, deleteFn func() error) (bool, error) {

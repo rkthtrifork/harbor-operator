@@ -4,11 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
-	"strings"
 
 	"github.com/go-logr/logr"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,7 +60,7 @@ func (r *ScanAllScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	params, paramsHash, err := scanAllParameters(cr.Spec.Parameters)
+	params, paramsHash, err := scheduleParameters(cr.Spec.Parameters, "scan all")
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -135,35 +132,6 @@ func (r *ScanAllScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return builder.Complete(r)
-}
-
-func scanAllParameters(in map[string]apiextensionsv1.JSON) (map[string]any, string, error) {
-	if in == nil {
-		return nil, "", nil
-	}
-	out := map[string]any{}
-	keys := make([]string, 0, len(in))
-	for key, raw := range in {
-		if len(raw.Raw) == 0 {
-			continue
-		}
-		var value any
-		if err := json.Unmarshal(raw.Raw, &value); err != nil {
-			return nil, "", fmt.Errorf("invalid scan all parameters for %s: %w", key, err)
-		}
-		out[key] = value
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, key := range keys {
-		raw := in[key]
-		if len(raw.Raw) == 0 {
-			continue
-		}
-		parts = append(parts, fmt.Sprintf("%s=%s", key, strings.TrimSpace(string(raw.Raw))))
-	}
-	return out, strings.Join(parts, "&"), nil
 }
 
 func scanAllSchedulesEqual(current, desired *harborclient.Schedule) bool {
