@@ -2,7 +2,9 @@ name: Verify Generated Assets
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'release/v*'
   workflow_dispatch:
 
 concurrency:

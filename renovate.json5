@@ -32,6 +32,17 @@
       automergeType: "pr",
     },
     {
+      description: "Automerge Docker digest refreshes after CI passes.",
+      matchDatasources: [
+        "docker",
+      ],
+      matchUpdateTypes: [
+        "digest",
+      ],
+      automerge: true,
+      automergeType: "pr",
+    },
+    {
       description: "Release branches only receive runtime dependency updates.",
       matchBaseBranches: [
         "/^release\\/.+$/",

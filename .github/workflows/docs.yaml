@@ -2,7 +2,9 @@ name: Docs
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'release/v*'
   push:
     branches: [main]
     paths:
