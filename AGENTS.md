@@ -6,10 +6,20 @@ Contributor-facing guidance lives in [`CONTRIBUTING.md`](./CONTRIBUTING.md). Kee
 ## Self-Maintenance
 
 - Treat `AGENTS.md` as a living repo contract, not a static note.
-- When an agent learns a durable repo rule, workflow, constraint, or convention while doing work here, update `AGENTS.md` in the same change when practical.
+- When an agent learns a durable repo expectation, constraint, or convention
+  while doing work here, update `AGENTS.md` in the same change when practical.
 - If guidance in `AGENTS.md` is outdated, redundant, misleading, or no longer enforced by the repo, remove or replace it directly instead of leaving stale instructions behind.
 - Keep `AGENTS.md` and [`CONTRIBUTING.md`](./CONTRIBUTING.md) aligned on shared project rules. If one changes, check whether the other should change too.
-- Prefer documenting stable expectations and recurring workflows. Do not add one-off task notes, temporary incident details, or personal working preferences.
+- Prefer documenting durable goals, invariants, and decision criteria. Do not
+  turn the current implementation into policy unless the repo truly depends on
+  that exact shape.
+- Current implementation paths are not sacred. If a simpler, safer, or more
+  maintainable approach better preserves the durable goals, prefer that change
+  and update the affected docs, tests, and automation together.
+- Question existing choices when there is a concrete improvement, but avoid
+  churn that only swaps one valid style for another.
+- Do not add one-off task notes, temporary incident details, or personal working
+  preferences.
 
 ## Required Structure
 
@@ -68,7 +78,6 @@ The docs site is built with MkDocs Material. Hand-written guides live under `doc
 ## Automation Conventions
 - Pull request titles must follow conventional-commit format (`type(scope): summary` or `type: summary`) because the `pr-title` workflow enforces it.
 - Renovate PRs must keep semantic commit titles enabled and use strict PR titles so branch suffixes like `(main)` do not get appended.
-- Release branches should only receive patch-level dependency update PRs. Minor and major dependency bumps stay manual so patch releases do not silently widen the operator's dependency baseline.
 - GitHub Actions workflows should use trigger-level `paths` filters for clearly scoped automation, but not on pull-request workflows whose checks are required for merging. For required PR checks, let the workflow start and use lightweight changed-file detection inside jobs or steps.
 
 ## Verification
@@ -83,20 +92,29 @@ Useful local docs target:
 - Use the `Makefile` with local installations of Docker, Go, Helm, `kubectl`, and Kind as needed.
 - This repository does not currently maintain a devcontainer setup.
 
-## Release Branches
+## Release Principles
 - Release branches use the form `release/vX.Y` for supported operator minor lines.
 - `main` remains the development branch; maintenance patch releases are cut from release branches.
-- Support only the latest 3 release branches by semver for routine maintenance automation.
-- Dependency-only patch releases may be tagged automatically from release branches on the scheduled patch train.
-- Only patch-level dependency updates should be merged to release branches automatically. Minor and major dependency updates should be handled manually, with explicit review and release intent.
-- Any non-dependency change on a release branch should be released manually.
-
-## Chart Packaging
-- Chart releases may package with explicit `--version` and `--app-version` values derived from release tags instead of committing patch-version bumps back into `Chart.yaml`.
-- Automated release-branch patch trains must publish the operator tag first, wait for the matching GHCR image to exist, and only then create the chart tag.
-- The scheduled release-branch patch train should only process the latest 3 supported release branches; `workflow_dispatch` may still target an older branch explicitly when needed.
-- On release branches, dependency-only operator patch releases should also publish a new chart release so the chart default image tracks the newest operator patch.
-- Chart-only patch releases remain a manual path and should set intended chart and operator versions deliberately before tagging.
+- Keep release operations reproducible, auditable, and hard to perform
+  partially. Prefer one clear release path over parallel mechanisms.
+- Release tags should be treated as records of an intentional release, not as an
+  ad hoc control surface.
+- Release automation must account for repository rulesets and required
+  permissions.
+- New minor release branches should start with `charts/harbor-operator/Chart.yaml`
+  `version` and `appVersion` aligned to `X.Y.0`.
+- Chart release artifacts should clearly identify both the chart version and the
+  operator image version they install.
+- Routine release-branch maintenance automation should only process the latest 3
+  supported release branches; older branches require explicit release intent.
+- Only dependency-only patch releases should be eligible for automatic
+  merge/release on release branches.
+- Automated release-branch patch releases should publish the operator image and
+  matching chart together so chart defaults track the newest operator patch.
+- Minor, major, and non-dependency changes on release branches require manual
+  review and explicit release intent.
+- Chart-only patch releases are manual exceptions and should set intended chart
+  and operator versions deliberately.
 - GitHub's `latest` release should track the highest stable operator tag (`vX.Y.Z`); chart releases (`chart-vX.Y.Z`) must not mark themselves as `latest`.
 - Auto-generated GitHub release notes must be scoped to the same tag family: operator releases diff from earlier `v*` tags, and chart releases diff from earlier `chart-v*` tags.
 - RC release notes should compare against the latest stable release on the same release branch (`X.Y` line); if that line has no stable release yet, fall back to the previous stable tag in the same tag family.

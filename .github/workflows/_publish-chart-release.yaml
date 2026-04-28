@@ -1,20 +1,41 @@
-name: Release Helm Chart (OCI)
+name: Publish Chart Release
 
 on:
-  push:
-    tags:
-      - "chart-v*"
+  workflow_call:
+    inputs:
+      version:
+        description: Chart version without the chart-v prefix.
+        required: true
+        type: string
+      operator_version:
+        description: Operator appVersion to package into the chart.
+        required: true
+        type: string
+      ref:
+        description: Git ref to check out for the release.
+        required: true
+        type: string
+      tag_name:
+        description: Chart release tag.
+        required: true
+        type: string
+      prerelease:
+        description: Whether the GitHub Release is a prerelease.
+        required: true
+        type: boolean
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Set up Helm
@@ -23,25 +44,10 @@ jobs:
       - name: Lint chart
         run: helm lint charts/harbor-operator
 
-      - name: Resolve chart release metadata
-        id: chart_meta
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          chart_version="${tag#chart-v}"
-          operator_tag="$(git tag --points-at HEAD --list 'v*' --sort=-version:refname | head -n1)"
-          if [ -n "$operator_tag" ]; then
-            operator_version="${operator_tag#v}"
-          else
-            operator_version="$(grep -E '^appVersion:' charts/harbor-operator/Chart.yaml | sed -E 's/^appVersion:[[:space:]]*"?(.*)"?/\1/')"
-          fi
-
-          echo "chart_version=$chart_version" >> "$GITHUB_OUTPUT"
-          echo "operator_version=$operator_version" >> "$GITHUB_OUTPUT"
-
       - name: Verify operator image exists
         env:
           OPERATOR_IMAGE: ghcr.io/${{ github.repository }}
-          OPERATOR_VERSION: ${{ steps.chart_meta.outputs.operator_version }}
+          OPERATOR_VERSION: ${{ inputs.operator_version }}
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -62,25 +68,21 @@ jobs:
       - name: Package chart
         run: |
           helm package charts/harbor-operator \
-            --version "${{ steps.chart_meta.outputs.chart_version }}" \
-            --app-version "${{ steps.chart_meta.outputs.operator_version }}" \
+            --version "${{ inputs.version }}" \
+            --app-version "${{ inputs.operator_version }}" \
             --destination dist
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push chart
-        run: helm push "dist/harbor-operator-${{ steps.chart_meta.outputs.chart_version }}.tgz" oci://ghcr.io/rkthtrifork/charts
-
-      - name: Classify tag
-        id: classify
-        uses: ./.github/actions/classify-tag
-        with:
-          prefix: "chart-v"
+        run: helm push "dist/harbor-operator-${{ inputs.version }}.tgz" oci://ghcr.io/rkthtrifork/charts
 
       - name: Resolve release notes start tag
-        if: ${{ steps.classify.outputs.is_release == 'true' }}
         id: notes
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
         run: |
           previous_in_series() {
             local target="$1"
@@ -101,10 +103,8 @@ jobs:
             '
           }
 
-          current_tag="${GITHUB_REF_NAME}"
-
-          if [ "${{ steps.classify.outputs.is_rc }}" = "true" ]; then
-            version="${current_tag#chart-v}"
+          if [ "$PRERELEASE" = "true" ]; then
+            version="${TAG_NAME#chart-v}"
             base_version="${version%%-rc.*}"
             release_line="$(printf '%s' "${base_version}" | cut -d. -f1-2)"
             previous_tag="$(
@@ -115,21 +115,20 @@ jobs:
               previous_tag="$(previous_in_series "chart-v${base_version}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
             fi
           else
-            previous_tag="$(previous_in_series "${current_tag}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
+            previous_tag="$(previous_in_series "${TAG_NAME}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
           fi
 
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ inputs.tag_name }}
           previous_tag: ${{ steps.notes.outputs.previous_tag }}
           generate_release_notes: true
           make_latest: false
-          prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
+          prerelease: ${{ inputs.prerelease }}
           files: |
-            dist/harbor-operator-${{ steps.chart_meta.outputs.chart_version }}.tgz
+            dist/harbor-operator-${{ inputs.version }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

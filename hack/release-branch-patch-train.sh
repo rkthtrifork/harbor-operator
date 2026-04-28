@@ -3,12 +3,8 @@ set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-false}"
 RELEASE_BRANCH="${RELEASE_BRANCH:-}"
-GHCR_IMAGE="${GHCR_IMAGE:-}"
-GHCR_USERNAME="${GHCR_USERNAME:-}"
-GHCR_TOKEN="${GHCR_TOKEN:-}"
-IMAGE_WAIT_TIMEOUT_SECONDS="${IMAGE_WAIT_TIMEOUT_SECONDS:-900}"
-IMAGE_WAIT_INTERVAL_SECONDS="${IMAGE_WAIT_INTERVAL_SECONDS:-15}"
 SUPPORTED_RELEASE_BRANCH_COUNT="${SUPPORTED_RELEASE_BRANCH_COUNT:-3}"
+GITHUB_OUTPUT="${GITHUB_OUTPUT:-}"
 
 AUTO_RELEASE_PATHS=(
 	"go.mod"
@@ -43,6 +39,60 @@ tag_exists_remote() {
 	git ls-remote --tags origin "refs/tags/${tag}" | grep -q .
 }
 
+remote_tag_target() {
+	local tag="$1"
+	local target
+
+	target="$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+	if [[ -z "$target" ]]; then
+		target="$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')"
+	fi
+
+	printf '%s\n' "$target"
+}
+
+local_tag_target() {
+	local tag="$1"
+
+	if git rev-parse --verify --quiet "${tag}^{commit}" >/dev/null; then
+		git rev-parse "${tag}^{commit}"
+	fi
+}
+
+create_or_push_tag() {
+	local tag="$1"
+	local target_sha="$2"
+	local message="$3"
+	local remote_target
+	local local_target
+
+	remote_target="$(remote_tag_target "$tag")"
+	if [[ -n "$remote_target" ]]; then
+		if [[ "$remote_target" != "$target_sha" ]]; then
+			log "Tag ${tag} already exists at ${remote_target}, expected ${target_sha}"
+			return 1
+		fi
+
+		log "Tag ${tag} already exists at ${target_sha}"
+		return 0
+	fi
+
+	local_target="$(local_tag_target "$tag")"
+	if [[ -n "$local_target" ]]; then
+		if [[ "$local_target" == "$target_sha" ]]; then
+			log "Pushing existing local tag ${tag}"
+			git push origin "$tag"
+			return 0
+		fi
+
+		log "Removing stale local tag ${tag} at ${local_target}"
+		git tag -d "$tag" >/dev/null
+	fi
+
+	git tag -a "$tag" "$target_sha" -m "$message"
+	git push origin "$tag"
+}
+
 tag_message() {
 	local tag="$1"
 	git for-each-ref --format='%(contents)' "refs/tags/${tag}" | head -n1
@@ -56,39 +106,6 @@ stable_tag_points_at() {
 		grep -E "^${prefix}[0-9]+\.[0-9]+\.[0-9]+$" |
 		sort -V |
 		tail -n1) || true
-}
-
-ensure_ghcr_login() {
-	if [[ -z "$GHCR_IMAGE" || -z "$GHCR_USERNAME" || -z "$GHCR_TOKEN" ]]; then
-		log "Skipping image availability checks: GHCR credentials or image name not configured"
-		return 1
-	fi
-
-	echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
-}
-
-wait_for_image_tag() {
-	local image_tag="$1"
-	local attempt=0
-	local max_attempts=$((IMAGE_WAIT_TIMEOUT_SECONDS / IMAGE_WAIT_INTERVAL_SECONDS))
-
-	if (( max_attempts < 1 )); then
-		max_attempts=1
-	fi
-
-	while (( attempt < max_attempts )); do
-		if docker manifest inspect "${GHCR_IMAGE}:${image_tag}" >/dev/null 2>&1; then
-			log "Found published operator image ${GHCR_IMAGE}:${image_tag}"
-			return 0
-		fi
-
-		attempt=$((attempt + 1))
-		log "Waiting for operator image ${GHCR_IMAGE}:${image_tag} (${attempt}/${max_attempts})"
-		sleep "$IMAGE_WAIT_INTERVAL_SECONDS"
-	done
-
-	log "Timed out waiting for operator image ${GHCR_IMAGE}:${image_tag}"
-	return 1
 }
 
 list_release_branches() {
@@ -145,6 +162,71 @@ path_is_auto_release_relevant() {
 	return 1
 }
 
+operator_releases_file="$(mktemp)"
+chart_releases_file="$(mktemp)"
+printf '[]\n' > "$operator_releases_file"
+printf '[]\n' > "$chart_releases_file"
+
+add_operator_release() {
+	local version="$1"
+	local tag="$2"
+	local ref="$3"
+
+	jq \
+		--arg version "$version" \
+		--arg tag "$tag" \
+		--arg ref "$ref" \
+		'. += [{version: $version, tag: $tag, ref: $ref}]' \
+		"$operator_releases_file" > "${operator_releases_file}.tmp"
+	mv "${operator_releases_file}.tmp" "$operator_releases_file"
+}
+
+add_chart_release() {
+	local version="$1"
+	local operator_version="$2"
+	local tag="$3"
+	local ref="$4"
+
+	jq \
+		--arg version "$version" \
+		--arg operator_version "$operator_version" \
+		--arg tag "$tag" \
+		--arg ref "$ref" \
+		'. += [{version: $version, operator_version: $operator_version, tag: $tag, ref: $ref}]' \
+		"$chart_releases_file" > "${chart_releases_file}.tmp"
+	mv "${chart_releases_file}.tmp" "$chart_releases_file"
+}
+
+write_outputs() {
+	local operator_matrix
+	local chart_matrix
+
+	operator_matrix="$(jq -c '{include: .}' "$operator_releases_file")"
+	chart_matrix="$(jq -c '{include: .}' "$chart_releases_file")"
+
+	log "Operator publish matrix: ${operator_matrix}"
+	log "Chart publish matrix: ${chart_matrix}"
+
+	if [[ -n "$GITHUB_OUTPUT" ]]; then
+		{
+			echo "operator_matrix=${operator_matrix}"
+			echo "chart_matrix=${chart_matrix}"
+			if jq -e 'length > 0' "$operator_releases_file" >/dev/null; then
+				echo "has_operator_releases=true"
+			else
+				echo "has_operator_releases=false"
+			fi
+			if jq -e 'length > 0' "$chart_releases_file" >/dev/null; then
+				echo "has_chart_releases=true"
+			else
+				echo "has_chart_releases=false"
+			fi
+		} >> "$GITHUB_OUTPUT"
+	fi
+}
+
+trap write_outputs EXIT
+
 git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
 
 mapfile -t branches < <(list_release_branches)
@@ -167,10 +249,6 @@ fi
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-if [[ "$DRY_RUN" != "true" ]]; then
-	ensure_ghcr_login
-fi
 
 for branch in "${branches[@]}"; do
 	log "Inspecting ${branch}"
@@ -227,12 +305,12 @@ for branch in "${branches[@]}"; do
 		log "Next chart tag: ${next_chart_tag}"
 
 		if [[ "$DRY_RUN" == "true" ]]; then
+			add_chart_release "$next_chart_version" "$current_operator_version" "$next_chart_tag" "$next_chart_tag"
 			continue
 		fi
 
-		wait_for_image_tag "${current_operator_version}"
-		git tag -a "${next_chart_tag}" "${head_sha}" -m "Automated chart patch release ${next_chart_tag} for ${operator_tag}"
-		git push origin "${next_chart_tag}"
+		create_or_push_tag "${next_chart_tag}" "${head_sha}" "Automated chart patch release ${next_chart_tag} for ${operator_tag}"
+		add_chart_release "$next_chart_version" "$current_operator_version" "$next_chart_tag" "$next_chart_tag"
 		continue
 	fi
 
@@ -262,8 +340,14 @@ for branch in "${branches[@]}"; do
 	next_chart_version="$(increment_patch "$current_chart_version")"
 	next_chart_tag="chart-v${next_chart_version}"
 
-	if tag_exists_remote "$next_chart_tag"; then
-		log "Skipping ${branch}: tag ${next_chart_tag} already exists"
+	existing_chart_tag_target="$(remote_tag_target "$next_chart_tag")"
+	if [[ -n "$existing_chart_tag_target" ]]; then
+		if [[ "$existing_chart_tag_target" == "$head_sha" ]]; then
+			log "Chart tag ${next_chart_tag} already exists at HEAD; scheduling chart publish"
+			add_chart_release "$next_chart_version" "$next_operator_version" "$next_chart_tag" "$next_chart_tag"
+		else
+			log "Skipping ${branch}: tag ${next_chart_tag} already exists at ${existing_chart_tag_target}"
+		fi
 		continue
 	fi
 
@@ -272,17 +356,24 @@ for branch in "${branches[@]}"; do
 	log "Next chart tag: ${next_chart_tag}"
 
 	if [[ "$DRY_RUN" == "true" ]]; then
+		add_operator_release "$next_operator_version" "$next_operator_tag" "$next_operator_tag"
+		add_chart_release "$next_chart_version" "$next_operator_version" "$next_chart_tag" "$next_chart_tag"
 		continue
 	fi
 
-	if tag_exists_remote "$next_operator_tag"; then
-		log "Operator tag ${next_operator_tag} already exists; resuming with image availability checks"
+	existing_operator_tag_target="$(remote_tag_target "$next_operator_tag")"
+	if [[ -n "$existing_operator_tag_target" ]]; then
+		if [[ "$existing_operator_tag_target" != "$head_sha" ]]; then
+			log "Skipping ${branch}: operator tag ${next_operator_tag} already exists at ${existing_operator_tag_target}"
+			continue
+		fi
+
+		log "Operator tag ${next_operator_tag} already exists at HEAD; scheduling chart publish only"
 	else
-		git tag -a "${next_operator_tag}" "${head_sha}" -m "Automated dependency patch release ${next_operator_tag}"
-		git push origin "${next_operator_tag}"
+		create_or_push_tag "${next_operator_tag}" "${head_sha}" "Automated dependency patch release ${next_operator_tag}"
+		add_operator_release "$next_operator_version" "$next_operator_tag" "$next_operator_tag"
 	fi
 
-	wait_for_image_tag "${next_operator_version}"
-	git tag -a "${next_chart_tag}" "${head_sha}" -m "Automated chart patch release ${next_chart_tag} for ${next_operator_tag}"
-	git push origin "${next_chart_tag}"
+	create_or_push_tag "${next_chart_tag}" "${head_sha}" "Automated chart patch release ${next_chart_tag} for ${next_operator_tag}"
+	add_chart_release "$next_chart_version" "$next_operator_version" "$next_chart_tag" "$next_chart_tag"
 done

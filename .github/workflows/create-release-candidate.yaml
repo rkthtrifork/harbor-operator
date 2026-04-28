@@ -1,0 +1,142 @@
+name: Create Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: RC version without the leading v, e.g. 0.7.0-rc.1
+        required: true
+        type: string
+      release_branch:
+        description: Optional release branch. Defaults to release/vX.Y from version.
+        required: false
+        type: string
+      skip_ci_check:
+        description: Allow tagging even if required branch checks are not green.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  checks: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+      operator_tag: ${{ steps.prepare.outputs.operator_tag }}
+      chart_tag: ${{ steps.prepare.outputs.chart_tag }}
+      release_branch: ${{ steps.prepare.outputs.release_branch }}
+      head_sha: ${{ steps.prepare.outputs.head_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release candidate tags
+        id: prepare
+        env:
+          VERSION: ${{ inputs.version }}
+          RELEASE_BRANCH_INPUT: ${{ inputs.release_branch }}
+          SKIP_CI_CHECK: ${{ inputs.skip_ci_check && 'true' || 'false' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            echo "version must use X.Y.Z-rc.N format, got: $VERSION" >&2
+            exit 1
+          fi
+
+          base_version="${VERSION%%-rc.*}"
+          release_line="$(printf '%s' "$base_version" | cut -d. -f1-2)"
+          release_branch="${RELEASE_BRANCH_INPUT:-release/v${release_line}}"
+
+          if [[ "$release_branch" != "release/v${release_line}" ]]; then
+            echo "release branch $release_branch does not match version line ${release_line}" >&2
+            exit 1
+          fi
+
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
+          if ! git rev-parse --verify "origin/${release_branch}" >/dev/null; then
+            echo "Branch ${release_branch} does not exist" >&2
+            exit 1
+          fi
+
+          head_sha="$(git rev-parse "origin/${release_branch}")"
+          operator_tag="v${VERSION}"
+          chart_tag="chart-v${VERSION}"
+
+          if [ "$SKIP_CI_CHECK" != "true" ]; then
+            required_checks=(docs lint verify-generated test test-e2e)
+            check_runs="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${head_sha}/check-runs" --paginate)"
+            for check in "${required_checks[@]}"; do
+              if ! jq -e --arg check "$check" '.check_runs | any(.name == $check and .conclusion == "success")' <<<"$check_runs" >/dev/null; then
+                echo "Required check is not green on ${release_branch}@${head_sha}: ${check}" >&2
+                exit 1
+              fi
+            done
+          fi
+
+          create_or_validate_tag() {
+            local tag="$1"
+            local message="$2"
+            local existing_sha
+
+            existing_sha="$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+            if [ -z "$existing_sha" ]; then
+              existing_sha="$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')"
+            fi
+
+            if [ -n "$existing_sha" ]; then
+              if [ "$existing_sha" != "$head_sha" ]; then
+                echo "Tag ${tag} already exists at ${existing_sha}, expected ${head_sha}" >&2
+                exit 1
+              fi
+              return
+            fi
+
+            git tag -a "$tag" "$head_sha" -m "$message"
+            git push origin "$tag"
+          }
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          create_or_validate_tag "$operator_tag" "Release candidate ${operator_tag}"
+          create_or_validate_tag "$chart_tag" "Chart release candidate ${chart_tag} for ${operator_tag}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "operator_tag=$operator_tag" >> "$GITHUB_OUTPUT"
+          echo "chart_tag=$chart_tag" >> "$GITHUB_OUTPUT"
+          echo "release_branch=$release_branch" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+  publish-operator:
+    needs: prepare
+    uses: ./.github/workflows/_publish-operator-release.yaml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.operator_tag }}
+      tag_name: ${{ needs.prepare.outputs.operator_tag }}
+      prerelease: true
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write
+
+  publish-chart:
+    needs:
+      - prepare
+      - publish-operator
+    uses: ./.github/workflows/_publish-chart-release.yaml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      operator_version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.chart_tag }}
+      tag_name: ${{ needs.prepare.outputs.chart_tag }}
+      prerelease: true
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write

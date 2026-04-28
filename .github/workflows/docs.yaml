@@ -6,14 +6,9 @@ on:
       - main
       - 'release/v*'
   push:
-    branches: [main]
-    paths:
-      - "api/**"
-      - "docs/**"
-      - "hack/crd-ref-docs.yaml"
-      - "hack/mkdocs.yml"
-      - "Makefile"
-      - ".github/workflows/docs.yaml"
+    branches:
+      - main
+      - 'release/v*'
 
 permissions:
   contents: read

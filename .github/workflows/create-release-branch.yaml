@@ -1,0 +1,80 @@
+name: Create Release Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      minor:
+        description: Minor version line, e.g. 0.7
+        required: true
+        type: string
+      source_ref:
+        description: Source ref to branch from.
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Create branch
+        env:
+          MINOR: ${{ inputs.minor }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if [[ ! "$MINOR" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "minor must use X.Y format, got: $MINOR" >&2
+            exit 1
+          fi
+
+          version="${MINOR}.0"
+          branch="release/v${MINOR}"
+
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists" >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "v${version}" >/dev/null 2>&1; then
+            echo "Tag v${version} already exists" >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "chart-v${version}" >/dev/null 2>&1; then
+            echo "Tag chart-v${version} already exists" >&2
+            exit 1
+          fi
+
+          git switch -c "$branch"
+
+          perl -0pi -e "s/^version: .*\$/version: ${version}/m" charts/harbor-operator/Chart.yaml
+          perl -0pi -e "s/^appVersion: .*\$/appVersion: \"${version}\"/m" charts/harbor-operator/Chart.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add charts/harbor-operator/Chart.yaml
+          git commit -m "chore(release): prepare v${version} release branch"
+          git push origin "HEAD:refs/heads/${branch}"
+
+          echo "Created ${branch} from ${SOURCE_REF}"

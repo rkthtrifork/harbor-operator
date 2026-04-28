@@ -1,36 +1,59 @@
-name: Release
+name: Publish Operator Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_call:
+    inputs:
+      version:
+        description: Operator version without the leading v.
+        required: true
+        type: string
+      ref:
+        description: Git ref to check out for the release.
+        required: true
+        type: string
+      tag_name:
+        description: Operator release tag.
+        required: true
+        type: string
+      prerelease:
+        description: Whether the GitHub Release is a prerelease.
+        required: true
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=tag
+      - name: Resolve image tags
+        id: image_tags
+        env:
+          VERSION: ${{ inputs.version }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+        run: |
+          {
+            echo "tags<<EOF"
+            echo "${IMAGE}:${VERSION}"
+            echo "${IMAGE}:${TAG_NAME}"
+            if [ "$PRERELEASE" != "true" ]; then
+              echo "${IMAGE}:$(printf '%s' "$VERSION" | cut -d. -f1-2)"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
@@ -46,46 +69,36 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Classify tag
-        id: classify
-        uses: ./.github/actions/classify-tag
-        with:
-          prefix: "v"
+          tags: ${{ steps.image_tags.outputs.tags }}
 
       - name: Decide latest release flag
         id: latest
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
         run: |
-          if [ "${{ steps.classify.outputs.is_release }}" != "true" ]; then
+          if [ "$PRERELEASE" = "true" ]; then
             echo "make_latest=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ "${{ steps.classify.outputs.is_rc }}" = "true" ]; then
-            echo "make_latest=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          current_tag="${GITHUB_REF_NAME}"
           highest_tag="$(
             {
               git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true
-            } \
-              | sort -V \
-              | tail -n1
+            } | sort -V | tail -n1
           )"
 
-          if [ "$current_tag" = "$highest_tag" ]; then
+          if [ "$TAG_NAME" = "$highest_tag" ]; then
             echo "make_latest=true" >> "$GITHUB_OUTPUT"
           else
             echo "make_latest=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Resolve release notes start tag
-        if: ${{ steps.classify.outputs.is_release == 'true' }}
         id: notes
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
         run: |
           previous_in_series() {
             local target="$1"
@@ -106,33 +119,30 @@ jobs:
             '
           }
 
-          current_tag="${GITHUB_REF_NAME}"
-
-          if [ "${{ steps.classify.outputs.is_rc }}" = "true" ]; then
-            version="${current_tag#v}"
+          if [ "$PRERELEASE" = "true" ]; then
+            version="${TAG_NAME#v}"
             base_version="${version%%-rc.*}"
             release_line="$(printf '%s' "${base_version}" | cut -d. -f1-2)"
             previous_tag="$(
-              previous_in_series "${base_version}" "v${release_line}.*" "^v${release_line}\.[0-9]+$"
+              previous_in_series "v${base_version}" "v${release_line}.*" "^v${release_line}\.[0-9]+$"
             )"
 
             if [ -z "$previous_tag" ]; then
               previous_tag="$(previous_in_series "v${base_version}" 'v*' '^v[0-9]+\.[0-9]+\.[0-9]+$')"
             fi
           else
-            previous_tag="$(previous_in_series "${current_tag}" 'v*' '^v[0-9]+\.[0-9]+\.[0-9]+$')"
+            previous_tag="$(previous_in_series "${TAG_NAME}" 'v*' '^v[0-9]+\.[0-9]+\.[0-9]+$')"
           fi
 
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        if: ${{ steps.classify.outputs.is_release == 'true' }}
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ inputs.tag_name }}
           previous_tag: ${{ steps.notes.outputs.previous_tag }}
           generate_release_notes: true
           make_latest: ${{ steps.latest.outputs.make_latest }}
-          prerelease: ${{ steps.classify.outputs.is_rc == 'true' }}
+          prerelease: ${{ inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

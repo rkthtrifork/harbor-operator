@@ -20,12 +20,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-patch-train:
+  prepare:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: read
       pull-requests: read
+    outputs:
+      operator_matrix: ${{ steps.patch-train.outputs.operator_matrix }}
+      chart_matrix: ${{ steps.patch-train.outputs.chart_matrix }}
+      has_operator_releases: ${{ steps.patch-train.outputs.has_operator_releases }}
+      has_chart_releases: ${{ steps.patch-train.outputs.has_chart_releases }}
     steps:
       - name: Create GitHub App token
         id: app-token
@@ -42,10 +46,45 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Create patch releases when runtime dependency files changed on release branches
+        id: patch-train
         env:
           RELEASE_BRANCH: ${{ inputs.release_branch }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
-          GHCR_IMAGE: ghcr.io/${{ github.repository }}
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash hack/release-branch-patch-train.sh
+
+  publish-operator:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.has_operator_releases == 'true' && !inputs.dry_run }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.operator_matrix) }}
+    uses: ./.github/workflows/_publish-operator-release.yaml
+    with:
+      version: ${{ matrix.version }}
+      ref: ${{ matrix.ref }}
+      tag_name: ${{ matrix.tag }}
+      prerelease: false
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write
+
+  publish-chart:
+    needs:
+      - prepare
+      - publish-operator
+    if: ${{ always() && needs.prepare.outputs.has_chart_releases == 'true' && !inputs.dry_run && (needs.publish-operator.result == 'success' || needs.publish-operator.result == 'skipped') }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.chart_matrix) }}
+    uses: ./.github/workflows/_publish-chart-release.yaml
+    with:
+      version: ${{ matrix.version }}
+      operator_version: ${{ matrix.operator_version }}
+      ref: ${{ matrix.ref }}
+      tag_name: ${{ matrix.tag }}
+      prerelease: false
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write

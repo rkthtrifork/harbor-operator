@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - 'release/v*'
+  push:
+    branches:
+      - 'release/v*'
   workflow_dispatch:
 
 concurrency:
