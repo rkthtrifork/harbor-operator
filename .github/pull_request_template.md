@@ -1,22 +1,7 @@
 ## Summary
 
-_TODO_
+<!-- What changed, and why? -->
 
-PR title format: `type(scope): summary` or `type: summary`
-Examples: `fix(controller): handle orphaned HarborConnection`, `docs: clarify installation`
+## Reviewer Notes
 
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Docs
-- [ ] Refactor/cleanup
-
-## Structure Checklist
-- [ ] CRD types include relevant printcolumns
-- [ ] Controller follows standard reconcile flow and uses `setErrorStatus`
-- [ ] Docs added/updated in `docs/crds/`
-
-## Notes
-
-_TODO_
+<!-- Optional: verification, release impact, risks, follow-ups, or reviewer focus. -->
