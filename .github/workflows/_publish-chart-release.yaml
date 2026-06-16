@@ -65,6 +65,24 @@ jobs:
           echo "Operator image ${OPERATOR_IMAGE}:${OPERATOR_VERSION} was not found in GHCR" >&2
           exit 1
 
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Check whether chart package already exists
+        id: chart_exists
+        run: |
+          existing_chart="$(helm show chart oci://ghcr.io/rkthtrifork/charts/harbor-operator --version "${{ inputs.version }}" 2>/dev/null || true)"
+          if [ -n "$existing_chart" ]; then
+            existing_app_version="$(awk '$1 == "appVersion:" { value=$2; gsub(/^"/, "", value); gsub(/"$/, "", value); print value; exit }' <<<"$existing_chart")"
+            if [ "$existing_app_version" != "${{ inputs.operator_version }}" ]; then
+              echo "Existing chart ${{ inputs.version }} has appVersion ${existing_app_version}, expected ${{ inputs.operator_version }}" >&2
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Package chart
         run: |
           helm package charts/harbor-operator \
@@ -72,10 +90,8 @@ jobs:
             --app-version "${{ inputs.operator_version }}" \
             --destination dist
 
-      - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       - name: Push chart
+        if: steps.chart_exists.outputs.exists != 'true'
         run: helm push "dist/harbor-operator-${{ inputs.version }}.tgz" oci://ghcr.io/rkthtrifork/charts
 
       - name: Resolve release notes start tag

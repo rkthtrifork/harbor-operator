@@ -3,8 +3,12 @@ name: Create Release Branch
 on:
   workflow_dispatch:
     inputs:
-      minor:
-        description: Minor version line, e.g. 0.7
+      operator_version:
+        description: Initial operator version for the release line, e.g. 0.7.0
+        required: true
+        type: string
+      chart_version:
+        description: Initial chart version for the release branch, e.g. 0.5.0
         required: true
         type: string
       source_ref:
@@ -15,6 +19,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: create-release-branch-${{ inputs.operator_version }}
+  cancel-in-progress: false
 
 jobs:
   create-release-branch:
@@ -37,17 +45,23 @@ jobs:
 
       - name: Create branch
         env:
-          MINOR: ${{ inputs.minor }}
+          OPERATOR_VERSION: ${{ inputs.operator_version }}
+          CHART_VERSION: ${{ inputs.chart_version }}
           SOURCE_REF: ${{ inputs.source_ref }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          if [[ ! "$MINOR" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            echo "minor must use X.Y format, got: $MINOR" >&2
+          if [[ ! "$OPERATOR_VERSION" =~ ^[0-9]+\.[0-9]+\.0$ ]]; then
+            echo "operator_version must use X.Y.0 format for a new minor release branch, got: $OPERATOR_VERSION" >&2
             exit 1
           fi
 
-          version="${MINOR}.0"
-          branch="release/v${MINOR}"
+          if [[ ! "$CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "chart_version must use X.Y.Z format, got: $CHART_VERSION" >&2
+            exit 1
+          fi
+
+          operator_line="$(printf '%s' "$OPERATOR_VERSION" | cut -d. -f1-2)"
+          branch="release/v${operator_line}"
 
           git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
 
@@ -56,25 +70,27 @@ jobs:
             exit 1
           fi
 
-          if git ls-remote --exit-code --tags origin "v${version}" >/dev/null 2>&1; then
-            echo "Tag v${version} already exists" >&2
+          if git ls-remote --exit-code --tags origin "v${OPERATOR_VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${OPERATOR_VERSION} already exists" >&2
             exit 1
           fi
 
-          if git ls-remote --exit-code --tags origin "chart-v${version}" >/dev/null 2>&1; then
-            echo "Tag chart-v${version} already exists" >&2
+          if git ls-remote --exit-code --tags origin "chart-v${CHART_VERSION}" >/dev/null 2>&1; then
+            echo "Tag chart-v${CHART_VERSION} already exists" >&2
             exit 1
           fi
 
           git switch -c "$branch"
 
-          perl -0pi -e "s/^version: .*\$/version: ${version}/m" charts/harbor-operator/Chart.yaml
-          perl -0pi -e "s/^appVersion: .*\$/appVersion: \"${version}\"/m" charts/harbor-operator/Chart.yaml
+          perl -0pi -e "s/^version: .*\$/version: ${CHART_VERSION}/m" charts/harbor-operator/Chart.yaml
+          perl -0pi -e "s/^appVersion: .*\$/appVersion: \"${OPERATOR_VERSION}\"/m" charts/harbor-operator/Chart.yaml
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add charts/harbor-operator/Chart.yaml
-          git commit -m "chore(release): prepare v${version} release branch"
+          if ! git diff --cached --quiet -- charts/harbor-operator/Chart.yaml; then
+            git commit -m "chore(release): prepare v${OPERATOR_VERSION} release branch"
+          fi
           git push origin "HEAD:refs/heads/${branch}"
 
           echo "Created ${branch} from ${SOURCE_REF}"

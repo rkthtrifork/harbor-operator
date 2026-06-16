@@ -1,6 +1,13 @@
 name: Release Branch Patch Train
 
 on:
+  push:
+    branches:
+      - 'release/v*'
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
   schedule:
     - cron: "0 6 * * 0"
   workflow_dispatch:
@@ -24,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: read
       pull-requests: read
     outputs:
       operator_matrix: ${{ steps.patch-train.outputs.operator_matrix }}
@@ -48,13 +56,14 @@ jobs:
       - name: Create patch releases when runtime dependency files changed on release branches
         id: patch-train
         env:
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
-          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          RELEASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_branch || github.event_name == 'push' && github.ref_name || '' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash hack/release-branch-patch-train.sh
 
   publish-operator:
     needs: prepare
-    if: ${{ needs.prepare.outputs.has_operator_releases == 'true' && !inputs.dry_run }}
+    if: ${{ needs.prepare.outputs.has_operator_releases == 'true' && inputs.dry_run != true }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare.outputs.operator_matrix) }}
@@ -73,7 +82,7 @@ jobs:
     needs:
       - prepare
       - publish-operator
-    if: ${{ always() && needs.prepare.outputs.has_chart_releases == 'true' && !inputs.dry_run && (needs.publish-operator.result == 'success' || needs.publish-operator.result == 'skipped') }}
+    if: ${{ always() && needs.prepare.outputs.has_chart_releases == 'true' && inputs.dry_run != true && (needs.publish-operator.result == 'success' || needs.publish-operator.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare.outputs.chart_matrix) }}

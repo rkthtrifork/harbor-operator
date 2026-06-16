@@ -197,18 +197,24 @@ We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in
 ### Release Versioning
 - Operator releases use tags `vX.Y.Z` or `vX.Y.Z-rc.N`.
 - Chart releases use tags `chart-vX.Y.Z` or `chart-vX.Y.Z-rc.N`.
-- New minor release branches should start with `charts/harbor-operator/Chart.yaml`
-  metadata aligned to the release line: `version: X.Y.0` and
-  `appVersion: "X.Y.0"`.
+- Operator and chart versions are independent. `release/vX.Y` branches track
+  the operator `X.Y` source line; chart versions on that branch may be on a
+  different semver line.
+- `charts/harbor-operator/Chart.yaml` is the release metadata source on release
+  branches: `appVersion` is the operator image version and `version` is the
+  chart version.
+- New minor release branches should start with `Chart.yaml` metadata set
+  deliberately, for example `version: 0.5.0` and `appVersion: "0.7.0"` on
+  `release/v0.7`.
 - Keep releases reproducible, auditable, and hard to perform partially. Prefer
   one clear release path over parallel mechanisms.
 - Treat release tags as records of an intentional release, not as an ad hoc
   control surface.
 - Release automation must account for repository rulesets and required
   permissions.
-- Chart-only releases are not part of the normal automated release path. If one
-  is needed, bump `charts/harbor-operator/Chart.yaml` deliberately and document
-  the reason in the release PR.
+- Create release tags through the dispatch workflows instead of pushing tags by
+  hand. The workflows validate the branch, required checks, and tag target
+  before publishing.
 
 ### Release Branches
 - Release branches use the form `release/vX.Y` for supported operator minor lines.
@@ -222,8 +228,72 @@ We maintain the Helm chart under `charts/harbor-operator/`. Please keep these in
 ### Chart Packaging on Release Branches
 - Published chart artifacts should clearly identify both the chart version and
   the operator image version they install.
-- Automated release-branch patch releases should publish the operator image and
-  matching chart together so chart defaults track the newest operator patch.
+- Stable chart releases must not reference prerelease operator versions.
+- Chart-only patch releases are supported. Change the chart files on the
+  relevant operator release branch, bump only `Chart.yaml` `version`, keep
+  `appVersion` on the intended operator version, and run the chart release
+  workflow.
+- Operator patch releases should update `Chart.yaml` `appVersion` to the new
+  operator version. Bump `Chart.yaml` `version` when publishing a matching chart
+  package.
+- Automated release-branch patch releases are allowed only for dependency-only
+  changes. The patch train bumps `Chart.yaml`, waits for required checks on that
+  commit, publishes the operator image, and then publishes a matching chart so
+  chart defaults track the newest operator patch.
+- The patch train is recoverable. If release tags already exist but the GitHub
+  release or chart package asset is missing, the next run schedules the missing
+  publish job again.
+- Unpublished chart changes block automated dependency patch releases. Chart
+  changes that were already published by a chart-only release do not block a
+  later dependency-only operator patch.
+- Release automation behavior is covered by `hack/test_release_branch_patch_train.py`;
+  run it when changing release automation.
 - GitHub's `latest` release is reserved for the highest stable operator tag (`vX.Y.Z`); chart releases (`chart-vX.Y.Z`) publish GitHub releases for assets/notes but do not mark themselves as `latest`.
 - Auto-generated GitHub release notes are scoped by tag family so operator releases compare against earlier `v*` tags and chart releases compare against earlier `chart-v*` tags.
 - RC release notes compare against the latest stable release on the same release branch (`X.Y` line); if that line has no stable release yet, the workflow falls back to the previous stable tag in the same tag family.
+
+### Release Workflows
+Use the workflows below instead of pushing release tags by hand.
+
+- Create a new operator release branch. The branch name is derived from the
+  operator version, and the initial `Chart.yaml` metadata is committed to the
+  branch:
+  ```
+  gh workflow run create-release-branch.yaml \
+    -f operator_version=0.7.0 \
+    -f chart_version=0.5.0 \
+    -f source_ref=main
+  ```
+- For dependency-only Renovate changes on supported release branches, merge the
+  PR and let the patch train run. It also runs weekly as a backstop. No manual
+  release command is needed. If a publish job fails after tags are created, the
+  next patch train run will schedule the missing publish job again.
+- If the release branch already exists and the release is not handled by the
+  patch train, prepare the next release metadata without editing files locally:
+  ```
+  gh workflow run prepare-release-metadata.yaml \
+    -f release_branch=release/v0.7 \
+    -f operator_version=0.7.1 \
+    -f chart_version=0.5.1
+  ```
+- Wait for `docs`, `lint`, `verify-generated`, `test`, and `test-e2e` to pass on
+  the release branch commit before publishing.
+- Publish the operator version in `Chart.yaml` `appVersion`:
+  ```
+  gh workflow run create-operator-release.yaml \
+    -f release_branch=release/v0.7
+  ```
+- Publish the chart version in `Chart.yaml` `version`:
+  ```
+  gh workflow run create-chart-release.yaml \
+    -f release_branch=release/v0.7
+  ```
+- For a normal manual operator patch that should become the Helm default, prepare
+  both versions, wait for checks, run the operator release workflow, then run the
+  chart release workflow.
+- For release candidates, use the same metadata workflow with RC versions, for
+  example `operator_version=0.7.0-rc.1` and `chart_version=0.5.0-rc.1`, then run
+  the same separate operator and chart release workflows.
+- For chart-only releases, set only `chart_version` in the metadata workflow,
+  keep `appVersion` on the intended operator version, wait for checks, and run
+  only `create-chart-release.yaml`.
