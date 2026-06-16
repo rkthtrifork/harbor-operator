@@ -1,12 +1,19 @@
 name: Release Branch Patch Train
 
 on:
+  push:
+    branches:
+      - 'release/v*'
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
   schedule:
     - cron: "0 6 * * 0"
   workflow_dispatch:
     inputs:
       release_branch:
-        description: Optional release branch to process, e.g. release/0.5
+        description: Optional release branch to process, e.g. release/v0.5
         required: false
         type: string
       dry_run:
@@ -20,20 +27,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-patch-train:
+  prepare:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: read
       pull-requests: read
+    outputs:
+      operator_matrix: ${{ steps.patch-train.outputs.operator_matrix }}
+      chart_matrix: ${{ steps.patch-train.outputs.chart_matrix }}
+      has_operator_releases: ${{ steps.patch-train.outputs.has_operator_releases }}
+      has_chart_releases: ${{ steps.patch-train.outputs.has_chart_releases }}
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Checkout
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Create patch releases when runtime dependency files changed on release branches
+        id: patch-train
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
-          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          RELEASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_branch || github.event_name == 'push' && github.ref_name || '' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash hack/release-branch-patch-train.sh
+
+  publish-operator:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.has_operator_releases == 'true' && inputs.dry_run != true }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.operator_matrix) }}
+    uses: ./.github/workflows/_publish-operator-release.yaml
+    with:
+      version: ${{ matrix.version }}
+      ref: ${{ matrix.ref }}
+      tag_name: ${{ matrix.tag }}
+      prerelease: false
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write
+
+  publish-chart:
+    needs:
+      - prepare
+      - publish-operator
+    if: ${{ always() && needs.prepare.outputs.has_chart_releases == 'true' && inputs.dry_run != true && (needs.publish-operator.result == 'success' || needs.publish-operator.result == 'skipped') }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.chart_matrix) }}
+    uses: ./.github/workflows/_publish-chart-release.yaml
+    with:
+      version: ${{ matrix.version }}
+      operator_version: ${{ matrix.operator_version }}
+      ref: ${{ matrix.ref }}
+      tag_name: ${{ matrix.tag }}
+      prerelease: false
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write

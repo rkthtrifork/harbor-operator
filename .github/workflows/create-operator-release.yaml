@@ -1,0 +1,133 @@
+name: Create Operator Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch:
+        description: Release branch to publish from, e.g. release/v0.7.
+        required: true
+        type: string
+      skip_ci_check:
+        description: Allow tagging even if required branch checks are not green.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: create-operator-release-${{ inputs.release_branch }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+      tag: ${{ steps.prepare.outputs.tag }}
+      prerelease: ${{ steps.prepare.outputs.prerelease }}
+      release_branch: ${{ steps.prepare.outputs.release_branch }}
+      head_sha: ${{ steps.prepare.outputs.head_sha }}
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Prepare operator release tag
+        id: prepare
+        env:
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
+          SKIP_CI_CHECK: ${{ inputs.skip_ci_check && 'true' || 'false' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ ! "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+$ ]]; then
+            echo "release_branch must use release/vX.Y format, got: $RELEASE_BRANCH" >&2
+            exit 1
+          fi
+
+          branch_line="${RELEASE_BRANCH#release/v}"
+
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
+          if ! git rev-parse --verify "origin/${RELEASE_BRANCH}" >/dev/null; then
+            echo "Branch ${RELEASE_BRANCH} does not exist" >&2
+            exit 1
+          fi
+
+          chart_yaml="$(git show "origin/${RELEASE_BRANCH}:charts/harbor-operator/Chart.yaml")"
+          version="$(awk '$1 == "appVersion:" { value=$2; gsub(/^"/, "", value); gsub(/"$/, "", value); print value; exit }' <<<"$chart_yaml")"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "Chart.yaml appVersion must use X.Y.Z or X.Y.Z-rc.N, got: $version" >&2
+            exit 1
+          fi
+
+          release_line="$(printf '%s' "${version%%-rc.*}" | cut -d. -f1-2)"
+          if [[ "$release_line" != "$branch_line" ]]; then
+            echo "release branch ${RELEASE_BRANCH} does not match Chart.yaml appVersion line ${release_line}" >&2
+            exit 1
+          fi
+
+          head_sha="$(git rev-parse "origin/${RELEASE_BRANCH}")"
+          tag="v${version}"
+
+          if [ "$SKIP_CI_CHECK" != "true" ]; then
+            python3 hack/required_checks.py "$head_sha"
+          fi
+
+          existing_sha="$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+          if [ -z "$existing_sha" ]; then
+            existing_sha="$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')"
+          fi
+
+          if [ -n "$existing_sha" ]; then
+            if [ "$existing_sha" != "$head_sha" ]; then
+              echo "Tag ${tag} already exists at ${existing_sha}, expected ${head_sha}" >&2
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            if [[ "$version" == *-rc.* ]]; then
+              git tag -a "$tag" "$head_sha" -m "Release candidate ${tag}"
+            else
+              git tag -a "$tag" "$head_sha" -m "Release ${tag}"
+            fi
+            git push origin "$tag"
+          fi
+
+          if [[ "$version" == *-rc.* ]]; then
+            prerelease="true"
+          else
+            prerelease="false"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+  publish-operator:
+    needs: prepare
+    uses: ./.github/workflows/_publish-operator-release.yaml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.tag }}
+      tag_name: ${{ needs.prepare.outputs.tag }}
+      prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: write

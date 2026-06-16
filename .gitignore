@@ -16,6 +16,13 @@ Dockerfile.cross
 # Go workspace file
 go.work
 
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Local GitHub App private keys
+*.private-key.pem
+
 # Kubernetes Generated files - skip generated files, except for vendored files
 !vendor/**/zz_generated.*
 

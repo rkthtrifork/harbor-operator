@@ -1,0 +1,122 @@
+name: Prepare Release Metadata
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch:
+        description: Release branch to update, e.g. release/v0.7.
+        required: true
+        type: string
+      operator_version:
+        description: Optional operator appVersion to set, e.g. 0.7.1 or 0.7.1-rc.1.
+        required: false
+        type: string
+      chart_version:
+        description: Optional chart version to set, e.g. 0.5.1 or 0.5.1-rc.1.
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-release-metadata-${{ inputs.release_branch }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.release_branch }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Update Chart.yaml release metadata
+        env:
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
+          OPERATOR_VERSION_INPUT: ${{ inputs.operator_version }}
+          CHART_VERSION_INPUT: ${{ inputs.chart_version }}
+        run: |
+          if [[ ! "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+$ ]]; then
+            echo "release_branch must use release/vX.Y format, got: $RELEASE_BRANCH" >&2
+            exit 1
+          fi
+
+          if [[ -z "$OPERATOR_VERSION_INPUT" && -z "$CHART_VERSION_INPUT" ]]; then
+            echo "Set operator_version, chart_version, or both" >&2
+            exit 1
+          fi
+
+          current_operator_version="$(awk '$1 == "appVersion:" { value=$2; gsub(/^"/, "", value); gsub(/"$/, "", value); print value; exit }' charts/harbor-operator/Chart.yaml)"
+          current_chart_version="$(awk '$1 == "version:" { value=$2; gsub(/^"/, "", value); gsub(/"$/, "", value); print value; exit }' charts/harbor-operator/Chart.yaml)"
+
+          operator_version="${OPERATOR_VERSION_INPUT:-$current_operator_version}"
+          chart_version="${CHART_VERSION_INPUT:-$current_chart_version}"
+
+          if [[ ! "$operator_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "operator_version must use X.Y.Z or X.Y.Z-rc.N, got: $operator_version" >&2
+            exit 1
+          fi
+
+          if [[ ! "$chart_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "chart_version must use X.Y.Z or X.Y.Z-rc.N, got: $chart_version" >&2
+            exit 1
+          fi
+
+          if [[ "$operator_version" == *-rc.* && "$chart_version" != *-rc.* ]]; then
+            echo "Stable chart metadata must not reference a prerelease operator version" >&2
+            exit 1
+          fi
+
+          branch_line="${RELEASE_BRANCH#release/v}"
+          operator_line="$(printf '%s' "${operator_version%%-rc.*}" | cut -d. -f1-2)"
+          if [[ "$operator_line" != "$branch_line" ]]; then
+            echo "release branch ${RELEASE_BRANCH} does not match operator version line ${operator_line}" >&2
+            exit 1
+          fi
+
+          operator_changed=false
+          chart_changed=false
+          if [[ "$operator_version" != "$current_operator_version" ]]; then
+            operator_changed=true
+          fi
+          if [[ "$chart_version" != "$current_chart_version" ]]; then
+            chart_changed=true
+          fi
+
+          if [[ "$operator_changed" == "false" && "$chart_changed" == "false" ]]; then
+            echo "Chart.yaml already contains the requested release metadata"
+            exit 0
+          fi
+
+          git fetch origin --tags --prune
+
+          if [[ "$operator_changed" == "true" ]] && git ls-remote --exit-code --tags origin "v${operator_version}" >/dev/null 2>&1; then
+            echo "Tag v${operator_version} already exists" >&2
+            exit 1
+          fi
+
+          if [[ "$chart_changed" == "true" ]] && git ls-remote --exit-code --tags origin "chart-v${chart_version}" >/dev/null 2>&1; then
+            echo "Tag chart-v${chart_version} already exists" >&2
+            exit 1
+          fi
+
+          perl -0pi -e "s/^version: .*\$/version: ${chart_version}/m" charts/harbor-operator/Chart.yaml
+          perl -0pi -e "s/^appVersion: .*\$/appVersion: \"${operator_version}\"/m" charts/harbor-operator/Chart.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add charts/harbor-operator/Chart.yaml
+          git commit -m "chore(release): prepare v${operator_version} and chart-v${chart_version}"
+          git push origin "HEAD:refs/heads/${RELEASE_BRANCH}"

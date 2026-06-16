@@ -1,0 +1,96 @@
+name: Create Release Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      operator_version:
+        description: Initial operator version for the release line, e.g. 0.7.0
+        required: true
+        type: string
+      chart_version:
+        description: Initial chart version for the release branch, e.g. 0.5.0
+        required: true
+        type: string
+      source_ref:
+        description: Source ref to branch from.
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: create-release-branch-${{ inputs.operator_version }}
+  cancel-in-progress: false
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Create branch
+        env:
+          OPERATOR_VERSION: ${{ inputs.operator_version }}
+          CHART_VERSION: ${{ inputs.chart_version }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if [[ ! "$OPERATOR_VERSION" =~ ^[0-9]+\.[0-9]+\.0$ ]]; then
+            echo "operator_version must use X.Y.0 format for a new minor release branch, got: $OPERATOR_VERSION" >&2
+            exit 1
+          fi
+
+          if [[ ! "$CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "chart_version must use X.Y.Z format, got: $CHART_VERSION" >&2
+            exit 1
+          fi
+
+          operator_line="$(printf '%s' "$OPERATOR_VERSION" | cut -d. -f1-2)"
+          branch="release/v${operator_line}"
+
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists" >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "v${OPERATOR_VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${OPERATOR_VERSION} already exists" >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "chart-v${CHART_VERSION}" >/dev/null 2>&1; then
+            echo "Tag chart-v${CHART_VERSION} already exists" >&2
+            exit 1
+          fi
+
+          git switch -c "$branch"
+
+          perl -0pi -e "s/^version: .*\$/version: ${CHART_VERSION}/m" charts/harbor-operator/Chart.yaml
+          perl -0pi -e "s/^appVersion: .*\$/appVersion: \"${OPERATOR_VERSION}\"/m" charts/harbor-operator/Chart.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add charts/harbor-operator/Chart.yaml
+          if ! git diff --cached --quiet -- charts/harbor-operator/Chart.yaml; then
+            git commit -m "chore(release): prepare v${OPERATOR_VERSION} release branch"
+          fi
+          git push origin "HEAD:refs/heads/${branch}"
+
+          echo "Created ${branch} from ${SOURCE_REF}"

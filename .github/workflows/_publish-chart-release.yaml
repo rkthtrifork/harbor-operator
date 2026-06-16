@@ -1,0 +1,150 @@
+name: Publish Chart Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Chart version without the chart-v prefix.
+        required: true
+        type: string
+      operator_version:
+        description: Operator appVersion to package into the chart.
+        required: true
+        type: string
+      ref:
+        description: Git ref to check out for the release.
+        required: true
+        type: string
+      tag_name:
+        description: Chart release tag.
+        required: true
+        type: string
+      prerelease:
+        description: Whether the GitHub Release is a prerelease.
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+
+      - name: Lint chart
+        run: helm lint charts/harbor-operator
+
+      - name: Verify operator image exists
+        env:
+          OPERATOR_IMAGE: ghcr.io/${{ github.repository }}
+          OPERATOR_VERSION: ${{ inputs.operator_version }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+
+          for attempt in $(seq 1 30); do
+            if docker manifest inspect "${OPERATOR_IMAGE}:${OPERATOR_VERSION}" >/dev/null 2>&1; then
+              exit 0
+            fi
+
+            echo "Waiting for operator image ${OPERATOR_IMAGE}:${OPERATOR_VERSION} (${attempt}/30)"
+            sleep 15
+          done
+
+          echo "Operator image ${OPERATOR_IMAGE}:${OPERATOR_VERSION} was not found in GHCR" >&2
+          exit 1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Check whether chart package already exists
+        id: chart_exists
+        run: |
+          existing_chart="$(helm show chart oci://ghcr.io/rkthtrifork/charts/harbor-operator --version "${{ inputs.version }}" 2>/dev/null || true)"
+          if [ -n "$existing_chart" ]; then
+            existing_app_version="$(awk '$1 == "appVersion:" { value=$2; gsub(/^"/, "", value); gsub(/"$/, "", value); print value; exit }' <<<"$existing_chart")"
+            if [ "$existing_app_version" != "${{ inputs.operator_version }}" ]; then
+              echo "Existing chart ${{ inputs.version }} has appVersion ${existing_app_version}, expected ${{ inputs.operator_version }}" >&2
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package chart
+        run: |
+          helm package charts/harbor-operator \
+            --version "${{ inputs.version }}" \
+            --app-version "${{ inputs.operator_version }}" \
+            --destination dist
+
+      - name: Push chart
+        if: steps.chart_exists.outputs.exists != 'true'
+        run: helm push "dist/harbor-operator-${{ inputs.version }}.tgz" oci://ghcr.io/rkthtrifork/charts
+
+      - name: Resolve release notes start tag
+        id: notes
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+        run: |
+          previous_in_series() {
+            local target="$1"
+            local pattern="$2"
+            local regex="$3"
+
+            {
+              git tag --list "$pattern" | grep -E "$regex" || true
+              echo "$target"
+            } | sort -V | awk -v target="$target" '
+              $0 == target { print prev; found = 1; exit }
+              { prev = $0 }
+              END {
+                if (!found && prev != target) {
+                  print prev
+                }
+              }
+            '
+          }
+
+          if [ "$PRERELEASE" = "true" ]; then
+            version="${TAG_NAME#chart-v}"
+            base_version="${version%%-rc.*}"
+            release_line="$(printf '%s' "${base_version}" | cut -d. -f1-2)"
+            previous_tag="$(
+              previous_in_series "chart-v${base_version}" "chart-v${release_line}.*" "^chart-v${release_line}\.[0-9]+$"
+            )"
+
+            if [ -z "$previous_tag" ]; then
+              previous_tag="$(previous_in_series "chart-v${base_version}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
+            fi
+          else
+            previous_tag="$(previous_in_series "${TAG_NAME}" 'chart-v*' '^chart-v[0-9]+\.[0-9]+\.[0-9]+$')"
+          fi
+
+          echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          previous_tag: ${{ steps.notes.outputs.previous_tag }}
+          generate_release_notes: true
+          make_latest: false
+          prerelease: ${{ inputs.prerelease }}
+          files: |
+            dist/harbor-operator-${{ inputs.version }}.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
