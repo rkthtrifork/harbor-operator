@@ -95,26 +95,52 @@ Useful local docs target:
 ## Release Principles
 - Release branches use the form `release/vX.Y` for supported operator minor lines.
 - `main` remains the development branch; maintenance patch releases are cut from release branches.
+- Release branches are operator source lines. Chart versions are independent and
+  may differ from the operator version on the same branch.
+- Treat `charts/harbor-operator/Chart.yaml` as release metadata on release
+  branches: `appVersion` is the operator image version and `version` is the
+  chart version.
 - Keep release operations reproducible, auditable, and hard to perform
   partially. Prefer one clear release path over parallel mechanisms.
 - Release tags should be treated as records of an intentional release, not as an
   ad hoc control surface.
 - Release automation must account for repository rulesets and required
   permissions.
-- New minor release branches should start with `charts/harbor-operator/Chart.yaml`
-  `version` and `appVersion` aligned to `X.Y.0`.
+- Create release tags through dispatch workflows rather than pushing tags by
+  hand.
+- Use `prepare-release-metadata.yaml` to update release-branch `Chart.yaml`
+  metadata when a manual release needs a version bump without local edits.
+- New minor release branches should start with deliberate `Chart.yaml`
+  `version` and `appVersion` values, even when the chart and operator semver
+  lines differ.
 - Chart release artifacts should clearly identify both the chart version and the
   operator image version they install.
+- Stable chart releases must not reference prerelease operator versions.
 - Routine release-branch maintenance automation should only process the latest 3
   supported release branches; older branches require explicit release intent.
 - Only dependency-only patch releases should be eligible for automatic
   merge/release on release branches.
-- Automated release-branch patch releases should publish the operator image and
-  matching chart together so chart defaults track the newest operator patch.
+- Automated release-branch patch releases are allowed only for dependency-only
+  changes. They must bump `Chart.yaml`, wait for required checks on that commit,
+  publish the operator image, and publish a matching chart so chart defaults
+  track the newest operator patch.
+- The patch train must be recoverable. Existing release tags are not enough to
+  consider a patch released; missing GitHub releases or chart package assets
+  should cause the publish jobs to be scheduled again.
+- Chart changes that have not already been published as a chart release should
+  block the automated patch train. Prior chart-only releases should not block a
+  later dependency-only operator patch.
+- Patch train behavior lives in `hack/release_branch_patch_train.py`; the
+  `.sh` file is a compatibility wrapper for workflow calls.
+- Required release check names live in `hack/required_checks.py`; keep manual
+  release workflows and patch-train gating on that shared helper.
+- Patch train behavior should be covered by `hack/test_release_branch_patch_train.py`;
+  run it when changing release automation.
 - Minor, major, and non-dependency changes on release branches require manual
   review and explicit release intent.
-- Chart-only patch releases are manual exceptions and should set intended chart
-  and operator versions deliberately.
+- Chart-only patch releases are supported from the relevant operator release
+  branch. Bump `Chart.yaml` `version`, keep `appVersion` on the intended
+  operator version, and use the chart release workflow.
 - GitHub's `latest` release should track the highest stable operator tag (`vX.Y.Z`); chart releases (`chart-vX.Y.Z`) must not mark themselves as `latest`.
 - Auto-generated GitHub release notes must be scoped to the same tag family: operator releases diff from earlier `v*` tags, and chart releases diff from earlier `chart-v*` tags.
 - RC release notes should compare against the latest stable release on the same release branch (`X.Y` line); if that line has no stable release yet, fall back to the previous stable tag in the same tag family.
