@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HarborConnectionSpec defines the desired state of HarborConnection.
-// +kubebuilder:validation:XValidation:rule="!(has(self.caBundleSecretRef) && size(self.caBundle) > 0)",message="caBundle and caBundleSecretRef are mutually exclusive"
+// +kubebuilder:validation:XValidation:rule="!(has(self.caBundleSecretRef) && has(self.caBundle) && size(self.caBundle) > 0)",message="caBundle and caBundleSecretRef are mutually exclusive"
 type HarborConnectionSpec struct {
 	// BaseURL is the Harbor API endpoint.
 	// +kubebuilder:validation:Format=url
