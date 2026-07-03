@@ -23,21 +23,14 @@ type UserGroupSearchItem struct {
 
 // ListUserGroups lists all user groups.
 func (c *Client) ListUserGroups(ctx context.Context) ([]UserGroup, error) {
-	var out []UserGroup
-	err := c.get(ctx, "/api/v2.0/usergroups", &out)
-	return out, err
+	return getPaged[UserGroup](ctx, c, "/api/v2.0/usergroups", nil)
 }
 
 // SearchUserGroups searches user groups by name.
 func (c *Client) SearchUserGroups(ctx context.Context, groupName string) ([]UserGroupSearchItem, error) {
 	values := url.Values{}
 	values.Set("groupname", groupName)
-	values.Set("page", "1")
-	values.Set("page_size", "100")
-	rel := "/api/v2.0/usergroups/search?" + values.Encode()
-	var out []UserGroupSearchItem
-	err := c.get(ctx, rel, &out)
-	return out, err
+	return getPaged[UserGroupSearchItem](ctx, c, "/api/v2.0/usergroups/search", values)
 }
 
 // GetUserGroup retrieves a user group by ID.

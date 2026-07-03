@@ -22,8 +22,6 @@ type Label struct {
 // ListLabels lists labels with optional filters.
 func (c *Client) ListLabels(ctx context.Context, name, scope string, projectID *int) ([]Label, error) {
 	values := url.Values{}
-	values.Set("page", "1")
-	values.Set("page_size", "100")
 	if name != "" {
 		values.Set("name", name)
 	}
@@ -33,13 +31,7 @@ func (c *Client) ListLabels(ctx context.Context, name, scope string, projectID *
 	if projectID != nil {
 		values.Set("project_id", strconv.Itoa(*projectID))
 	}
-	rel := "/api/v2.0/labels"
-	if len(values) > 0 {
-		rel += "?" + values.Encode()
-	}
-	var out []Label
-	err := c.get(ctx, rel, &out)
-	return out, err
+	return getPaged[Label](ctx, c, "/api/v2.0/labels", values)
 }
 
 // GetLabel retrieves a label by ID.

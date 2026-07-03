@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +49,8 @@ type Client struct {
 var defaultHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
+
+const defaultListPageSize = 100
 
 func New(baseURL, user, pass string) *Client {
 	return NewWithHTTPClient(baseURL, user, pass, defaultHTTPClient)
@@ -131,6 +135,54 @@ func (c *Client) do(ctx context.Context, method, relURL string, in, out any) (re
 func (c *Client) get(ctx context.Context, relURL string, out any) error {
 	_, err := c.do(ctx, http.MethodGet, relURL, nil, out)
 	return err
+}
+
+func getPaged[T any](ctx context.Context, c *Client, path string, values url.Values) ([]T, error) {
+	baseValues := cloneValues(values)
+	var out []T
+
+	for page := 1; ; page++ {
+		pageValues := cloneValues(baseValues)
+		pageValues.Set("page", strconv.Itoa(page))
+		pageValues.Set("page_size", strconv.Itoa(defaultListPageSize))
+
+		var current []T
+		resp, err := c.do(ctx, http.MethodGet, pathWithQuery(path, pageValues), nil, &current)
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, current...)
+		if !hasNextPage(resp, len(current), len(out)) {
+			return out, nil
+		}
+	}
+}
+
+func cloneValues(values url.Values) url.Values {
+	cloned := url.Values{}
+	for key, vals := range values {
+		for _, val := range vals {
+			cloned.Add(key, val)
+		}
+	}
+	return cloned
+}
+
+func hasNextPage(resp *http.Response, currentCount, totalFetched int) bool {
+	if resp != nil {
+		if total, err := strconv.Atoi(resp.Header.Get("X-Total-Count")); err == nil {
+			return totalFetched < total
+		}
+	}
+	return currentCount == defaultListPageSize
+}
+
+func pathWithQuery(path string, values url.Values) string {
+	if len(values) == 0 {
+		return path
+	}
+	return path + "?" + values.Encode()
 }
 
 func (c *Client) post(ctx context.Context, relURL string, in, out any) error {
