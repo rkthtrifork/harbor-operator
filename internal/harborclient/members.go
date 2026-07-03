@@ -38,9 +38,7 @@ type ProjectMember struct {
 // ListProjectMembers lists all members of a Harbor project.
 // Harbor accepts a project path segment here; controllers pass the resolved project name.
 func (c *Client) ListProjectMembers(ctx context.Context, projectRef string) ([]ProjectMember, error) {
-	var ms []ProjectMember
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/members", projectRef), &ms)
-	return ms, err
+	return getPaged[ProjectMember](ctx, c, fmt.Sprintf("/api/v2.0/projects/%s/members", projectRef), nil)
 }
 
 // CreateProjectMember creates a new project member.

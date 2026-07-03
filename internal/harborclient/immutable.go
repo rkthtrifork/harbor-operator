@@ -27,9 +27,7 @@ type ImmutableRule struct {
 
 // ListImmutableRules lists immutable tag rules for a project.
 func (c *Client) ListImmutableRules(ctx context.Context, projectRef string) ([]ImmutableRule, error) {
-	var out []ImmutableRule
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectRef), &out)
-	return out, err
+	return getPaged[ImmutableRule](ctx, c, fmt.Sprintf("/api/v2.0/projects/%s/immutabletagrules", projectRef), nil)
 }
 
 // CreateImmutableRule creates a new immutable tag rule.

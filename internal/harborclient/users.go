@@ -3,6 +3,7 @@ package harborclient
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 type User struct {
@@ -29,13 +30,11 @@ type UpdateUserRequest struct {
 }
 
 func (c *Client) ListUsers(ctx context.Context, query string) ([]User, error) {
-	rel := "/api/v2.0/users"
+	values := url.Values{}
 	if query != "" {
-		rel += "?q=" + query
+		values.Set("q", query)
 	}
-	var us []User
-	err := c.get(ctx, rel, &us)
-	return us, err
+	return getPaged[User](ctx, c, "/api/v2.0/users", values)
 }
 
 func (c *Client) GetUserByID(ctx context.Context, id int) (User, error) {

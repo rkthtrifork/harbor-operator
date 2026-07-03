@@ -62,19 +62,11 @@ type RobotSec struct {
 
 // ListRobots lists robot accounts with an optional query.
 func (c *Client) ListRobots(ctx context.Context, query string) ([]Robot, error) {
-	rel := "/api/v2.0/robots"
 	values := url.Values{}
 	if query != "" {
 		values.Set("q", query)
 	}
-	values.Set("page", "1")
-	values.Set("page_size", "100")
-	if len(values) > 0 {
-		rel = rel + "?" + values.Encode()
-	}
-	var robots []Robot
-	err := c.get(ctx, rel, &robots)
-	return robots, err
+	return getPaged[Robot](ctx, c, "/api/v2.0/robots", values)
 }
 
 // GetRobotByID retrieves a robot account by ID.

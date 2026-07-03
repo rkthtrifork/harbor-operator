@@ -49,18 +49,10 @@ type ReplicationPolicy struct {
 // ListReplicationPolicies lists replication policies.
 func (c *Client) ListReplicationPolicies(ctx context.Context, name string) ([]ReplicationPolicy, error) {
 	values := url.Values{}
-	values.Set("page", "1")
-	values.Set("page_size", "100")
 	if name != "" {
 		values.Set("name", name)
 	}
-	rel := "/api/v2.0/replication/policies"
-	if len(values) > 0 {
-		rel += "?" + values.Encode()
-	}
-	var out []ReplicationPolicy
-	err := c.get(ctx, rel, &out)
-	return out, err
+	return getPaged[ReplicationPolicy](ctx, c, "/api/v2.0/replication/policies", values)
 }
 
 // GetReplicationPolicy retrieves a replication policy by ID.

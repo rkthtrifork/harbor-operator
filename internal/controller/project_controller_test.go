@@ -110,4 +110,96 @@ var _ = Describe("Project Controller", func() {
 			Expect(project.Status.HarborProjectID).To(Equal(42))
 		})
 	})
+
+	Context("When adopting an existing project", func() {
+		const resourceName = "adopted-project"
+
+		ctx := context.Background()
+
+		typeNamespacedName := types.NamespacedName{
+			Name:      resourceName,
+			Namespace: "default",
+		}
+		project := &harborv1alpha1.Project{}
+		var server *httptest.Server
+
+		BeforeEach(func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != testAdminUser || pass != testPassword {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects" {
+					if r.URL.Query().Get("page") != "1" ||
+						r.URL.Query().Get("page_size") != "100" ||
+						r.URL.Query().Get("q") != "name="+resourceName {
+						http.Error(w, "missing project name query", http.StatusBadRequest)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[{"project_id":42,"name":"adopted-project","metadata":{"public":"false"}}]`))
+					return
+				}
+				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects/42" {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"project_id":42,"name":"adopted-project","metadata":{"public":"false"}}`))
+					return
+				}
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects" {
+					w.WriteHeader(http.StatusConflict)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "harbor-admin", testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "harbor-conn", server.URL, "harbor-admin")).To(Succeed())
+
+			resource := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: "default",
+				},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
+					},
+					AllowTakeover: true,
+					Public:        false,
+				},
+			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			server.Close()
+			resource := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
+
+			_ = k8sClient.Delete(ctx, resource)
+
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin", Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
+		})
+
+		It("finds the existing Harbor project by name before creating", func() {
+			controllerReconciler := &ProjectReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			Expect(project.Status.HarborProjectID).To(Equal(42))
+		})
+	})
 })
