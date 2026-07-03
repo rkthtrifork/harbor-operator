@@ -33,6 +33,8 @@ import (
 )
 
 var _ = Describe("Project Controller", func() {
+	const projectsPath = "/api/v2.0/projects"
+
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -52,7 +54,7 @@ var _ = Describe("Project Controller", func() {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects" {
+				if r.Method == http.MethodPost && r.URL.Path == projectsPath {
 					w.Header().Set("Location", "/api/v2.0/projects/42")
 					w.WriteHeader(http.StatusCreated)
 					return
@@ -130,7 +132,7 @@ var _ = Describe("Project Controller", func() {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/projects" {
+				if r.Method == http.MethodGet && r.URL.Path == projectsPath {
 					if r.URL.Query().Get("page") != "1" ||
 						r.URL.Query().Get("page_size") != "100" ||
 						r.URL.Query().Get("q") != "name="+resourceName {
@@ -146,7 +148,7 @@ var _ = Describe("Project Controller", func() {
 					_, _ = w.Write([]byte(`{"project_id":42,"name":"adopted-project","metadata":{"public":"false"}}`))
 					return
 				}
-				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/projects" {
+				if r.Method == http.MethodPost && r.URL.Path == projectsPath {
 					w.WriteHeader(http.StatusConflict)
 					return
 				}
