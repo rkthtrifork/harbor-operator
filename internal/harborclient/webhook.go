@@ -30,9 +30,7 @@ type WebhookPolicy struct {
 
 // ListWebhookPolicies lists webhook policies for a project.
 func (c *Client) ListWebhookPolicies(ctx context.Context, projectRef string) ([]WebhookPolicy, error) {
-	var out []WebhookPolicy
-	err := c.get(ctx, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectRef), &out)
-	return out, err
+	return getPaged[WebhookPolicy](ctx, c, fmt.Sprintf("/api/v2.0/projects/%s/webhook/policies", projectRef), nil)
 }
 
 // GetWebhookPolicy retrieves a webhook policy by ID.

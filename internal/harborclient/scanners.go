@@ -40,9 +40,7 @@ type ScannerRegistrationReq struct {
 
 // ListScanners lists scanner registrations.
 func (c *Client) ListScanners(ctx context.Context) ([]ScannerRegistration, error) {
-	var out []ScannerRegistration
-	err := c.get(ctx, "/api/v2.0/scanners", &out)
-	return out, err
+	return getPaged[ScannerRegistration](ctx, c, "/api/v2.0/scanners", nil)
 }
 
 // GetScanner retrieves a scanner registration.

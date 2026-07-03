@@ -19,21 +19,13 @@ type Quota struct {
 // ListQuotas lists quotas with optional reference filters.
 func (c *Client) ListQuotas(ctx context.Context, reference, referenceID string) ([]Quota, error) {
 	values := url.Values{}
-	values.Set("page", "1")
-	values.Set("page_size", "100")
 	if reference != "" {
 		values.Set("reference", reference)
 	}
 	if referenceID != "" {
 		values.Set("reference_id", referenceID)
 	}
-	rel := "/api/v2.0/quotas"
-	if len(values) > 0 {
-		rel += "?" + values.Encode()
-	}
-	var out []Quota
-	err := c.get(ctx, rel, &out)
-	return out, err
+	return getPaged[Quota](ctx, c, "/api/v2.0/quotas", values)
 }
 
 // GetQuota retrieves a quota by ID.

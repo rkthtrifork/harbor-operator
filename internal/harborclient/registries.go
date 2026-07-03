@@ -48,10 +48,10 @@ func (c *Client) FindRegistryByName(ctx context.Context, name string) (*Registry
 	if name == "" {
 		return nil, nil
 	}
-	escaped := url.QueryEscape(name)
-	path := fmt.Sprintf("/api/v2.0/registries?page=1&page_size=100&q=name=%s", escaped)
-	var regs []Registry
-	if err := c.get(ctx, path, &regs); err != nil {
+	values := url.Values{}
+	values.Set("q", "name="+name)
+	regs, err := getPaged[Registry](ctx, c, "/api/v2.0/registries", values)
+	if err != nil {
 		return nil, err
 	}
 	for i := range regs {

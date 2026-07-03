@@ -3,6 +3,8 @@ package harborclient
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 type ProjectMetadata struct {
@@ -51,21 +53,21 @@ type CreateProjectRequest struct {
 }
 
 func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
-	var ps []Project
-	err := c.get(ctx, "/api/v2.0/projects", &ps)
-	return ps, err
+	return getPaged[Project](ctx, c, "/api/v2.0/projects", nil)
 }
 
 func (c *Client) FindProjectByName(ctx context.Context, name string) (*Project, error) {
 	if name == "" {
 		return nil, nil
 	}
-	projects, err := c.ListProjects(ctx)
+	values := url.Values{}
+	values.Set("q", "name="+name)
+	projects, err := getPaged[Project](ctx, c, "/api/v2.0/projects", values)
 	if err != nil {
 		return nil, err
 	}
 	for i := range projects {
-		if projects[i].Name == name {
+		if strings.EqualFold(projects[i].Name, name) {
 			return &projects[i], nil
 		}
 	}

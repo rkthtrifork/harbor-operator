@@ -137,17 +137,15 @@ func (r *ProjectReconciler) deleteProject(ctx context.Context, hc *harborclient.
 // adoption by name
 func (r *ProjectReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Project) (bool, error) {
 
-	projects, err := hc.ListProjects(ctx)
+	project, err := hc.FindProjectByName(ctx, cr.Name)
 	if err != nil {
 		return false, err
 	}
-	for _, p := range projects {
-		if strings.EqualFold(p.Name, cr.Name) {
-			cr.Status.HarborProjectID = p.ProjectID
-			return true, r.Status().Update(ctx, cr)
-		}
+	if project == nil {
+		return false, nil
 	}
-	return false, nil
+	cr.Status.HarborProjectID = project.ProjectID
+	return true, r.Status().Update(ctx, cr)
 }
 
 func (r *ProjectReconciler) buildCreateReq(ctx context.Context, cr *harborv1alpha1.Project) (harborclient.CreateProjectRequest, error) {
