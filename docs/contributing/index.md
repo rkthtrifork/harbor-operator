@@ -7,6 +7,7 @@ Use it for:
 - local Kind-based development
 - testing and verification expectations
 - docs generation and publishing details
+- operator and Helm chart releases
 
 For the full contributor contract, also see [`CONTRIBUTING.md`](https://github.com/rkthtrifork/harbor-operator/blob/main/CONTRIBUTING.md).
 

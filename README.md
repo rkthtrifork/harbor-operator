@@ -364,4 +364,10 @@ make kind-redeploy
   make lint
   ```
 
+- Run the normal non-E2E CI baseline (generated drift, lint, tests, and the docs build):
+
+  ```sh
+  make check
+  ```
+
 Open a PR with a clear description of what you changed and why.
