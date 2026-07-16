@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harbor Resource Change"
+  short_description: "Change Harbor-backed resources end to end."
+  default_prompt: "Use $harbor-resource-change to implement a Harbor-backed resource change end to end."

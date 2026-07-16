@@ -3,10 +3,12 @@
 ## Main Test Targets
 
 ```sh
+make check
 make test
 make test-e2e
 ```
 
+- `make check` runs the normal non-E2E CI baseline: generated drift, lint, tests, and the docs build
 - `make test` runs the non-E2E Go test suite
 - `make test-e2e` runs the live end-to-end suite against the current Kind cluster
 
@@ -15,8 +17,10 @@ make test-e2e
 When API types, Kubebuilder markers, RBAC, or docs reference content change, regenerate and verify the generated assets:
 
 ```sh
-make manifests generate sync-chart generate-docs
+make check-drift
 ```
+
+This preserves the generated-file diff that existed before the command and fails only when regeneration changes it further.
 
 ## Docs Site
 

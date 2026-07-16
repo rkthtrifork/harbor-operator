@@ -32,6 +32,17 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: check
+check: ## Run the normal non-E2E CI baseline.
+	$(MAKE) check-drift
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) docs-site-build
+
+.PHONY: check-drift
+check-drift: ## Regenerate tracked assets and fail if regeneration adds drift.
+	./hack/check-generated-drift.sh
+
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases

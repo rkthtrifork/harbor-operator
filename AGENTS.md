@@ -1,146 +1,84 @@
-# AGENTS
+# AGENTS.md
 
-This repo has strict structure expectations. If you expand the operator, follow this.
-Contributor-facing guidance lives in [`CONTRIBUTING.md`](./CONTRIBUTING.md). Keep this file aligned with it.
+How to work in this repo. Keep it short and precise — this is not a changelog. See [§ Maintaining this file](#maintaining-this-file) before adding anything.
 
-## Self-Maintenance
+## Orientation
 
-- Treat `AGENTS.md` as a living repo contract, not a static note.
-- When an agent learns a durable repo expectation, constraint, or convention
-  while doing work here, update `AGENTS.md` in the same change when practical.
-- If guidance in `AGENTS.md` is outdated, redundant, misleading, or no longer enforced by the repo, remove or replace it directly instead of leaving stale instructions behind.
-- Keep `AGENTS.md` and [`CONTRIBUTING.md`](./CONTRIBUTING.md) aligned on shared project rules. If one changes, check whether the other should change too.
-- Prefer documenting durable goals, invariants, and decision criteria. Do not
-  turn the current implementation into policy unless the repo truly depends on
-  that exact shape.
-- Current implementation paths are not sacred. If a simpler, safer, or more
-  maintainable approach better preserves the durable goals, prefer that change
-  and update the affected docs, tests, and automation together.
-- Question existing choices when there is a concrete improvement, but avoid
-  churn that only swaps one valid style for another.
-- Do not add one-off task notes, temporary incident details, or personal working
-  preferences.
+The public Kubernetes API originates in the Go types and Kubebuilder markers under `api/v1alpha1`. The Harbor OpenAPI document at `hack/harbor-openapi.yaml` is a checked-in reference for Harbor API semantics, not a generator input for this operator.
 
-## Required Structure
+Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/bases`, `config/rbac/role.yaml`, chart CRDs and RBAC, and `docs/reference/api.md`. Read them when generated shape is relevant, but do not hand-edit them. Change their source types or markers, then regenerate with `make check-drift` or the narrower generation target.
 
-### CRD Types
-Location: `api/v1alpha1/*_types.go`
-- Must embed `HarborSpecBase` in Spec and `HarborStatusBase` in Status.
-- Add `AllowTakeover` on identity-based CRDs that represent named Harbor identities without IDs.
-- Use `metadata.name` as the Harbor-side identity for named resources. Do not add duplicate `spec.name` / `spec.username` / `spec.groupName` style fields for the same identity.
-- Prefer Kubernetes object references plus referenced status over raw Harbor IDs or `nameOrID` union fields.
-- Root CRDs must include `+kubebuilder:object:root=true` and `+kubebuilder:subresource:status`.
-- Must include printcolumns: `Ready`, `Reason`, `Message` (priority=1), `Age`.
-- Add CRD-specific printcolumns (see existing types).
+## Operating principles
 
-### Controllers
-Location: `internal/controller/*_controller.go`
-Follow the standard reconcile order:
-1. Load CR
-2. Set Reconciling if generation changed
-3. Build Harbor client
-4. Delete path (`finalizeIfDeleting` + delete helper)
-5. Ensure finalizer
-6. Defaults / adoption
-7. Create/Update
-8. Status update (`setReadyStatus`/`markReady`) + `setErrorStatus` on failures
-9. Return drift detection result
+### Autonomy, keyed to blast radius
 
-Errors must be surfaced through `setErrorStatus`.
+- **Just do it** when a change is reversible, localized, and does not alter a public contract. Do not ask permission for the obvious.
+- **Propose first and wait** when a change touches architecture, CRD schema or compatibility, ownership or deletion semantics, release behavior, or is hard to undo — even if you are confident. "Obvious" is not sufficient on its own here.
 
-### Docs
-Location: `docs/crds/*.md`
-Each CRD requires a doc file with:
-- Short description
-- Example YAML (code block)
-- Spec field summary
-- Notes about behavior and constraints
+### Direction
 
-The docs site is built with MkDocs Material. Hand-written guides live under `docs/crds/`. Keep the generated schema reference in `docs/reference/api.md` up to date with `make generate-docs`.
+- When changing public contracts or persisted Kubernetes resource shape, flag backwards-compatibility implications before implementing so they can be weighed.
+- When a task outgrows a simple existing design, a refactor is welcome: do it if it is clearly right and in the just-do-it category; propose it otherwise.
 
-## Harbor API Reference
-- `hack/harbor-openapi.yaml` is the checked-in Harbor OpenAPI spec.
-- Use it when changing `internal/harborclient`, Harbor-specific controller behavior, or tests that depend on Harbor API semantics.
-- Refresh it with `make update-harbor-openapi` when needed.
+### Suggesting improvements
 
-## Generated Assets
-- `config/crd/bases` is canonical for CRDs.
-- `config/rbac/role.yaml` is canonical for RBAC.
-- `docs/reference/api.md` is canonical for the generated API reference.
-- Sync chart CRDs with `make sync-chart-crds`.
-- Sync chart RBAC with `make sync-chart-rbac`.
-- Sync Helm chart assets with `make sync-chart`.
+- Surface material design, infrastructure, or architecture improvements you spot while working, each with a one-line cost/benefit. Not nitpicks.
+- If a fix is trivial and safe, make it. Otherwise report the improvement in the handoff without silently expanding the task. If a tool would materially help your work, say so.
 
-## Operator Runtime Flags
-- `--watch-namespaces` scopes the operator to a fixed namespace set when needed.
-- `--harbor-connection` points Harbor-backed resources at one operator-wide `ClusterHarborConnection`; in that mode `spec.harborConnectionRef` may be omitted or must match the configured cluster connection.
+### Testing
 
-## Automation Conventions
-- Pull request titles must follow conventional-commit format (`type(scope): summary` or `type: summary`) because the `pr-title` workflow enforces it.
-- Renovate PRs must keep semantic commit titles enabled and use strict PR titles so branch suffixes like `(main)` do not get appended.
-- GitHub Actions workflows should use trigger-level `paths` filters for clearly scoped automation, but not on pull-request workflows whose checks are required for merging. For required PR checks, let the workflow start and use lightweight changed-file detection inside jobs or steps.
+- Cover behavior and edge cases; do not test internal wiring. Assert contracts and observable behavior so implementation can change freely without breaking tests.
+- Verification is evidence, not a checklist. Choose checks that match the changed behavior, explain what they prove when it matters, and add task-specific manual or end-to-end validation when automated checks do not cover the risk.
+- Use the local Kind stack for bounded integration checks when reconciliation depends on real Kubernetes or Harbor behavior. Do not require full E2E validation for changes whose risk is already covered by focused tests and static checks.
 
-## Verification
-Run:
-- `make manifests generate sync-chart generate-docs`
+## Operator contracts
 
-Useful local docs target:
-- `make docs-build`
+- Specs and statuses embed `HarborSpecBase` and `HarborStatusBase`. Named Harbor identities use `metadata.name`; do not duplicate the identity in `spec`.
+- Identity-based resources without Harbor IDs expose `AllowTakeover`. Prefer Kubernetes references and referenced status over raw Harbor IDs or `nameOrID` unions.
+- Root CRDs include the root and status-subresource markers plus `Ready`, `Reason`, `Message`, and `Age` print columns.
+- Reconciliation handles generation changes, client construction, deletion and finalization, adoption/defaulting, create/update, status, and drift detection in a legible order. Surface operational failures through `setErrorStatus`.
+- Every CRD has a guide under `docs/crds/` with an example, field summary, and behavioral constraints.
+- `--watch-namespaces` scopes watched namespaces. `--harbor-connection` selects one operator-wide `ClusterHarborConnection`; in that mode a resource connection reference may be omitted or must match it.
 
-## Development Environment
-- Local host-based development is the supported workflow.
-- Use the `Makefile` with local installations of Docker, Go, Helm, `kubectl`, and Kind as needed.
-- This repository does not currently maintain a devcontainer setup.
+For a complete Harbor-backed resource change, use the shared workflow in [`.agents/skills/harbor-resource-change.md`](.agents/skills/harbor-resource-change.md).
 
-## Release Principles
-- Release branches use the form `release/vX.Y` for supported operator minor lines.
-- `main` remains the development branch; maintenance patch releases are cut from release branches.
-- Release branches are operator source lines. Chart versions are independent and
-  may differ from the operator version on the same branch.
-- Treat `charts/harbor-operator/Chart.yaml` as release metadata on release
-  branches: `appVersion` is the operator image version and `version` is the
-  chart version.
-- Keep release operations reproducible, auditable, and hard to perform
-  partially. Prefer one clear release path over parallel mechanisms.
-- Release tags should be treated as records of an intentional release, not as an
-  ad hoc control surface.
-- Release automation must account for repository rulesets and required
-  permissions.
-- Create release tags through dispatch workflows rather than pushing tags by
-  hand.
-- Use `prepare-release-metadata.yaml` to update release-branch `Chart.yaml`
-  metadata when a manual release needs a version bump without local edits.
-- New minor release branches should start with deliberate `Chart.yaml`
-  `version` and `appVersion` values, even when the chart and operator semver
-  lines differ.
-- Chart release artifacts should clearly identify both the chart version and the
-  operator image version they install.
-- Stable chart releases must not reference prerelease operator versions.
-- Routine release-branch maintenance automation should only process the latest 3
-  supported release branches; older branches require explicit release intent.
-- Only dependency-only patch releases should be eligible for automatic
-  merge/release on release branches.
-- Automated release-branch patch releases are allowed only for dependency-only
-  changes. They must bump `Chart.yaml`, wait for required checks on that commit,
-  publish the operator image, and publish a matching chart so chart defaults
-  track the newest operator patch.
-- The patch train must be recoverable. Existing release tags are not enough to
-  consider a patch released; missing GitHub releases or chart package assets
-  should cause the publish jobs to be scheduled again.
-- Chart changes that have not already been published as a chart release should
-  block the automated patch train. Prior chart-only releases should not block a
-  later dependency-only operator patch.
-- Patch train behavior lives in `hack/release_branch_patch_train.py`; the
-  `.sh` file is a compatibility wrapper for workflow calls.
-- Required release check names live in `hack/required_checks.py`; keep manual
-  release workflows and patch-train gating on that shared helper.
-- Patch train behavior should be covered by `hack/test_release_branch_patch_train.py`;
-  run it when changing release automation.
-- Minor, major, and non-dependency changes on release branches require manual
-  review and explicit release intent.
-- Chart-only patch releases are supported from the relevant operator release
-  branch. Bump `Chart.yaml` `version`, keep `appVersion` on the intended
-  operator version, and use the chart release workflow.
-- GitHub's `latest` release should track the highest stable operator tag (`vX.Y.Z`); chart releases (`chart-vX.Y.Z`) must not mark themselves as `latest`.
-- Auto-generated GitHub release notes must be scoped to the same tag family: operator releases diff from earlier `v*` tags, and chart releases diff from earlier `chart-v*` tags.
-- RC release notes should compare against the latest stable release on the same release branch (`X.Y` line); if that line has no stable release yet, fall back to the previous stable tag in the same tag family.
+## Commands
+
+These commands are the baseline vocabulary for verification. Keep them aligned with the Makefile and CI.
+
+| Scope | Command |
+| --- | --- |
+| Normal non-E2E baseline | `make check` |
+| Generated assets | `make check-drift` |
+| Go tests | `make test` |
+| Lint | `make lint` |
+| Docs | `make docs-build` |
+| Live Kind suite | `make test-e2e` |
+| Local stack | `make kind-up`, `make kind-refresh`, `make kind-redeploy` |
+
+`make check-drift` regenerates code, manifests, chart assets, and API reference docs and fails only when regeneration adds to the existing generated-file diff, so it is safe to use on a dirty feature branch.
+
+## Git conventions
+
+Use Conventional Commits for commit messages and PR titles, for example `feat(api): add project metadata`. Branch names should use the same type prefix, for example `feat/project-metadata`.
+
+Renovate must keep semantic commit titles and strict PR titles. Required pull-request workflows should start even when a change is irrelevant to their expensive work; use lightweight changed-file detection inside those workflows rather than trigger-level path filters.
+
+## Pointers
+
+- **Contributor contract** → [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Harbor API semantics** → [hack/harbor-openapi.yaml](hack/harbor-openapi.yaml)
+- **Release process** → [docs/contributing/releases.md](docs/contributing/releases.md) and [`.agents/skills/harbor-release.md`](.agents/skills/harbor-release.md)
+- **Shared agent workflows** → [`.agents/skills/`](.agents/skills/)
+
+## Maintaining this file
+
+This file is short on purpose, and bounded by strict membership, not a line limit. Before adding anything, route it:
+
+- A **decision plus rationale** → an ADR under `docs/decisions/` when the repository needs to preserve that decision. Never record rationale here.
+- A **contributor or operational procedure** → `CONTRIBUTING.md` or the relevant page under `docs/contributing/`.
+- An **implementation detail** → record it nowhere. Code and tests are the truth, and they are free to change.
+- A **reusable task workflow with a clear boundary** → a shared skill under `.agents/skills/`, linked into tool-specific surfaces when useful, with source-of-truth links instead of duplicated detail.
+- An **improvement idea** → fix it when trivial and in scope; otherwise surface it in the handoff or the repository's established tracker.
+
+Update guidance in place when reality changes; do not append exceptions. Remove stale or redundant guidance directly. Keep shared contributor rules aligned with `CONTRIBUTING.md`, but do not duplicate its detailed procedures here.
