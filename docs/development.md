@@ -46,7 +46,13 @@ Generated assets are verified in CI. That includes:
 - synced chart RBAC and chart CRDs
 - generated API reference docs
 
-The verify workflow effectively checks:
+Check for drift locally with:
+
+```sh
+make check-drift
+```
+
+It regenerates these assets and fails only when regeneration adds to the existing generated-file diff, so it is safe to run on a dirty feature branch. The verify workflow effectively checks the same regeneration:
 
 ```sh
 make manifests generate sync-chart generate-docs

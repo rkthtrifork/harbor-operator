@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harbor Release"
+  short_description: "Prepare and publish Harbor Operator releases."
+  default_prompt: "Use $harbor-release to prepare or publish a Harbor Operator release safely."
