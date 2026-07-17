@@ -17,7 +17,7 @@ make test-e2e
 When API types, Kubebuilder markers, RBAC, or docs reference content change, regenerate and verify the generated assets:
 
 ```sh
-make check-drift
+make verify-generated
 ```
 
 This preserves the generated-file diff that existed before the command and fails only when regeneration changes it further.

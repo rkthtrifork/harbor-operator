@@ -13,10 +13,10 @@ make kind-up
 For a local cluster with Cilium and Hubble:
 
 ```sh
-make kind-up-cilium
+make kind-up KIND_CNI=cilium
 ```
 
-Both targets:
+Both configurations:
 
 - create a Kind cluster
 - install Traefik
@@ -25,7 +25,7 @@ Both targets:
 
 ## Core Workflow
 
-1. Start the stack with `make kind-up` or `make kind-up-cilium`
+1. Start the stack with `make kind-up` or `make kind-up KIND_CNI=cilium`
 2. Change code or CRD types
 3. Redeploy with `make kind-refresh`
 4. Exercise the operator with sample CRs or focused manifests
@@ -49,7 +49,7 @@ make apply-samples
 To remove Harbor custom resources again:
 
 ```sh
-make delete-crs
+make delete-harbor-crs
 ```
 
 ## Useful Commands
@@ -71,7 +71,7 @@ make test-e2e
 Generate the CRD API reference:
 
 ```sh
-make generate-docs
+make generate-api-reference
 ```
 
 Build the site:

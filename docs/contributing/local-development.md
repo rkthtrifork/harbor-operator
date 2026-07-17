@@ -9,7 +9,7 @@ make kind-up
 Or with Cilium and Hubble:
 
 ```sh
-make kind-up-cilium
+make kind-up KIND_CNI=cilium
 ```
 
 ## Normal Iteration Loop

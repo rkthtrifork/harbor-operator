@@ -24,7 +24,7 @@ snapshot() {
 }
 
 snapshot >"$before"
-make -C "$repo_root" manifests generate sync-chart generate-docs
+make -C "$repo_root" generate
 snapshot >"$after"
 
 if cmp -s "$before" "$after"; then

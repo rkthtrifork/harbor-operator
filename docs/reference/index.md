@@ -22,7 +22,7 @@ The generated reference is produced with `crd-ref-docs` from the API types in `a
 Regenerate it with:
 
 ```sh
-make generate-docs
+make generate-api-reference
 ```
 
 The generated page is checked into the repository and verified in CI so that the schema reference stays aligned with the API definitions.
