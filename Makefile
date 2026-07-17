@@ -13,6 +13,21 @@ KIND_CNI ?= default
 ## Container CLI (tested with Docker).
 CONTAINER_TOOL ?= docker
 
+# Tool binaries
+LOCALBIN ?= $(CURDIR)/bin
+KUBECTL ?= kubectl
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
+
+# Tool versions
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
+ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime)
+ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
+GOLANGCI_LINT_VERSION ?= v2.11.4
+CRD_REF_DOCS_VERSION ?= v0.3.0
+
 # Use Bash and fail recipes when a command or pipeline fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
@@ -227,24 +242,9 @@ kind-redeploy: ## Reset and redeploy the operator in Kind.
 	$(MAKE) kind-reset
 	$(MAKE) kind-refresh
 
-# Tool dependencies
-LOCALBIN ?= $(CURDIR)/bin
+# Tool installation
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
-
-# Tool binaries
-KUBECTL ?= kubectl
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-ENVTEST ?= $(LOCALBIN)/setup-envtest
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
-
-# Tool versions
-CONTROLLER_TOOLS_VERSION ?= v0.20.1
-ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime)
-ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
-GOLANGCI_LINT_VERSION ?= v2.11.4
-CRD_REF_DOCS_VERSION ?= v0.3.0
 
 $(CONTROLLER_GEN): $(CONTROLLER_GEN)-$(CONTROLLER_TOOLS_VERSION)
 	ln -sf $(CONTROLLER_GEN)-$(CONTROLLER_TOOLS_VERSION) $(CONTROLLER_GEN)
