@@ -10,9 +10,6 @@ MKDOCS_CONFIG ?= hack/mkdocs.yml
 ## Kind CNI: default or cilium (with Hubble).
 KIND_CNI ?= default
 
-## Container CLI (tested with Docker).
-CONTAINER_TOOL ?= docker
-
 # Tool binaries
 LOCALBIN ?= $(CURDIR)/bin
 CONTROLLER_GEN = $(LOCALBIN)/controller-gen
@@ -88,8 +85,8 @@ generate-deepcopy: $(CONTROLLER_GEN) ## Generate DeepCopy implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: generate-manifests
-generate-manifests: $(CONTROLLER_GEN) ## Generate CRDs, RBAC, and webhooks.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+generate-manifests: $(CONTROLLER_GEN) ## Generate CRDs and RBAC.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: sync-chart-assets
 sync-chart-assets: ## Sync generated CRDs and RBAC to the chart.
@@ -109,7 +106,7 @@ generate-api-reference: $(CRD_REF_DOCS) ## Generate the CRD API reference.
 
 .PHONY: build-docs-site
 build-docs-site: ## Build the site without regenerating its API reference.
-	$(CONTAINER_TOOL) run --rm -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
+	docker run --rm -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
 
 .PHONY: docs-build
 docs-build: ## Generate the API reference and build the site.
@@ -118,7 +115,7 @@ docs-build: ## Generate the API reference and build the site.
 
 .PHONY: docs-serve
 docs-serve: generate-api-reference ## Generate and serve the site locally.
-	$(CONTAINER_TOOL) run --rm -p 8000:8000 -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) serve --dev-addr 0.0.0.0:8000 -f $(MKDOCS_CONFIG)
+	docker run --rm -p 8000:8000 -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) serve --dev-addr 0.0.0.0:8000 -f $(MKDOCS_CONFIG)
 
 .PHONY: update-harbor-openapi
 update-harbor-openapi: ## Refresh the checked-in Harbor OpenAPI specification.
@@ -128,7 +125,7 @@ update-harbor-openapi: ## Refresh the checked-in Harbor OpenAPI specification.
 
 .PHONY: docker-build
 docker-build: ## Build the operator image.
-	$(CONTAINER_TOOL) build -t $(IMG) .
+	docker build -t $(IMG) .
 
 ##@ Deployment
 
