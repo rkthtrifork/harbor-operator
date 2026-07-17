@@ -63,5 +63,5 @@ make kind-up
 or:
 
 ```sh
-make kind-up-cilium
+make kind-up KIND_CNI=cilium
 ```

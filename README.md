@@ -117,10 +117,10 @@ If you want Cilium to be the CNI (so Hubble can observe pod traffic), create
 the cluster with Cilium from the start:
 
 ```sh
-make kind-up-cilium
+make kind-up KIND_CNI=cilium
 ```
 
-`make kind-up-cilium` uses Cilium and Hubble. Startup is slower than `make kind-up`.
+`KIND_CNI=cilium` installs Cilium and Hubble. Startup is slower than the default Kind CNI.
 
 ### 3. Working with Samples
 
@@ -131,10 +131,10 @@ Apply or remove sample CRs (in `config/samples`):
 make apply-samples
 
 # Delete all Harbor CRs (connection objects last) in all namespaces
-make delete-crs
+make delete-harbor-crs
 ```
 
-> `delete-crs` removes **all** custom resources in the
+> `delete-harbor-crs` removes **all** custom resources in the
 > `harbor.harbor-operator.io` API group, not just the manifests in `config/samples/`.
 
 ### 4. Normal Edit / Test Loop
@@ -166,21 +166,7 @@ Use `make kind-refresh` after changing:
 - RBAC
 - Helm chart wiring for the operator
 
-### 5. Deploying to an Existing Kind Cluster
-
-If you already have a Kind cluster and supporting stack running, you can deploy
-the operator onto that current cluster with:
-
-```sh
-make kind-deploy
-```
-
-`kind-deploy` and `kind-refresh` run the same deployment steps with different intent:
-
-- `kind-deploy` is the base "deploy onto this Kind cluster" target
-- `kind-refresh` is the normal iterative developer workflow
-
-### 6. Full Reset / Clean Redeploy
+### 5. Full Reset / Clean Redeploy
 
 If you want to wipe operator-managed CRs, remove the operator, remove CRDs, and
 then install everything again from scratch:
@@ -203,24 +189,24 @@ Typical uses:
 - a CRD change is incompatible with existing CRs
 - you want to re-test first-install behavior
 
-### 7. Useful Low-Level Targets
+### 6. Useful Low-Level Targets
 
 The high-level workflow above is usually enough, but these targets are useful
 when working on packaging and deployment details:
 
 ```sh
-make prepare-deploy
-make sync-chart
+make generate-manifests
+make sync-chart-assets
 make apply-crds
-make kind-load-image
+make docker-build
 ```
 
-- `prepare-deploy` regenerates code/manifests, syncs chart assets, and applies CRDs
-- `sync-chart` copies generated CRDs and RBAC into the Helm chart
+- `generate-manifests` regenerates canonical CRDs and RBAC
+- `sync-chart-assets` copies generated CRDs and RBAC into the Helm chart
 - `apply-crds` applies the current chart CRDs to the cluster
-- `kind-load-image` only loads the already-built local image into Kind
+- `docker-build` builds the operator image without deploying it
 
-### 8. Tearing Down
+### 7. Tearing Down
 
 To delete only the Kind cluster:
 
@@ -238,10 +224,10 @@ The repository ships two documentation layers:
 The documentation site is built with MkDocs Material and deployed from `main` to GitHub Pages.
 In the repository settings, GitHub Pages should be configured to deploy from GitHub Actions.
 
-Generate the API reference with:
+Generate only the API reference with:
 
 ```sh
-make generate-docs
+make generate-api-reference
 ```
 
 Build the MkDocs site locally with:
@@ -299,13 +285,13 @@ If you want to remove Harbor-managed resources, CRDs, and the operator:
 
 ```sh
 # Remove Harbor CRs (connection objects last)
-make delete-crs
+make delete-harbor-crs
 
-# Remove the operator
-helm uninstall harbor-operator -n harbor-operator-system
+# Remove the operator deployment while retaining its CRDs
+make undeploy
 
 # Remove CRDs for the harbor.harbor-operator.io API group
-make uninstall
+make delete-crds
 ```
 
 In a Kind dev cluster, a full reset is just:
@@ -329,7 +315,7 @@ make kind-up
 or, if you want Cilium/Hubble:
 
 ```sh
-make kind-up-cilium
+make kind-up KIND_CNI=cilium
 ```
 
 Then iterate with:
@@ -346,10 +332,10 @@ make kind-redeploy
 
 ### Common Commands
 
-- Format and vet:
+- Apply automatic formatting and lint fixes:
 
   ```sh
-  make fmt vet
+  make fix
   ```
 
 - Run tests:

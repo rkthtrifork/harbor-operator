@@ -53,11 +53,11 @@ jobs:
 
       - name: Generate API reference
         if: github.event_name != 'pull_request' || steps.changes.outputs.api_reference == 'true'
-        run: make generate-docs
+        run: make generate-api-reference
 
       - name: Build docs site
         if: github.event_name != 'pull_request' || steps.changes.outputs.docs_site == 'true'
-        run: make docs-site-build
+        run: make build-docs-site
 
       - name: Configure Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

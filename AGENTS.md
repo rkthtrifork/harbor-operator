@@ -6,7 +6,7 @@ How to work in this repo. Keep it short and precise — this is not a changelog.
 
 The public Kubernetes API originates in the Go types and Kubebuilder markers under `api/v1alpha1`. The Harbor OpenAPI document at `hack/harbor-openapi.yaml` is a checked-in reference for Harbor API semantics, not a generator input for this operator.
 
-Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/bases`, `config/rbac/role.yaml`, chart CRDs and RBAC, and `docs/reference/api.md`. Read them when generated shape is relevant, but do not hand-edit them. Change their source types or markers, then regenerate with `make check-drift` or the narrower generation target.
+Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/bases`, `config/rbac/role.yaml`, chart CRDs and RBAC, and `docs/reference/api.md`. Read them when generated shape is relevant, but do not hand-edit them. Change their source types or markers, then regenerate with `make generate` or the appropriate focused generation target.
 
 ## Operating principles
 
@@ -49,14 +49,14 @@ These commands are the baseline vocabulary for verification. Keep them aligned w
 | Scope | Command |
 | --- | --- |
 | Normal non-E2E baseline | `make check` |
-| Generated assets | `make check-drift` |
+| Generated assets | `make verify-generated` |
 | Go tests | `make test` |
 | Lint | `make lint` |
 | Docs | `make docs-build` |
 | Live Kind suite | `make test-e2e` |
 | Local stack | `make kind-up`, `make kind-refresh`, `make kind-redeploy` |
 
-`make check-drift` regenerates code, manifests, chart assets, and API reference docs and fails only when regeneration adds to the existing generated-file diff, so it is safe to use on a dirty feature branch.
+`make verify-generated` regenerates code, manifests, chart assets, and API reference docs and fails only when regeneration adds to the existing generated-file diff, so it is safe to use on a dirty feature branch.
 
 ## Git conventions
 
