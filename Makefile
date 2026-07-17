@@ -15,11 +15,10 @@ CONTAINER_TOOL ?= docker
 
 # Tool binaries
 LOCALBIN ?= $(CURDIR)/bin
-KUBECTL ?= kubectl
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-ENVTEST ?= $(LOCALBIN)/setup-envtest
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
+CONTROLLER_GEN = $(LOCALBIN)/controller-gen
+SETUP_ENVTEST = $(LOCALBIN)/setup-envtest
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
 
 # Tool versions
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
@@ -48,8 +47,8 @@ check: ## Run the non-E2E CI baseline.
 	$(MAKE) build-docs-site
 
 .PHONY: test
-test: $(ENVTEST) ## Run non-E2E Go tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+test: $(SETUP_ENVTEST) ## Run non-E2E Go tests.
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 .PHONY: test-e2e
 test-e2e: ## Run E2E tests against the current Kind cluster.
@@ -135,7 +134,7 @@ docker-build: ## Build the operator image.
 
 .PHONY: apply-crds
 apply-crds: ## Apply chart CRDs to the current cluster.
-	$(KUBECTL) apply -f charts/harbor-operator/crds
+	kubectl apply -f charts/harbor-operator/crds
 
 .PHONY: prepare-deploy
 prepare-deploy:
@@ -146,11 +145,11 @@ prepare-deploy:
 
 .PHONY: delete-crds
 delete-crds: ## Delete operator CRDs and remaining instances.
-	$(KUBECTL) delete --ignore-not-found -f charts/harbor-operator/crds
+	kubectl delete --ignore-not-found -f charts/harbor-operator/crds
 
 .PHONY: deploy
 deploy: prepare-deploy ## Generate assets and deploy to the current cluster.
-	$(KUBECTL) create namespace harbor-operator-system --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	kubectl create namespace harbor-operator-system --dry-run=client -o yaml | kubectl apply -f -
 	IMG_REF="$(IMG)"; \
 	if [[ "$${IMG_REF}" == *@* ]]; then echo "Digest image references are not supported by deploy"; exit 1; fi; \
 	IMG_LAST="$${IMG_REF##*/}"; \
@@ -166,8 +165,8 @@ deploy: prepare-deploy ## Generate assets and deploy to the current cluster.
 		--set-string image.repository=$${IMG_REPO} \
 		--set-string image.tag=$${IMG_TAG} \
 		--wait
-	$(KUBECTL) rollout restart deployment/harbor-operator -n harbor-operator-system
-	$(KUBECTL) rollout status deployment/harbor-operator -n harbor-operator-system --timeout=180s
+	kubectl rollout restart deployment/harbor-operator -n harbor-operator-system
+	kubectl rollout status deployment/harbor-operator -n harbor-operator-system --timeout=180s
 
 .PHONY: undeploy
 undeploy: ## Remove the deployment; retain Harbor CRs and CRDs.
@@ -181,7 +180,7 @@ delete-harbor-crs: ## Delete all Harbor CRs by policy; connections last.
 
 .PHONY: apply-samples
 apply-samples: ## Apply sample Harbor CRs to the current cluster.
-	$(KUBECTL) apply -k config/samples
+	kubectl apply -k config/samples
 
 ##@ Kind
 
@@ -251,10 +250,10 @@ $(CONTROLLER_GEN): $(CONTROLLER_GEN)-$(CONTROLLER_TOOLS_VERSION)
 $(CONTROLLER_GEN)-$(CONTROLLER_TOOLS_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
-$(ENVTEST): $(ENVTEST)-$(ENVTEST_VERSION)
-	ln -sf $(ENVTEST)-$(ENVTEST_VERSION) $(ENVTEST)
-$(ENVTEST)-$(ENVTEST_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+$(SETUP_ENVTEST): $(SETUP_ENVTEST)-$(ENVTEST_VERSION)
+	ln -sf $(SETUP_ENVTEST)-$(ENVTEST_VERSION) $(SETUP_ENVTEST)
+$(SETUP_ENVTEST)-$(ENVTEST_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(SETUP_ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
 
 $(CRD_REF_DOCS): $(CRD_REF_DOCS)-$(CRD_REF_DOCS_VERSION)
 	ln -sf $(CRD_REF_DOCS)-$(CRD_REF_DOCS_VERSION) $(CRD_REF_DOCS)
