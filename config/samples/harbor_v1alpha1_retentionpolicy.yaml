@@ -6,7 +6,6 @@ spec:
   harborConnectionRef:
     name: harbor-conn
     kind: HarborConnection
-  algorithm: or
   projectRef:
     name: project-sample
   trigger:

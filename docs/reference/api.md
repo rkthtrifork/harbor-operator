@@ -959,7 +959,6 @@ _Appears in:_
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID.<br />When set, scope.ref is resolved from the Project status and scope.level is forced to "project". |  | Optional: \{\} <br /> |
-| `algorithm` _string_ | Algorithm defines the retention algorithm, e.g. "or". |  | Optional: \{\} <br /> |
 | `rules` _[RetentionRule](#retentionrule) array_ | Rules defines the retention rules. |  | MinItems: 1 <br /> |
 | `trigger` _[RetentionTrigger](#retentiontrigger)_ | Trigger defines when the retention policy runs. |  | Optional: \{\} <br /> |
 | `scope` _[RetentionScope](#retentionscope)_ | Scope defines the policy scope. |  | Optional: \{\} <br /> |

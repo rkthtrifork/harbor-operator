@@ -16,10 +16,6 @@ type RetentionPolicySpec struct {
 	// +optional
 	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
 
-	// Algorithm defines the retention algorithm, e.g. "or".
-	// +optional
-	Algorithm string `json:"algorithm,omitempty"`
-
 	// Rules defines the retention rules.
 	// +kubebuilder:validation:MinItems=1
 	Rules []RetentionRule `json:"rules"`
