@@ -28,8 +28,7 @@ Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/b
 ### Testing
 
 - Cover behavior and edge cases; do not test internal wiring. Assert contracts and observable behavior so implementation can change freely without breaking tests.
-- Verification is evidence, not a checklist. Choose checks that match the changed behavior, explain what they prove when it matters, and add task-specific manual or end-to-end validation when automated checks do not cover the risk.
-- Use the local Kind stack for bounded integration checks when reconciliation depends on real Kubernetes or Harbor behavior. Do not require full E2E validation for changes whose risk is already covered by focused tests and static checks.
+- Verification is evidence, not a checklist. Focused automated checks are sufficient when they cover the risk; add task-specific live validation only when real Kubernetes or Harbor behavior remains material and unproven.
 
 ## Operator contracts
 
