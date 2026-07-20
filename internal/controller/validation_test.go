@@ -60,6 +60,50 @@ var _ = Describe("CRD validation and defaulting", func() {
 		})
 	})
 
+	It("rejects changes to a project's registryRef", func() {
+		newProject := func(name string, registryRef *harborv1alpha1.RegistryReference) *harborv1alpha1.Project {
+			return &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNamespace,
+					Name:      name,
+				},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
+					},
+					RegistryRef: registryRef,
+				},
+			}
+		}
+		expectInvalidUpdate := func(project *harborv1alpha1.Project) {
+			err := k8sClient.Update(ctx, project)
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsInvalid(err)).To(BeTrue(), err.Error())
+			Expect(err.Error()).To(ContainSubstring("registryRef is immutable"))
+		}
+
+		normalProject := newProject("immutable-registry-normal-project", nil)
+		Expect(k8sClient.Create(ctx, normalProject)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(ctx, normalProject) })
+		normalProject.Spec.RegistryRef = &harborv1alpha1.RegistryReference{Name: "upstream"}
+		expectInvalidUpdate(normalProject)
+
+		proxyProject := newProject(
+			"immutable-registry-proxy-project",
+			&harborv1alpha1.RegistryReference{Name: "upstream"},
+		)
+		Expect(k8sClient.Create(ctx, proxyProject)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(ctx, proxyProject) })
+		proxyProject.Spec.Public = true
+		Expect(k8sClient.Update(ctx, proxyProject)).To(Succeed())
+
+		proxyProject.Spec.RegistryRef = &harborv1alpha1.RegistryReference{Name: "other-upstream"}
+		expectInvalidUpdate(proxyProject)
+
+		proxyProject.Spec.RegistryRef = nil
+		expectInvalidUpdate(proxyProject)
+	})
+
 	It("defaults webhook enabled to true", func() {
 		policy := &harborv1alpha1.WebhookPolicy{
 			ObjectMeta: metav1.ObjectMeta{

@@ -5,6 +5,7 @@ import (
 )
 
 // ProjectSpec defines the desired state of Project.
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.registryRef) ? !has(self.registryRef) : has(self.registryRef) && self.registryRef == oldSelf.registryRef",message="registryRef is immutable"
 type ProjectSpec struct {
 	HarborSpecBase `json:",inline"`
 

@@ -23,17 +23,27 @@ spec:
   public: false
 
   # Enable security scanning and related metadata settings.
-  autoScan: true
-  severity: "high"
-  preventVul: true
+  metadata:
+    auto_scan: "true"
+    severity: high
+    prevent_vul: "true"
 
   # Optional: drift detection for the project configuration.
   driftDetectionInterval: 5m
   reconcileNonce: "bump-1"
 ```
 
-> The exact metadata set (auto-scan, severity, etc.) depends on your CRD schema,
-> but the operator maps those fields into Harbor’s project metadata.
+To create a proxy-cache project, reference a `Registry` when creating the Project:
+
+```yaml
+spec:
+  harborConnectionRef:
+    name: my-harbor
+    kind: HarborConnection
+  public: false
+  registryRef:
+    name: upstream-registry
+```
 
 ## Key Fields
 
@@ -49,12 +59,15 @@ spec:
 - **spec.creationPolicy** (string, optional)
   Controls whether the project is created, adopted, or either. Defaults to `Create`.
 
-- **spec.autoScan**, **spec.preventVul**, **spec.severity**, etc. (optional)
+- **spec.metadata** (object, optional)
   These map to Harbor’s project metadata fields, controlling:
 
   - automatic scanning of images,
   - vulnerability blocking behavior,
   - minimum severity threshold, etc.
+
+- **spec.registryRef** (object, optional, immutable)
+  References the `Registry` used to create a Harbor proxy-cache project. The referenced resource must exist and have a Harbor registry ID before the Project can be created. Harbor cannot convert an existing project to or from a proxy-cache project, so this reference cannot be added, removed, or changed after creation. Recreate the Project to select a different proxy-cache mode or registry.
 
 - **spec.driftDetectionInterval** (duration, optional)
   Periodic check for drift between Harbor’s project config and the CR.
@@ -74,6 +87,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
   - Ensures the project exists in Harbor.
   - Updates metadata to match your spec.
+  - Creates a proxy-cache project when `registryRef` is set at creation time.
   - Applies `creationPolicy` when the project is not yet recorded in status.
 
 - **Delete**
