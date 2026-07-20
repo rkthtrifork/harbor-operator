@@ -14,7 +14,6 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  algorithm: or
   projectRef:
     name: project-sample
   trigger:
@@ -42,9 +41,6 @@ spec:
 
 - **spec.harborConnectionRef** (object, required)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
-
-- **spec.algorithm** (string, optional)
-  Retention algorithm, e.g. `or`.
 
 - **spec.rules** (array, required)
   Retention rules matching the Harbor retention API schema.
