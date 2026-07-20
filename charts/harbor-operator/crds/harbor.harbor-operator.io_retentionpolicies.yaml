@@ -59,9 +59,6 @@ spec:
             description: RetentionPolicySpec defines the desired state of a retention
               policy.
             properties:
-              algorithm:
-                description: Algorithm defines the retention algorithm, e.g. "or".
-                type: string
               deletionPolicy:
                 default: Delete
                 description: |-

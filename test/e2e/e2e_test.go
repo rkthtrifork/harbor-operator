@@ -406,7 +406,6 @@ spec:
     kind: HarborConnection
   projectRef:
     name: %s
-  algorithm: or
   trigger:
     kind: Schedule
     settings:

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
@@ -47,8 +48,10 @@ var _ = Describe("Retention Policy Controller", func() {
 			Namespace: "default",
 		}
 		var server *httptest.Server
+		var receivedAlgorithm chan string
 
 		BeforeEach(func() {
+			receivedAlgorithm = make(chan string, 1)
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
 				if !ok || user != testAdminUser || pass != testPassword {
@@ -56,6 +59,14 @@ var _ = Describe("Retention Policy Controller", func() {
 					return
 				}
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/retentions" {
+					var request struct {
+						Algorithm string `json:"algorithm"`
+					}
+					if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					receivedAlgorithm <- request.Algorithm
 					w.Header().Set("Location", "/api/v2.0/retentions/17")
 					w.WriteHeader(http.StatusCreated)
 					return
@@ -92,7 +103,6 @@ var _ = Describe("Retention Policy Controller", func() {
 						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
 					ProjectRef: &harborv1alpha1.ProjectReference{Name: "demo"},
-					Algorithm:  "or",
 					Trigger: &harborv1alpha1.RetentionTrigger{
 						Kind: "Schedule",
 						Settings: map[string]apiextensionsv1.JSON{
@@ -154,6 +164,7 @@ var _ = Describe("Retention Policy Controller", func() {
 			out := &harborv1alpha1.RetentionPolicy{}
 			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
 			Expect(out.Status.HarborRetentionID).To(Equal(17))
+			Expect(<-receivedAlgorithm).To(Equal("or"))
 			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
 			Expect(cond).NotTo(BeNil())
 			Expect(cond.Status).To(Equal(metav1.ConditionTrue))

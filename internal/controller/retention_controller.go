@@ -161,7 +161,7 @@ func toRetentionPolicy(cr harborv1alpha1.RetentionPolicy) (harborclient.Retentio
 		return harborclient.RetentionPolicy{}, err
 	}
 	return harborclient.RetentionPolicy{
-		Algorithm: cr.Spec.Algorithm,
+		Algorithm: "or",
 		Rules:     rules,
 		Trigger:   trigger,
 		Scope:     toRetentionScope(cr.Spec.Scope),
