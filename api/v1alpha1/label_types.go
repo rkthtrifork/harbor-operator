@@ -8,10 +8,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type LabelSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing label in Harbor with the same name.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor label.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// Description is an optional description.
 	// +optional

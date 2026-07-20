@@ -35,10 +35,11 @@ type WebhookTargetSpec struct {
 type WebhookPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing webhook policy in Harbor with the same name.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor webhook policy.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// ProjectRef references a Project CR to derive the Harbor project ID.
 	// +optional

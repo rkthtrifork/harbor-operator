@@ -9,7 +9,7 @@ This guidance is kept in `CONTRIBUTING.md` because it is contributor-facing and 
 ### CRD Types (`api/v1alpha1/*_types.go`)
 Each CRD type file must include:
 - A **Spec** and **Status** struct with `HarborSpecBase` and `HarborStatusBase` embedded.
-- `AllowTakeover` on CRDs that represent named Harbor identities without IDs (Registry, Project, User, Robot, Member).
+- `CreationPolicy` on CRDs whose controllers can uniquely discover existing Harbor resources for adoption.
 - Use `metadata.name` as the Harbor identity for named resources instead of adding duplicate name fields in `spec`.
 - Prefer Kubernetes object references and referenced status over raw Harbor IDs or `nameOrID` selector fields.
 - `// +kubebuilder:object:root=true` and `// +kubebuilder:subresource:status` on the root type.
@@ -21,9 +21,11 @@ Example:
 type ExampleSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover should be set on identity-based CRDs (Registry/Project/User/Robot/Member).
+	// CreationPolicy is appropriate only when an existing Harbor resource can be uniquely discovered.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// TODO(user): add spec fields
 }

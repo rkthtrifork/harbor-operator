@@ -96,7 +96,7 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		SingleActiveReplication:   cr.Spec.SingleActiveReplication,
 	}
 
-	if cr.Status.HarborReplicationPolicyID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborReplicationPolicyID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, &cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -108,6 +108,9 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if cr.Status.HarborReplicationPolicyID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		id, err := hc.CreateReplicationPolicy(ctx, policy)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)

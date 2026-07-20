@@ -71,7 +71,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if cr.Status.HarborRobotID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborRobotID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
@@ -80,6 +80,9 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if cr.Status.HarborRobotID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		return r.createRobot(ctx, hc, &cr, secretRef)
 	}
 

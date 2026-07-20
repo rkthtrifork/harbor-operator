@@ -89,7 +89,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		ScopeSelectors: toImmutableScopeSelectors(cr.Spec.ScopeSelectors),
 	}
 
-	if cr.Status.HarborImmutableRuleID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborImmutableRuleID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, projectKey, &cr, desired)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -101,6 +101,9 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if cr.Status.HarborImmutableRuleID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		if err := hc.CreateImmutableRule(ctx, projectKey, desired); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}

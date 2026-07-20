@@ -18,7 +18,7 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  allowTakeover: false
+  creationPolicy: Create
 
   projectRef:
     name: my-project
@@ -78,9 +78,8 @@ spec:
 
 Exactly one of `memberUser` or `memberGroup` should be set.
 
-- **spec.allowTakeover** (bool, optional)
-  If `true`, the operator will adopt an existing Harbor membership for the same
-  identity (user/group + project).
+- **spec.creationPolicy** (string, optional)
+  Controls whether the membership is created, adopted, or either. Defaults to `Create`.
 
 ## Common Fields
 
@@ -94,8 +93,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
   - Converts `role` to Harbor’s role ID.
   - Calls Harbor’s project membership API with either `member_user` or `member_group`.
-  - Treats “already exists” responses as idempotent (depending on client handling).
-  - If `allowTakeover` is `true` and a membership already exists, it is adopted.
+  - Applies `creationPolicy` when a matching membership already exists or is absent.
 
 - **Update**
 

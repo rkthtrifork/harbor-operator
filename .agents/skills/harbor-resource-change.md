@@ -11,7 +11,7 @@ Treat a Harbor resource as one contract spanning Kubernetes API shape, Harbor se
 
 Read `AGENTS.md`, the closest existing resource implementation, and the relevant operation in `hack/harbor-openapi.yaml`. Determine identity, scope, referenced objects, Harbor IDs, create/update support, adoption, deletion policy, secrets, and observable status before editing.
 
-Flag backwards-compatibility implications before changing a CRD schema or established ownership/deletion behavior. Prefer Kubernetes references and referenced status over raw Harbor IDs. Use `metadata.name` for named Harbor identities and add `AllowTakeover` only for identity-based resources without IDs.
+Flag backwards-compatibility implications before changing a CRD schema or established ownership/deletion behavior. Prefer Kubernetes references and referenced status over raw Harbor IDs. Use `metadata.name` for named Harbor identities and add `CreationPolicy` only when the controller can uniquely discover an existing Harbor resource for adoption.
 
 ## Implement the vertical slice
 
@@ -27,6 +27,10 @@ Do not hand-edit generated deepcopy code, CRDs, RBAC, chart copies of generated 
 
 ## Verify
 
-Run focused tests while iterating. Then run `make check`, inspect the generated diff, and confirm every generated change follows from an intentional source change. Use the Kind E2E workflow only when real Kubernetes or Harbor behavior remains material and unproven.
+Run focused tests while iterating. Then run `make check`, inspect the generated diff, and confirm every generated change follows from an intentional source change.
+
+When real Kubernetes or Harbor behavior remains material and unproven, start or reuse the local Kind stack and manually exercise the changed behavior. Prefer focused manual checks over the full E2E suite when they isolate the relevant risk more directly.
+
+Inspect existing clusters and workloads before creating one because another task may be using a compatible shared stack. Reuse a healthy stack with unique test resources when practical, but avoid resets, teardown, or replacing shared operator and CRD state; use an isolated cluster when validation would disrupt concurrent work.
 
 Report the contract chosen, compatibility implications, generated outputs, automated evidence, and any live behavior not exercised.

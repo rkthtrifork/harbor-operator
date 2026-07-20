@@ -42,6 +42,22 @@ var _ = Describe("CRD validation and defaulting", func() {
 		Expect(stored.Spec.HarborConnectionRef).NotTo(BeNil())
 		Expect(stored.Spec.HarborConnectionRef.Kind).To(BeEmpty())
 		Expect(stored.Spec.DeletionPolicy).To(Equal(harborv1alpha1.DeletionPolicyDelete))
+		Expect(stored.Spec.CreationPolicy).To(Equal(harborv1alpha1.CreationPolicyCreate))
+	})
+
+	It("rejects unsupported creation policies", func() {
+		expectInvalid(&harborv1alpha1.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      "invalid-creation-policy",
+			},
+			Spec: harborv1alpha1.ProjectSpec{
+				HarborSpecBase: harborv1alpha1.HarborSpecBase{
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
+				},
+				CreationPolicy: "Replace",
+			},
+		})
 	})
 
 	It("rejects changes to a project's registryRef", func() {

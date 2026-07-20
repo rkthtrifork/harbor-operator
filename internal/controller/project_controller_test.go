@@ -167,8 +167,8 @@ var _ = Describe("Project Controller", func() {
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
 						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn"},
 					},
-					AllowTakeover: true,
-					Public:        false,
+					CreationPolicy: harborv1alpha1.CreationPolicyCreateOrAdopt,
+					Public:         false,
 				},
 			}
 			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -177,9 +177,11 @@ var _ = Describe("Project Controller", func() {
 		AfterEach(func() {
 			server.Close()
 			resource := &harborv1alpha1.Project{}
-			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
-
-			_ = k8sClient.Delete(ctx, resource)
+			if k8sClient.Get(ctx, typeNamespacedName, resource) == nil {
+				resource.Finalizers = nil
+				_ = k8sClient.Update(ctx, resource)
+				_ = k8sClient.Delete(ctx, resource)
+			}
 
 			conn := &harborv1alpha1.HarborConnection{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn", Namespace: "default"}, conn)
@@ -202,6 +204,88 @@ var _ = Describe("Project Controller", func() {
 
 			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
 			Expect(project.Status.HarborProjectID).To(Equal(42))
+		})
+
+		It("adopts the existing project with creation policy Adopt", func() {
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			project.Spec.CreationPolicy = harborv1alpha1.CreationPolicyAdopt
+			Expect(k8sClient.Update(ctx, project)).To(Succeed())
+
+			controllerReconciler := &ProjectReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			Expect(project.Status.HarborProjectID).To(Equal(42))
+		})
+	})
+
+	Context("When Adopt cannot find an existing project", func() {
+		const resourceName = "missing-adopted-project"
+
+		ctx := context.Background()
+		typeNamespacedName := types.NamespacedName{Name: resourceName, Namespace: "default"}
+		var server *httptest.Server
+		createRequested := false
+
+		BeforeEach(func() {
+			createRequested = false
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user, pass, ok := r.BasicAuth()
+				if !ok || user != testAdminUser || pass != testPassword {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if r.Method == http.MethodGet && r.URL.Path == projectsPath {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`[]`))
+					return
+				}
+				if r.Method == http.MethodPost && r.URL.Path == projectsPath {
+					createRequested = true
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+
+			Expect(createPasswordSecret(ctx, k8sClient, "harbor-admin-adopt", testPassword)).To(Succeed())
+			Expect(createHarborConnection(ctx, k8sClient, "harbor-conn-adopt", server.URL, "harbor-admin-adopt")).To(Succeed())
+			resource := &harborv1alpha1.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
+				Spec: harborv1alpha1.ProjectSpec{
+					HarborSpecBase: harborv1alpha1.HarborSpecBase{
+						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "harbor-conn-adopt"},
+					},
+					CreationPolicy: harborv1alpha1.CreationPolicyAdopt,
+				},
+			}
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			server.Close()
+			resource := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
+			_ = k8sClient.Delete(ctx, resource)
+			conn := &harborv1alpha1.HarborConnection{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-conn-adopt", Namespace: "default"}, conn)
+			_ = k8sClient.Delete(ctx, conn)
+			secret := &corev1.Secret{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "harbor-admin-adopt", Namespace: "default"}, secret)
+			_ = k8sClient.Delete(ctx, secret)
+		})
+
+		It("reports an error without creating a project", func() {
+			controllerReconciler := &ProjectReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).To(MatchError(ContainSubstring("requires an existing Harbor resource to adopt")))
+			Expect(createRequested).To(BeFalse())
 		})
 	})
 })

@@ -28,6 +28,9 @@ spec:
 - **spec.ldapGroupDN** (string, optional)
   LDAP DN for LDAP groups.
 
+- **spec.creationPolicy** (string, optional)
+  Controls whether the group is created, adopted, or either. Defaults to `Create`.
+
 ## Common Fields
 
 `UserGroup` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)

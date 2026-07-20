@@ -92,7 +92,7 @@ func (r *LabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		ProjectID:   projectID,
 	}
 
-	if cr.Status.HarborLabelID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborLabelID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, &cr, desired)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -104,6 +104,9 @@ func (r *LabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if cr.Status.HarborLabelID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		id, err := hc.CreateLabel(ctx, desired)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)

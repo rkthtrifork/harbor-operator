@@ -16,6 +16,33 @@ const (
 	DeletionPolicyOrphan DeletionPolicy = "Orphan"
 )
 
+// CreationPolicy controls how the operator acquires a Harbor resource that is
+// not yet recorded in status.
+type CreationPolicy string
+
+const (
+	// CreationPolicyCreate creates a new Harbor resource and reports a conflict
+	// when a matching resource already exists.
+	CreationPolicyCreate CreationPolicy = "Create"
+	// CreationPolicyAdopt requires and adopts a matching Harbor resource without
+	// creating one when no match exists.
+	CreationPolicyAdopt CreationPolicy = "Adopt"
+	// CreationPolicyCreateOrAdopt adopts a matching Harbor resource when present
+	// and creates one otherwise.
+	CreationPolicyCreateOrAdopt CreationPolicy = "CreateOrAdopt"
+)
+
+// AllowsCreation reports whether the policy permits creating a Harbor resource.
+// The zero value is treated as Create so direct Go clients receive the API default.
+func (policy CreationPolicy) AllowsCreation() bool {
+	return policy == "" || policy == CreationPolicyCreate || policy == CreationPolicyCreateOrAdopt
+}
+
+// AllowsAdoption reports whether the policy permits adopting a Harbor resource.
+func (policy CreationPolicy) AllowsAdoption() bool {
+	return policy == CreationPolicyAdopt || policy == CreationPolicyCreateOrAdopt
+}
+
 // HarborConnectionReference identifies either a namespaced HarborConnection or a
 // cluster-scoped ClusterHarborConnection.
 type HarborConnectionReference struct {

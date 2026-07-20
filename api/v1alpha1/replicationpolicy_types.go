@@ -46,10 +46,11 @@ type ReplicationFilterSpec struct {
 type ReplicationPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing replication policy in Harbor with the same name.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor policy.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// Description is an optional policy description.
 	// +optional

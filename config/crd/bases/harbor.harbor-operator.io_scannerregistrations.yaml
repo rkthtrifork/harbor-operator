@@ -86,14 +86,18 @@ spec:
                 required:
                 - name
                 type: object
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing scanner registration in Harbor with the same name.
-                type: boolean
               auth:
                 description: Auth defines the authentication approach (e.g. Basic,
                   Bearer, X-ScannerAdapter-API-Key).
+                type: string
+              creationPolicy:
+                default: Create
+                description: CreationPolicy controls whether the operator creates
+                  or adopts the Harbor scanner registration.
+                enum:
+                - Create
+                - Adopt
+                - CreateOrAdopt
                 type: string
               default:
                 description: Default indicates whether this scanner should be set

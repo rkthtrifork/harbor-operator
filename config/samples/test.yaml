@@ -12,4 +12,4 @@ spec:
   insecure: false
   type: github-ghcr
   url: https://ghcr.io
-  allowTakeover: false # what happens if name is not specified?
+  creationPolicy: Create

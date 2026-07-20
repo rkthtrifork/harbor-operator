@@ -23,10 +23,11 @@ type MemberGroup struct {
 type MemberSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing project membership in Harbor for the same identity.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor membership.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// ProjectRef references the project where the member should be added.
 	ProjectRef ProjectReference `json:"projectRef"`

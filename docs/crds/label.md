@@ -29,6 +29,9 @@ spec:
 - **metadata.name** (string, required)
   The Harbor label name managed by this CR.
 
+- **spec.creationPolicy** (string, optional)
+  Controls whether the label is created, adopted, or either. Defaults to `Create`.
+
 ## Common Fields
 
 `Label` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)

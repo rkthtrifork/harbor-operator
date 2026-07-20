@@ -35,6 +35,9 @@ spec:
 - **spec.default** (bool, optional)
   Sets this registration as the system default scanner.
 
+- **spec.creationPolicy** (string, optional)
+  Controls whether the registration is created, adopted, or either. Defaults to `Create`.
+
 ## Common Fields
 
 `ScannerRegistration` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)

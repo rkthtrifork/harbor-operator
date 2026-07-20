@@ -63,6 +63,9 @@ spec:
 - **spec.replicateDeletion** (bool, optional)
   Whether to replicate deletions.
 
+- **spec.creationPolicy** (string, optional)
+  Controls whether the policy is created, adopted, or either. Defaults to `Create`.
+
 ## Common Fields
 
 `ReplicationPolicy` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)
@@ -78,4 +81,4 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
   Deletes the policy in Harbor when the CR is deleted.
 
 - **Adoption**
-  If `allowTakeover` is true, a policy with the same name is adopted.
+  A policy with the same name is adopted when `creationPolicy` permits adoption.

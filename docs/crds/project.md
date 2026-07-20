@@ -17,8 +17,7 @@ spec:
     name: my-harbor
     kind: HarborConnection
 
-  # Allow adopting an existing project with the same name.
-  allowTakeover: false
+  creationPolicy: Create
 
   # Make project public? (Harbor uses "public" metadata under the hood.)
   public: false
@@ -57,8 +56,8 @@ spec:
 - **metadata.name** (string, required)
   The Harbor project name managed by this CR.
 
-- **spec.allowTakeover** (bool, optional)
-  If `true`, the operator will adopt an existing Harbor project with the same name.
+- **spec.creationPolicy** (string, optional)
+  Controls whether the project is created, adopted, or either. Defaults to `Create`.
 
 - **spec.metadata** (object, optional)
   These map to Harbor’s project metadata fields, controlling:
@@ -89,7 +88,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
   - Ensures the project exists in Harbor.
   - Updates metadata to match your spec.
   - Creates a proxy-cache project when `registryRef` is set at creation time.
-  - If `allowTakeover` is `true` and a project already exists, it is adopted.
+  - Applies `creationPolicy` when the project is not yet recorded in status.
 
 - **Delete**
 

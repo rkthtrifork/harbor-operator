@@ -47,6 +47,13 @@ type connectionConfig struct {
 	displayName       string
 }
 
+func requireCreationAllowed(policy harborv1alpha1.CreationPolicy) error {
+	if policy.AllowsCreation() {
+		return nil
+	}
+	return fmt.Errorf("creationPolicy %q requires an existing Harbor resource to adopt", policy)
+}
+
 type harborConnectionRefAccessor func(client.Object) *harborv1alpha1.HarborConnectionReference
 
 func setupHarborBackedController(

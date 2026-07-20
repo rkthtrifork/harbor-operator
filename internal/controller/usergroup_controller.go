@@ -69,7 +69,7 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		LDAPGroupDN: cr.Spec.LDAPGroupDN,
 	}
 
-	if cr.Status.HarborGroupID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborGroupID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, &cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -81,6 +81,9 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if cr.Status.HarborGroupID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		id, err := hc.CreateUserGroup(ctx, desired)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)

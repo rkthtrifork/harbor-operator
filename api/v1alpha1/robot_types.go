@@ -100,10 +100,11 @@ type RobotPermission struct {
 type RobotSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing robot in Harbor with the same name.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor robot.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// Description of the robot account.
 	// +optional

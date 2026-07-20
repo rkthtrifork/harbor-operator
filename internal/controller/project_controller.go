@@ -65,7 +65,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Defaults & adoption
-	if cr.Status.HarborProjectID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborProjectID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if adopted {
@@ -82,6 +82,9 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Create / Update path
 	if cr.Status.HarborProjectID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		// create
 		newID, err := hc.CreateProject(ctx, createReq)
 		if err != nil {
