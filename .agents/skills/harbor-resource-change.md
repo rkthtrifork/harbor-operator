@@ -29,4 +29,6 @@ Do not hand-edit generated deepcopy code, CRDs, RBAC, chart copies of generated 
 
 Run focused tests while iterating. Then run `make check`, inspect the generated diff, and confirm every generated change follows from an intentional source change. Use the Kind E2E workflow only when real Kubernetes or Harbor behavior remains material and unproven.
 
+Before creating a Kind cluster, inspect existing clusters and workloads because another task may be using a compatible shared stack. Reuse a healthy stack when practical, use unique test resources, and avoid resets, teardown, or replacing shared operator and CRD state; use an isolated cluster when the required validation would disrupt concurrent work.
+
 Report the contract chosen, compatibility implications, generated outputs, automated evidence, and any live behavior not exercised.
