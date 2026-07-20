@@ -183,6 +183,10 @@ spec:
             required:
             - public
             type: object
+            x-kubernetes-validations:
+            - message: registryRef is immutable
+              rule: '!has(oldSelf.registryRef) ? !has(self.registryRef) : has(self.registryRef)
+                && self.registryRef == oldSelf.registryRef'
           status:
             description: ProjectStatus defines the observed state of Project.
             properties:
