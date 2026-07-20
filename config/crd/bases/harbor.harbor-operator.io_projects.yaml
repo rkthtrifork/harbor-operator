@@ -61,11 +61,15 @@ spec:
           spec:
             description: ProjectSpec defines the desired state of Project.
             properties:
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing project in Harbor with the same name.
-                type: boolean
+              creationPolicy:
+                default: Create
+                description: CreationPolicy controls whether the operator creates
+                  or adopts the Harbor project.
+                enum:
+                - Create
+                - Adopt
+                - CreateOrAdopt
+                type: string
               cve_allowlist:
                 description: CVEAllowlist holds the configuration for the CVE allowlist.
                 properties:

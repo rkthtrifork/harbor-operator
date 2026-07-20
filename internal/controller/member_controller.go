@@ -129,7 +129,9 @@ func (r *MemberReconciler) ensureMemberPresent(
 	}
 
 	if existing == nil {
-		// Member does not exist → create it.
+		if err := requireCreationAllowed(member.Spec.CreationPolicy); err != nil {
+			return err
+		}
 		newID, err := hc.CreateProjectMember(ctx, projectKey, reqBody)
 		if err != nil {
 			return err
@@ -151,11 +153,12 @@ func (r *MemberReconciler) ensureMemberPresent(
 		return nil
 	}
 
-	// Member exists. If takeover is not allowed and this CR was not previously ready, refuse to adopt.
-	if !member.Spec.AllowTakeover {
+	// A ready Member already manages this identity. Otherwise, an existing
+	// membership can only be acquired by a policy that permits adoption.
+	if !member.Spec.CreationPolicy.AllowsAdoption() {
 		cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
 		if cond == nil || cond.Status != metav1.ConditionTrue {
-			return fmt.Errorf("member already exists in Harbor and allowTakeover is false")
+			return fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", member.Spec.CreationPolicy)
 		}
 	}
 

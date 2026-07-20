@@ -9,10 +9,11 @@ import (
 type UserSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing user in Harbor with the same username.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor user.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// Email address of the user.
 	// +kubebuilder:validation:Format=email

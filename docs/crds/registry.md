@@ -49,8 +49,7 @@ spec:
   # Set to true to bypass certificate verification.
   insecure: false
 
-  # Allow adoption of an existing Harbor registry with the same name.
-  allowTakeover: true
+  creationPolicy: CreateOrAdopt
 
   # Periodic drift detection (e.g. "5m" for five minutes). 0 = disabled.
   driftDetectionInterval: 5m
@@ -60,7 +59,7 @@ spec:
 ```
 
 > [!CAUTION]
-> If `allowTakeover` is `true` and a registry with the same name already exists
+> If `creationPolicy` permits adoption and a registry with the same name already exists
 > in Harbor, the operator will take control of it and update its configuration
 > to match the CR.
 
@@ -91,13 +90,8 @@ spec:
 - **spec.caCertificateRef** (object, optional)
   Secret reference to a PEM-encoded CA certificate. Overrides `caCertificate`.
 
-- **spec.allowTakeover** (bool, optional)
-  If `true`, and a registry with the same name already exists in Harbor, the
-  operator will:
-
-  - adopt it,
-  - store its Harbor ID in status,
-  - and reconcile its configuration.
+- **spec.creationPolicy** (string, optional)
+  Controls whether the registry is created, adopted, or either. Defaults to `Create`.
 
 - **spec.driftDetectionInterval** (duration, optional)
   How often to re-check that Harbor’s config still matches the CR.
@@ -116,9 +110,8 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 - **Create**
 
-  - Lists registries and checks for one with the desired name.
-  - Creates a new registry via Harbor’s API if none exists.
-  - If `allowTakeover` is `true` and a registry exists, it is adopted.
+  - Creates a new registry when `creationPolicy` permits creation.
+  - If `creationPolicy` permits adoption and a registry exists, it is adopted.
 
 - **Update**
 

@@ -64,14 +64,18 @@ spec:
           spec:
             description: ReplicationPolicySpec defines the desired state of ReplicationPolicy.
             properties:
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing replication policy in Harbor with the same name.
-                type: boolean
               copyByChunk:
                 description: CopyByChunk indicates whether to enable copy by chunk.
                 type: boolean
+              creationPolicy:
+                default: Create
+                description: CreationPolicy controls whether the operator creates
+                  or adopts the Harbor policy.
+                enum:
+                - Create
+                - Adopt
+                - CreateOrAdopt
+                type: string
               deletionPolicy:
                 default: Delete
                 description: |-

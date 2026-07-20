@@ -29,10 +29,11 @@ type ImmutableSelector struct {
 type ImmutableTagRuleSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// AllowTakeover indicates whether the operator is allowed to adopt an
-	// existing immutable tag rule in Harbor that matches this spec.
+	// CreationPolicy controls whether the operator creates or adopts the Harbor rule.
+	// +kubebuilder:default=Create
+	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
-	AllowTakeover bool `json:"allowTakeover,omitempty"`
+	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// ProjectRef references a Project CR to derive the Harbor project ID.
 	// +optional

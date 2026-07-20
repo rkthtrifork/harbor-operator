@@ -94,7 +94,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 		policy.ProjectID = projectID
 	}
 
-	if cr.Status.HarborWebhookPolicyID == 0 && cr.Spec.AllowTakeover {
+	if cr.Status.HarborWebhookPolicyID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, projectKey, cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -106,6 +106,9 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 	}
 
 	if cr.Status.HarborWebhookPolicyID == 0 {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		id, err := hc.CreateWebhookPolicy(ctx, projectKey, policy)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)

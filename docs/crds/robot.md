@@ -14,7 +14,7 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  allowTakeover: false
+  creationPolicy: Create
   level: project
   permissions:
   - kind: project
@@ -52,8 +52,8 @@ spec:
   If omitted, the operator creates `<metadata.name>-secret` with key `secret`.
   If the Secret already exists, it must already be managed by the same `Robot`.
 
-- **spec.allowTakeover** (bool, optional)
-  If `true`, the operator will adopt an existing Harbor robot with the same name.
+- **spec.creationPolicy** (string, optional)
+  Controls whether the robot is created, adopted, or either. Defaults to `Create`.
 
 Robot secrets are rotated automatically once Harbor reports that the robot
 credential has expired (based on `expires_at`). The operator then refreshes the
@@ -71,7 +71,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
   - Creates the robot account with the requested permissions.
   - Uses `metadata.name` as the Harbor robot name.
-  - If `allowTakeover` is `true` and a robot already exists, it is adopted.
+  - Applies `creationPolicy` when the robot is not yet recorded in status.
 
 - **Update**
 

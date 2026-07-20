@@ -150,7 +150,7 @@ var _ = Describe("Member Controller", func() {
 		})
 	})
 
-	Context("When member already exists and takeover is disabled", func() {
+	Context("When member already exists and creation policy is Create", func() {
 		const resourceName = "existing-member"
 		const adminSecretName = "harbor-admin-member-existing"
 		const connName = "harbor-conn-member-existing"
@@ -208,9 +208,9 @@ var _ = Describe("Member Controller", func() {
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{
 						HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName},
 					},
-					AllowTakeover: false,
-					ProjectRef:    harborv1alpha1.ProjectReference{Name: "demo"},
-					Role:          "developer",
+					CreationPolicy: harborv1alpha1.CreationPolicyCreate,
+					ProjectRef:     harborv1alpha1.ProjectReference{Name: "demo"},
+					Role:           "developer",
 					MemberUser: &harborv1alpha1.MemberUser{
 						UserRef: harborv1alpha1.UserReference{Name: "alice"},
 					},

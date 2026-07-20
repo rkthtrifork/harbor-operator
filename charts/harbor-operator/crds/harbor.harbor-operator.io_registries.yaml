@@ -61,11 +61,6 @@ spec:
           spec:
             description: RegistrySpec defines the desired state of Registry.
             properties:
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing registry in Harbor with the same name.
-                type: boolean
               caCertificate:
                 description: CACertificate is the PEM-encoded CA certificate for this
                   registry endpoint.
@@ -91,6 +86,15 @@ spec:
                 required:
                 - name
                 type: object
+              creationPolicy:
+                default: Create
+                description: CreationPolicy controls whether the operator creates
+                  or adopts the Harbor registry.
+                enum:
+                - Create
+                - Adopt
+                - CreateOrAdopt
+                type: string
               credential:
                 description: Credential holds authentication details for the registry.
                 properties:

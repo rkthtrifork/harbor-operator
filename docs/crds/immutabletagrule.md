@@ -39,6 +39,9 @@ spec:
 - **spec.disabled** (bool, optional)
   Disable the rule without deleting it.
 
+- **spec.creationPolicy** (string, optional)
+  Controls whether the rule is created, adopted, or either. Defaults to `Create`.
+
 ## Common Fields
 
 `ImmutableTagRule` embeds `HarborSpecBase`. See [Common Spec Fields](../reference/common-spec-fields.md)

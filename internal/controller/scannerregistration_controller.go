@@ -82,7 +82,7 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 		Disabled:         cr.Spec.Disabled,
 	}
 
-	if cr.Status.HarborScannerID == "" && cr.Spec.AllowTakeover {
+	if cr.Status.HarborScannerID == "" && cr.Spec.CreationPolicy.AllowsAdoption() {
 		adopted, err := r.adoptExisting(ctx, hc, cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -94,6 +94,9 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 	}
 
 	if cr.Status.HarborScannerID == "" {
+		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		}
 		id, err := hc.CreateScanner(ctx, reqBody)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)

@@ -67,11 +67,15 @@ spec:
           spec:
             description: MemberSpec defines the desired state of Member.
             properties:
-              allowTakeover:
-                description: |-
-                  AllowTakeover indicates whether the operator is allowed to adopt an
-                  existing project membership in Harbor for the same identity.
-                type: boolean
+              creationPolicy:
+                default: Create
+                description: CreationPolicy controls whether the operator creates
+                  or adopts the Harbor membership.
+                enum:
+                - Create
+                - Adopt
+                - CreateOrAdopt
+                type: string
               deletionPolicy:
                 default: Delete
                 description: |-

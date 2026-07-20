@@ -11,7 +11,7 @@ Treat a Harbor resource as one contract spanning Kubernetes API shape, Harbor se
 
 Read `AGENTS.md`, the closest existing resource implementation, and the relevant operation in `hack/harbor-openapi.yaml`. Determine identity, scope, referenced objects, Harbor IDs, create/update support, adoption, deletion policy, secrets, and observable status before editing.
 
-Flag backwards-compatibility implications before changing a CRD schema or established ownership/deletion behavior. Prefer Kubernetes references and referenced status over raw Harbor IDs. Use `metadata.name` for named Harbor identities and add `AllowTakeover` only for identity-based resources without IDs.
+Flag backwards-compatibility implications before changing a CRD schema or established ownership/deletion behavior. Prefer Kubernetes references and referenced status over raw Harbor IDs. Use `metadata.name` for named Harbor identities and add `CreationPolicy` only when the controller can uniquely discover an existing Harbor resource for adoption.
 
 ## Implement the vertical slice
 

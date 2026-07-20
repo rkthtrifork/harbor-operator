@@ -34,7 +34,7 @@ Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/b
 ## Operator contracts
 
 - Specs and statuses embed `HarborSpecBase` and `HarborStatusBase`. Named Harbor identities use `metadata.name`; do not duplicate the identity in `spec`.
-- Identity-based resources without Harbor IDs expose `AllowTakeover`. Prefer Kubernetes references and referenced status over raw Harbor IDs or `nameOrID` unions.
+- Resources that can uniquely discover an existing Harbor identity expose `CreationPolicy`. Prefer Kubernetes references and referenced status over raw Harbor IDs or `nameOrID` unions.
 - Root CRDs include the root and status-subresource markers plus `Ready`, `Reason`, `Message`, and `Age` print columns.
 - Reconciliation handles generation changes, client construction, deletion and finalization, adoption/defaulting, create/update, status, and drift detection in a legible order. Surface operational failures through `setErrorStatus`.
 - Every CRD has a guide under `docs/crds/` with an example, field summary, and behavioral constraints.

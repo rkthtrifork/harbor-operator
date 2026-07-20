@@ -30,3 +30,16 @@ For the exact generated schema, defaults, and validation markers, see
 - **`spec.reconcileNonce`**
   Forces an immediate reconcile when the value changes. Use it when you want to
   trigger a refresh without changing any functional spec fields.
+
+## Creation Policy
+
+Resources that can uniquely discover an existing Harbor resource expose
+`spec.creationPolicy`:
+
+- `Create` (default) creates a new resource and reports a conflict if a match already exists.
+- `Adopt` requires a matching resource and reports an error instead of creating one when no match exists.
+- `CreateOrAdopt` adopts a matching resource when present and creates one otherwise.
+
+After creation or adoption, the operator fully reconciles the Harbor resource.
+`spec.deletionPolicy` independently controls whether deleting the Kubernetes object
+also deletes the managed Harbor resource.
