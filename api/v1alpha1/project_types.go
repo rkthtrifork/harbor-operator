@@ -41,6 +41,9 @@ type ProjectSpec struct {
 
 // ProjectMetadata defines additional metadata for the project.
 type ProjectMetadata struct {
+	// Public overrides the visibility derived from ProjectSpec.Public.
+	// When omitted, it defaults to the string form of ProjectSpec.Public.
+	// +optional
 	Public                   string `json:"public,omitempty"`
 	EnableContentTrust       string `json:"enable_content_trust,omitempty"`
 	EnableContentTrustCosign string `json:"enable_content_trust_cosign,omitempty"`

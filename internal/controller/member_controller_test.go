@@ -85,6 +85,10 @@ var _ = Describe("Member Controller", func() {
 				Spec: harborv1alpha1.UserSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Email:          "alice@example.com",
+					PasswordSecretRef: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "alice-password"},
+						Key:                  "password",
+					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, user)).To(Succeed())
@@ -195,6 +199,10 @@ var _ = Describe("Member Controller", func() {
 				Spec: harborv1alpha1.UserSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
 					Email:          "alice@example.com",
+					PasswordSecretRef: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "alice-password"},
+						Key:                  "password",
+					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, user)).To(Succeed())

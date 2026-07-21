@@ -38,13 +38,15 @@ spec:
   Harbor webhook event types.
 
 - **spec.targets** (array, required)
-  Webhook targets (type, address, optional authHeader).
+  Webhook targets (type, address, optional authHeader). Each target's
+  `skipCertVerify` defaults to `false`; enabling it disables TLS certificate
+  verification and is insecure.
 
 - **spec.enabled** (bool, optional)
-  Enables or disables the policy.
+  Enables or disables the policy. Defaults to `true`.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the policy is created, adopted, or either. Defaults to `Create`.
+  Controls whether the policy is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

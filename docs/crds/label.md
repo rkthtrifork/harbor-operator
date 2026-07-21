@@ -21,7 +21,8 @@ spec:
 ## Key Fields
 
 - **spec.scope** (string, optional)
-  `g` for global labels or `p` for project labels.
+  `g` for global labels or `p` for project labels. When omitted, it defaults to
+  `p` if `projectRef` is set and `g` otherwise.
 
 - **spec.projectRef** (object, optional)
   Required when using `scope: p`.
@@ -30,7 +31,7 @@ spec:
   The Harbor label name managed by this CR.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the label is created, adopted, or either. Defaults to `Create`.
+  Controls whether the label is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

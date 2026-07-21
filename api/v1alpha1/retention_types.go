@@ -31,7 +31,8 @@ type RetentionPolicySpec struct {
 
 // RetentionRule defines a retention rule.
 type RetentionRule struct {
-	// Disabled indicates whether the rule is disabled.
+	// Disabled indicates whether the rule is disabled. Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
 	Disabled bool `json:"disabled,omitempty"`
 

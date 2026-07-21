@@ -33,10 +33,21 @@ spec:
   Credential value for authentication (use secret reference for sensitive values).
 
 - **spec.default** (bool, optional)
-  Sets this registration as the system default scanner.
+  When `true`, promotes this registration to the system default scanner. `false`
+  or omission does not change Harbor's current default scanner assignment.
+
+- **spec.skipCertVerify** (bool, optional)
+  Defaults to `false`. If `true`, disables TLS certificate verification for
+  scanner requests and should only be used when secure verification cannot be configured.
+
+- **spec.useInternalAddr** (bool, optional)
+  Controls whether the scanner uses Harbor's internal address. Defaults to `false`.
+
+- **spec.disabled** (bool, optional)
+  Disables the scanner registration. Defaults to `false`.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the registration is created, adopted, or either. Defaults to `Create`.
+  Controls whether the registration is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

@@ -25,7 +25,9 @@ type WebhookTargetSpec struct {
 	// +optional
 	PayloadFormat string `json:"payloadFormat,omitempty"`
 
-	// SkipCertVerify indicates whether to skip TLS certificate verification.
+	// SkipCertVerify disables TLS certificate verification for this target.
+	// Defaults to false. Enabling it is insecure.
+	// +kubebuilder:default=false
 	// +optional
 	SkipCertVerify bool `json:"skipCertVerify,omitempty"`
 }
@@ -49,7 +51,7 @@ type WebhookPolicySpec struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 
-	// Enabled indicates whether the policy is enabled.
+	// Enabled indicates whether the policy is enabled. Defaults to true.
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`

@@ -36,9 +36,9 @@ Useful overrides include:
 - NetworkPolicy settings
 - `watchNamespaces` to scope the operator to specific namespaces
 - `harborConnection` to force a single `ClusterHarborConnection` for all Harbor-backed resources
-- `defaultCreationPolicy` to select the creation behavior of resources that omit `spec.creationPolicy`
-- `defaultDriftDetectionInterval` to configure periodic reconciliation for resources that omit `spec.driftDetectionInterval`
-- `harborRequestTimeout` to bound individual Harbor API requests
+- `defaultCreationPolicy` to select the creation behavior of resources that omit `spec.creationPolicy` (defaults to `Create`)
+- `defaultDriftDetectionInterval` to configure periodic reconciliation for resources that omit `spec.driftDetectionInterval` (defaults to `0s`, disabled)
+- `harborRequestTimeout` to bound individual Harbor API requests (defaults to `30s`)
 
 See the chart documentation in [`charts/harbor-operator/README.md`](https://github.com/rkthtrifork/harbor-operator/blob/main/charts/harbor-operator/README.md) for the install flags that matter most.
 

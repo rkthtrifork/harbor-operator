@@ -88,8 +88,9 @@ spec:
                 - name
                 type: object
               credentials:
-                description: Credentials holds the default credentials for Harbor
-                  API calls.
+                description: |-
+                  Credentials holds the default credentials for Harbor API calls.
+                  Omit this field to connect without authentication.
                 properties:
                   passwordSecretRef:
                     description: PasswordSecretRef points to the Kubernetes Secret
@@ -113,7 +114,7 @@ spec:
                     type: object
                   type:
                     default: basic
-                    description: Type of the credential, e.g., "basic".
+                    description: Type selects the credential type. Defaults to basic.
                     enum:
                     - basic
                     type: string
@@ -123,7 +124,6 @@ spec:
                     type: string
                 required:
                 - passwordSecretRef
-                - type
                 - username
                 type: object
             required:

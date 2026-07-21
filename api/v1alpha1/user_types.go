@@ -6,6 +6,7 @@ import (
 )
 
 // UserSpec defines the desired state of User.
+// +kubebuilder:validation:XValidation:rule="size(self.passwordSecretRef.name) > 0",message="passwordSecretRef.name is required"
 type UserSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -19,7 +20,7 @@ type UserSpec struct {
 	// +kubebuilder:validation:Format=email
 	Email string `json:"email"`
 
-	// Realname is an optional full name.
+	// Realname is an optional full name. Defaults to metadata.name.
 	// +optional
 	Realname string `json:"realname,omitempty"`
 
@@ -27,8 +28,8 @@ type UserSpec struct {
 	// +optional
 	Comment string `json:"comment,omitempty"`
 
-	// PasswordSecretRef references a secret key that contains the password for the user.
-	PasswordSecretRef corev1.SecretKeySelector `json:"passwordSecretRef,omitempty"`
+	// PasswordSecretRef references the required secret key containing the user's password.
+	PasswordSecretRef corev1.SecretKeySelector `json:"passwordSecretRef"`
 }
 
 // UserStatus defines the observed state of User.

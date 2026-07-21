@@ -79,7 +79,7 @@ spec:
 Exactly one of `memberUser` or `memberGroup` should be set.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the membership is created, adopted, or either. Defaults to `Create`.
+  Controls whether the membership is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

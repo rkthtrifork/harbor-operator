@@ -51,7 +51,8 @@ type HarborConnectionReference struct {
 	Name string `json:"name"`
 
 	// Kind selects the Harbor connection object kind.
-	// When omitted, controllers treat it as HarborConnection.
+	// Defaults to HarborConnection.
+	// +kubebuilder:default=HarborConnection
 	// +kubebuilder:validation:Enum=HarborConnection;ClusterHarborConnection
 	// +optional
 	Kind HarborConnectionReferenceKind `json:"kind,omitempty"`
@@ -72,13 +73,15 @@ type HarborSpecBase struct {
 	// Delete removes the corresponding Harbor resource before removing the finalizer.
 	// Orphan skips Harbor-side deletion and removes the finalizer so the
 	// Kubernetes object can be deleted while leaving the Harbor resource in place.
+	// Defaults to Delete.
 	// +kubebuilder:default=Delete
 	// +kubebuilder:validation:Enum=Delete;Orphan
 	// +optional
 	DeletionPolicy DeletionPolicy `json:"deletionPolicy,omitempty"`
 
-	// DriftDetectionInterval is the interval at which the operator will check
-	// for drift. A value of 0 (or omitted) disables periodic drift detection.
+	// DriftDetectionInterval is the interval at which the operator checks for drift.
+	// When omitted, the operator's default drift detection interval is used.
+	// An explicit value of 0 disables periodic drift detection.
 	// +optional
 	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
 

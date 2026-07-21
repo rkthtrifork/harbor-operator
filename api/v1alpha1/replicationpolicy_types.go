@@ -68,7 +68,9 @@ type ReplicationPolicySpec struct {
 	// +optional
 	DestNamespace string `json:"destNamespace,omitempty"`
 
-	// DestNamespaceReplaceCount controls namespace replacement behavior.
+	// DestNamespaceReplaceCount controls how many path components are replaced by DestNamespace.
+	// Defaults to -1, which selects Harbor's legacy replacement behavior.
+	// +kubebuilder:default=-1
 	// +optional
 	DestNamespaceReplaceCount *int `json:"destNamespaceReplaceCount,omitempty"`
 
@@ -81,26 +83,32 @@ type ReplicationPolicySpec struct {
 	Filters []ReplicationFilterSpec `json:"filters,omitempty"`
 
 	// ReplicateDeletion indicates whether delete operations are replicated.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	ReplicateDeletion *bool `json:"replicateDeletion,omitempty"`
 
 	// Override indicates whether to overwrite destination resources.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	Override *bool `json:"override,omitempty"`
 
 	// Enabled indicates whether the policy is enabled.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// Speed is the speed limit for each task.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	Speed *int `json:"speed,omitempty"`
 
 	// CopyByChunk indicates whether to enable copy by chunk.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	CopyByChunk *bool `json:"copyByChunk,omitempty"`
 
 	// SingleActiveReplication avoids overlapping executions.
+	// When omitted, the operator leaves this field unset for Harbor to interpret.
 	// +optional
 	SingleActiveReplication *bool `json:"singleActiveReplication,omitempty"`
 }

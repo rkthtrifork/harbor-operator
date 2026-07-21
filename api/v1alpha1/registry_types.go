@@ -40,8 +40,11 @@ type RegistrySpec struct {
 	// +optional
 	CACertificateRef *SecretReference `json:"caCertificateRef,omitempty"`
 
-	// Insecure indicates if remote certificates should be verified.
-	Insecure bool `json:"insecure"`
+	// Insecure disables TLS certificate verification when Harbor connects to the registry.
+	// Defaults to false. Enabling it is insecure; prefer CACertificateRef for private CAs.
+	// +kubebuilder:default=false
+	// +optional
+	Insecure bool `json:"insecure,omitempty"`
 }
 
 // RegistryCredentialSpec defines registry authentication details.

@@ -42,7 +42,7 @@ spec:
   Comma-separated event types to include.
 
 - **spec.parameters.dryRun** (bool, optional)
-  Run purge in dry-run mode.
+  Run purge in dry-run mode. Defaults to `false`.
 
 ## Common Fields
 

@@ -79,7 +79,9 @@ spec:
   Registry URL. Validated as a URL.
 
 - **spec.insecure** (bool, optional)
-  If `true`, skips TLS verification when Harbor connects to this registry.
+  Defaults to `false`. If `true`, Harbor skips TLS certificate verification when
+  connecting to this registry. Enabling it is insecure; use `caCertificateRef`
+  for a private CA whenever possible.
 
 - **spec.credential** (object, optional)
   Credentials for the registry. Use `type: basic` with an access key and secret.
@@ -91,11 +93,12 @@ spec:
   Secret reference to a PEM-encoded CA certificate. Overrides `caCertificate`.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the registry is created, adopted, or either. Defaults to `Create`.
+  Controls whether the registry is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 - **spec.driftDetectionInterval** (duration, optional)
   How often to re-check that Harbor’s config still matches the CR.
-  `"0"` or omitted → drift detection disabled.
+  When omitted, uses the operator's default drift detection interval. An explicit
+  `"0"` disables periodic drift detection.
 
 - **spec.reconcileNonce** (string, optional)
   Changing this value forces an immediate reconcile, even if nothing else changed.

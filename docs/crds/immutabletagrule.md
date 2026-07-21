@@ -37,10 +37,10 @@ spec:
   Selector definitions for tag and scope matching.
 
 - **spec.disabled** (bool, optional)
-  Disable the rule without deleting it.
+  Disable the rule without deleting it. Defaults to `false`.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the rule is created, adopted, or either. Defaults to `Create`.
+  Controls whether the rule is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

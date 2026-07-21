@@ -23,6 +23,7 @@ type LabelSpec struct {
 	Color string `json:"color,omitempty"`
 
 	// Scope is the label scope. Valid values are g (global) and p (project).
+	// When omitted, it defaults to p if ProjectRef is set and g otherwise.
 	// +kubebuilder:validation:Enum=g;p
 	// +optional
 	Scope string `json:"scope,omitempty"`

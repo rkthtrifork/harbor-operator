@@ -29,7 +29,7 @@ spec:
   LDAP DN for LDAP groups.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the group is created, adopted, or either. Defaults to `Create`.
+  Controls whether the group is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

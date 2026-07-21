@@ -33,19 +33,25 @@ type ScannerRegistrationSpec struct {
 	// +optional
 	AccessCredentialSecretRef *SecretReference `json:"accessCredentialSecretRef,omitempty"`
 
-	// SkipCertVerify indicates whether to skip certificate verification.
+	// SkipCertVerify disables TLS certificate verification for scanner requests.
+	// Defaults to false. Enabling it is insecure.
+	// +kubebuilder:default=false
 	// +optional
 	SkipCertVerify bool `json:"skipCertVerify,omitempty"`
 
 	// UseInternalAddr indicates whether the scanner uses Harbor's internal address.
+	// Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
 	UseInternalAddr bool `json:"useInternalAddr,omitempty"`
 
-	// Disabled indicates whether the registration is disabled.
+	// Disabled indicates whether the registration is disabled. Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
 	Disabled bool `json:"disabled,omitempty"`
 
-	// Default indicates whether this scanner should be set as system default.
+	// Default promotes this scanner to the system default when true.
+	// False or omitted does not change Harbor's current default scanner assignment.
 	// +optional
 	Default bool `json:"default,omitempty"`
 }

@@ -57,7 +57,7 @@ spec:
   The Harbor project name managed by this CR.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the project is created, adopted, or either. Defaults to `Create`.
+  Controls whether the project is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 - **spec.metadata** (object, optional)
   These map to Harbor’s project metadata fields, controlling:
@@ -65,6 +65,9 @@ spec:
   - automatic scanning of images,
   - vulnerability blocking behavior,
   - minimum severity threshold, etc.
+
+  When `metadata.public` is omitted, it defaults to the string form of
+  `spec.public`.
 
 - **spec.registryRef** (object, optional, immutable)
   References the `Registry` used to create a Harbor proxy-cache project. The referenced resource must exist and have a Harbor registry ID before the Project can be created. Harbor cannot convert an existing project to or from a proxy-cache project, so this reference cannot be added, removed, or changed after creation. Recreate the Project to select a different proxy-cache mode or registry.
