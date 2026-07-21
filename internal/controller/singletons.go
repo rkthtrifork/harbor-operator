@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,9 +18,6 @@ type singletonCandidate struct {
 	name      types.NamespacedName
 	createdAt metav1.Time
 }
-
-type singletonItemVisitor func(client.Object, *harborv1alpha1.HarborConnectionReference)
-type visitSingletonItems func(singletonItemVisitor)
 
 func normalizedHarborConnectionRef(ref *harborv1alpha1.HarborConnectionReference) harborv1alpha1.HarborConnectionReference {
 	if ref == nil {
@@ -82,12 +81,11 @@ func ensureSingletonOwner(
 	options OperatorOptions,
 	c client.Client,
 	current client.Object,
-	currentRef *harborv1alpha1.HarborConnectionReference,
 	list client.ObjectList,
-	visitItems visitSingletonItems,
+	getRef harborConnectionRefAccessor,
 	singletonKind string,
 ) error {
-	currentConn, err := resolveHarborConnection(ctx, options, c, current.GetNamespace(), currentRef)
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.GetNamespace(), getRef(current))
 	if err != nil {
 		return err
 	}
@@ -98,58 +96,49 @@ func ensureSingletonOwner(
 	currentName := client.ObjectKeyFromObject(current)
 	currentBaseURL := normalizeBaseURL(currentConn.baseURL)
 	peers := []singletonCandidate{}
-	visitItems(func(item client.Object, itemRef *harborv1alpha1.HarborConnectionReference) {
-		if client.ObjectKeyFromObject(item) == currentName || !item.GetDeletionTimestamp().IsZero() {
-			return
+	if err := apimeta.EachListItem(list, func(raw runtime.Object) error {
+		item, ok := raw.(client.Object)
+		if !ok {
+			return nil
 		}
-		itemConn, err := resolveHarborConnection(ctx, options, c, item.GetNamespace(), itemRef)
+		if client.ObjectKeyFromObject(item) == currentName || !item.GetDeletionTimestamp().IsZero() {
+			return nil
+		}
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.GetNamespace(), getRef(item))
 		if err != nil || normalizeBaseURL(itemConn.baseURL) != currentBaseURL {
-			return
+			return nil
 		}
 		peers = append(peers, singletonCandidate{
 			name:      client.ObjectKeyFromObject(item),
 			createdAt: item.GetCreationTimestamp(),
 		})
-	})
+		return nil
+	}); err != nil {
+		return err
+	}
 	return singletonOwnerConflict(current, currentConn.baseURL, peers, singletonKind)
 }
 
 func ensureConfigurationSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.Configuration) error {
-	list := &harborv1alpha1.ConfigurationList{}
-	return ensureSingletonOwner(ctx, options, c, current, current.Spec.HarborConnectionRef, list, func(visit singletonItemVisitor) {
-		for i := range list.Items {
-			item := &list.Items[i]
-			visit(item, item.Spec.HarborConnectionRef)
-		}
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.ConfigurationList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.Configuration).Spec.HarborConnectionRef
 	}, "Configuration")
 }
 
 func ensureGCScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.GCSchedule) error {
-	list := &harborv1alpha1.GCScheduleList{}
-	return ensureSingletonOwner(ctx, options, c, current, current.Spec.HarborConnectionRef, list, func(visit singletonItemVisitor) {
-		for i := range list.Items {
-			item := &list.Items[i]
-			visit(item, item.Spec.HarborConnectionRef)
-		}
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.GCScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.GCSchedule).Spec.HarborConnectionRef
 	}, "GCSchedule")
 }
 
 func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.PurgeAuditSchedule) error {
-	list := &harborv1alpha1.PurgeAuditScheduleList{}
-	return ensureSingletonOwner(ctx, options, c, current, current.Spec.HarborConnectionRef, list, func(visit singletonItemVisitor) {
-		for i := range list.Items {
-			item := &list.Items[i]
-			visit(item, item.Spec.HarborConnectionRef)
-		}
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.PurgeAuditScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.PurgeAuditSchedule).Spec.HarborConnectionRef
 	}, "PurgeAuditSchedule")
 }
 
 func ensureScanAllScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.ScanAllSchedule) error {
-	list := &harborv1alpha1.ScanAllScheduleList{}
-	return ensureSingletonOwner(ctx, options, c, current, current.Spec.HarborConnectionRef, list, func(visit singletonItemVisitor) {
-		for i := range list.Items {
-			item := &list.Items[i]
-			visit(item, item.Spec.HarborConnectionRef)
-		}
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.ScanAllScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.ScanAllSchedule).Spec.HarborConnectionRef
 	}, "ScanAllSchedule")
 }
