@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -43,7 +42,8 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 
-	if err := r.validateBaseURL(conn.Spec.BaseURL); err != nil {
+	if err := validateBaseURL(conn.Spec.BaseURL); err != nil {
+		r.logger.Error(err, "Invalid baseURL")
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
 
@@ -84,20 +84,6 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
-}
-
-func (r *ClusterHarborConnectionReconciler) validateBaseURL(baseURL string) error {
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		r.logger.Error(err, "Invalid baseURL format")
-		return err
-	}
-	if parsedURL.Scheme == "" {
-		err := fmt.Errorf("baseURL %s is missing a protocol scheme", baseURL)
-		r.logger.Error(err, "Invalid baseURL")
-		return err
-	}
-	return nil
 }
 
 func (r *ClusterHarborConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {

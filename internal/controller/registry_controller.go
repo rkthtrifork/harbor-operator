@@ -78,15 +78,12 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	// Desired payloads
-	createReq := r.buildCreateReq(cr, credential, caCert)
-	updateReq := r.buildUpdateReq(cr, credential, caCert)
-
 	// Create / Update
 	if cr.Status.HarborRegistryID == 0 {
 		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
+		createReq := r.buildCreateReq(cr, credential, caCert)
 		id, err := hc.CreateRegistry(ctx, createReq)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -112,6 +109,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	statusChanged := false
 	if registryNeedsUpdate(cr, *current, credHash, caCert) {
+		updateReq := r.buildUpdateReq(cr, credential, caCert)
 		if err := hc.UpdateRegistry(ctx, current.ID, updateReq); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
@@ -154,7 +152,7 @@ func (r *RegistryReconciler) adoptExisting(ctx context.Context, hc *harborclient
 }
 
 func (r *RegistryReconciler) buildCreateReq(cr harborv1alpha1.Registry, credential *harborclient.RegistryCredential, caCert string) harborclient.CreateRegistryRequest {
-	desired := harborclient.CreateRegistryRequest{
+	return harborclient.CreateRegistryRequest{
 		URL:           cr.Spec.URL,
 		Name:          cr.Name,
 		Description:   cr.Spec.Description,
@@ -163,7 +161,6 @@ func (r *RegistryReconciler) buildCreateReq(cr harborv1alpha1.Registry, credenti
 		CACertificate: caCert,
 		Credential:    credential,
 	}
-	return desired
 }
 
 func (r *RegistryReconciler) buildUpdateReq(cr harborv1alpha1.Registry, credential *harborclient.RegistryCredential, caCert string) harborclient.UpdateRegistryRequest {
