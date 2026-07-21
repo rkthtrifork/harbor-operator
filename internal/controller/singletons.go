@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -74,126 +76,69 @@ func singletonOwnerConflict(current client.Object, harborInstance string, peers 
 	)
 }
 
-func ensureConfigurationSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.Configuration) error {
-	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
+func ensureSingletonOwner(
+	ctx context.Context,
+	options OperatorOptions,
+	c client.Client,
+	current client.Object,
+	list client.ObjectList,
+	getRef harborConnectionRefAccessor,
+	singletonKind string,
+) error {
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.GetNamespace(), getRef(current))
 	if err != nil {
 		return err
 	}
-	var list harborv1alpha1.ConfigurationList
-	if err := c.List(ctx, &list); err != nil {
+	if err := c.List(ctx, list); err != nil {
 		return err
 	}
 
-	peers := make([]singletonCandidate, 0, len(list.Items))
-	for i := range list.Items {
-		item := &list.Items[i]
-		if item.Name == current.Name && item.Namespace == current.Namespace {
-			continue
+	currentName := client.ObjectKeyFromObject(current)
+	currentBaseURL := normalizeBaseURL(currentConn.baseURL)
+	peers := []singletonCandidate{}
+	if err := apimeta.EachListItem(list, func(raw runtime.Object) error {
+		item, ok := raw.(client.Object)
+		if !ok {
+			return nil
 		}
-		if !item.DeletionTimestamp.IsZero() {
-			continue
+		if client.ObjectKeyFromObject(item) == currentName || !item.GetDeletionTimestamp().IsZero() {
+			return nil
 		}
-		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
-		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
-			continue
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.GetNamespace(), getRef(item))
+		if err != nil || normalizeBaseURL(itemConn.baseURL) != currentBaseURL {
+			return nil
 		}
 		peers = append(peers, singletonCandidate{
-			name:      types.NamespacedName{Namespace: item.Namespace, Name: item.Name},
-			createdAt: item.CreationTimestamp,
+			name:      client.ObjectKeyFromObject(item),
+			createdAt: item.GetCreationTimestamp(),
 		})
+		return nil
+	}); err != nil {
+		return err
 	}
-	return singletonOwnerConflict(current, currentConn.baseURL, peers, "Configuration")
+	return singletonOwnerConflict(current, currentConn.baseURL, peers, singletonKind)
+}
+
+func ensureConfigurationSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.Configuration) error {
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.ConfigurationList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.Configuration).Spec.HarborConnectionRef
+	}, "Configuration")
 }
 
 func ensureGCScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.GCSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-	var list harborv1alpha1.GCScheduleList
-	if err := c.List(ctx, &list); err != nil {
-		return err
-	}
-
-	peers := make([]singletonCandidate, 0, len(list.Items))
-	for i := range list.Items {
-		item := &list.Items[i]
-		if item.Name == current.Name && item.Namespace == current.Namespace {
-			continue
-		}
-		if !item.DeletionTimestamp.IsZero() {
-			continue
-		}
-		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
-		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
-			continue
-		}
-		peers = append(peers, singletonCandidate{
-			name:      types.NamespacedName{Namespace: item.Namespace, Name: item.Name},
-			createdAt: item.CreationTimestamp,
-		})
-	}
-	return singletonOwnerConflict(current, currentConn.baseURL, peers, "GCSchedule")
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.GCScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.GCSchedule).Spec.HarborConnectionRef
+	}, "GCSchedule")
 }
 
 func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.PurgeAuditSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-	var list harborv1alpha1.PurgeAuditScheduleList
-	if err := c.List(ctx, &list); err != nil {
-		return err
-	}
-
-	peers := make([]singletonCandidate, 0, len(list.Items))
-	for i := range list.Items {
-		item := &list.Items[i]
-		if item.Name == current.Name && item.Namespace == current.Namespace {
-			continue
-		}
-		if !item.DeletionTimestamp.IsZero() {
-			continue
-		}
-		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
-		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
-			continue
-		}
-		peers = append(peers, singletonCandidate{
-			name:      types.NamespacedName{Namespace: item.Namespace, Name: item.Name},
-			createdAt: item.CreationTimestamp,
-		})
-	}
-	return singletonOwnerConflict(current, currentConn.baseURL, peers, "PurgeAuditSchedule")
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.PurgeAuditScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.PurgeAuditSchedule).Spec.HarborConnectionRef
+	}, "PurgeAuditSchedule")
 }
 
 func ensureScanAllScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.ScanAllSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
-	if err != nil {
-		return err
-	}
-	var list harborv1alpha1.ScanAllScheduleList
-	if err := c.List(ctx, &list); err != nil {
-		return err
-	}
-
-	peers := make([]singletonCandidate, 0, len(list.Items))
-	for i := range list.Items {
-		item := &list.Items[i]
-		if item.Name == current.Name && item.Namespace == current.Namespace {
-			continue
-		}
-		if !item.DeletionTimestamp.IsZero() {
-			continue
-		}
-		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
-		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
-			continue
-		}
-		peers = append(peers, singletonCandidate{
-			name:      types.NamespacedName{Namespace: item.Namespace, Name: item.Name},
-			createdAt: item.CreationTimestamp,
-		})
-	}
-	return singletonOwnerConflict(current, currentConn.baseURL, peers, "ScanAllSchedule")
+	return ensureSingletonOwner(ctx, options, c, current, &harborv1alpha1.ScanAllScheduleList{}, func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
+		return obj.(*harborv1alpha1.ScanAllSchedule).Spec.HarborConnectionRef
+	}, "ScanAllSchedule")
 }

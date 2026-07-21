@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,7 +45,8 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Validate the BaseURL.
-	if err := r.validateBaseURL(&conn); err != nil {
+	if err := validateBaseURL(conn.Spec.BaseURL); err != nil {
+		r.logger.Error(err, "Invalid baseURL")
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
 
@@ -98,21 +98,6 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	r.logger.Info("Successfully authenticated with Harbor API")
 	return ctrl.Result{}, nil
-}
-
-// validateBaseURL verifies that the BaseURL is a valid URL and includes a protocol scheme.
-func (r *HarborConnectionReconciler) validateBaseURL(conn *harborv1alpha1.HarborConnection) error {
-	parsedURL, err := url.Parse(conn.Spec.BaseURL)
-	if err != nil {
-		r.logger.Error(err, "Invalid baseURL format")
-		return err
-	}
-	if parsedURL.Scheme == "" {
-		err := fmt.Errorf("baseURL %s is missing a protocol scheme", conn.Spec.BaseURL)
-		r.logger.Error(err, "Invalid baseURL")
-		return err
-	}
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

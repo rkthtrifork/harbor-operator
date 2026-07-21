@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
@@ -56,6 +57,17 @@ func requireCreationAllowed(options OperatorOptions, policy harborv1alpha1.Creat
 
 func allowsAdoption(options OperatorOptions, policy harborv1alpha1.CreationPolicy) bool {
 	return options.effectiveCreationPolicy(policy).AllowsAdoption()
+}
+
+func validateBaseURL(baseURL string) error {
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return err
+	}
+	if parsedURL.Scheme == "" {
+		return fmt.Errorf("baseURL %s is missing a protocol scheme", baseURL)
+	}
+	return nil
 }
 
 type harborConnectionRefAccessor func(client.Object) *harborv1alpha1.HarborConnectionReference
