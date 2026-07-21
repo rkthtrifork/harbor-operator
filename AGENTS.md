@@ -67,8 +67,11 @@ Renovate must keep semantic commit titles and strict PR titles. Required pull-re
 
 - **Contributor contract** → [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Harbor API semantics** → [hack/harbor-openapi.yaml](hack/harbor-openapi.yaml)
+- **Technical architecture** → [docs/technical-architecture.md](docs/technical-architecture.md)
 - **Release process** → [docs/contributing/releases.md](docs/contributing/releases.md) and [`.agents/skills/harbor-release.md`](.agents/skills/harbor-release.md)
+- **Architecture decisions** → [docs/decisions/index.md](docs/decisions/index.md)
 - **Planned work** → [docs/backlog.md](docs/backlog.md)
+- **Known technical debt** → [docs/tech-debt.md](docs/tech-debt.md)
 - **Shared agent workflows** → [`.agents/skills/`](.agents/skills/)
 
 ## Maintaining this file
@@ -77,6 +80,7 @@ This file is short on purpose, and bounded by strict membership, not a line limi
 
 - A **decision plus rationale** → an ADR under `docs/decisions/` when the repository needs to preserve that decision. Never record rationale here.
 - A **contributor or operational procedure** → `CONTRIBUTING.md` or the relevant page under `docs/contributing/`.
+- An **accepted future outcome** → `docs/backlog.md`; an **intentionally unresolved shortcoming** → `docs/tech-debt.md`.
 - An **implementation detail** → record it nowhere. Code and tests are the truth, and they are free to change.
 - A **reusable task workflow with a clear boundary** → a shared skill under `.agents/skills/`, linked into tool-specific surfaces when useful, with source-of-truth links instead of duplicated detail.
 - An **improvement idea** → fix it when trivial and in scope; otherwise surface it in the handoff or the repository's established tracker.
