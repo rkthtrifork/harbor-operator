@@ -78,13 +78,27 @@
       "type": "array",
       "items": { "type": "string" }
     },
-    "harborConnection": { "type": "string" },
+    "harborConnection": {
+      "type": "string",
+      "default": "",
+      "description": "Operator-wide ClusterHarborConnection name. When empty, each resource uses spec.harborConnectionRef."
+    },
     "defaultCreationPolicy": {
       "type": "string",
-      "enum": ["Create", "Adopt", "CreateOrAdopt"]
+      "enum": ["Create", "Adopt", "CreateOrAdopt"],
+      "default": "Create",
+      "description": "Creation policy used when a resource omits spec.creationPolicy."
     },
-    "defaultDriftDetectionInterval": { "type": "string" },
-    "harborRequestTimeout": { "type": "string" },
+    "defaultDriftDetectionInterval": {
+      "type": "string",
+      "default": "0s",
+      "description": "Drift detection interval used when a resource omits spec.driftDetectionInterval. 0s disables periodic drift detection by default."
+    },
+    "harborRequestTimeout": {
+      "type": "string",
+      "default": "30s",
+      "description": "Timeout for each Harbor API request. Must be greater than zero."
+    },
     "pdb": {
       "type": "object",
       "additionalProperties": false,

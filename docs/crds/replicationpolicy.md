@@ -60,11 +60,21 @@ spec:
 - **spec.filters** (array, optional)
   Replication filters (name/tag/label scopes).
 
+- **spec.destNamespaceReplaceCount** (int, optional)
+  Number of source path components replaced by `destNamespace`. Defaults to
+  `-1`, which selects Harbor's legacy replacement behavior.
+
 - **spec.replicateDeletion** (bool, optional)
-  Whether to replicate deletions.
+  Whether to replicate deletions. When omitted, the operator leaves it unset for
+  Harbor to interpret.
+
+- **spec.override**, **spec.enabled**, **spec.speed**, **spec.copyByChunk**, and
+  **spec.singleActiveReplication** (optional)
+  The operator has no defaults for these controls. When omitted, they are left
+  unset for Harbor to interpret.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the policy is created, adopted, or either. Defaults to `Create`.
+  Controls whether the policy is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 

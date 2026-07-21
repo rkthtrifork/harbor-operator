@@ -39,7 +39,8 @@ type ImmutableTagRuleSpec struct {
 	// +optional
 	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
 
-	// Disabled indicates whether the rule is disabled.
+	// Disabled indicates whether the rule is disabled. Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
 	Disabled bool `json:"disabled,omitempty"`
 

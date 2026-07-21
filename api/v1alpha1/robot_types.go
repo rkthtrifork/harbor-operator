@@ -75,7 +75,8 @@ type RobotAccess struct {
 	// +kubebuilder:validation:Enum=*;pull;push;create;read;update;delete;list;operate;scanner-pull;stop
 	Action RobotAction `json:"action"`
 
-	// Effect defines the effect of the access rule, typically "allow".
+	// Effect defines the effect of the access rule. Defaults to allow.
+	// +kubebuilder:default=allow
 	// +optional
 	Effect string `json:"effect,omitempty"`
 }
@@ -119,13 +120,15 @@ type RobotSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Permissions []RobotPermission `json:"permissions"`
 
-	// Disable indicates whether the robot account is disabled.
+	// Disable controls whether the robot account is disabled.
+	// When omitted, the operator leaves it unset on creation and preserves the current value on update.
 	// +optional
 	Disable *bool `json:"disable,omitempty"`
 
 	// Duration is the token duration in days. Use -1 for never expires.
 	// If omitted, it defaults to -1.
 	// +kubebuilder:default=-1
+	// +optional
 	Duration int `json:"duration,omitempty"`
 
 	// SecretRef references the operator-managed secret key holding the robot secret.

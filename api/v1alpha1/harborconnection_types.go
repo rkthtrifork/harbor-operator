@@ -10,6 +10,8 @@ type HarborConnectionSpec struct {
 	BaseURL string `json:"baseURL"`
 
 	// Credentials holds the default credentials for Harbor API calls.
+	// Omit this field to connect without authentication.
+	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
 
 	// CABundle is a PEM-encoded CA bundle for validating Harbor TLS certificates.
@@ -24,10 +26,11 @@ type HarborConnectionSpec struct {
 
 // Credentials holds default authentication details.
 type Credentials struct {
-	// Type of the credential, e.g., "basic".
+	// Type selects the credential type. Defaults to basic.
 	// +kubebuilder:default=basic
 	// +kubebuilder:validation:Enum=basic
-	Type string `json:"type"`
+	// +optional
+	Type string `json:"type,omitempty"`
 
 	// Username for authentication.
 	// +kubebuilder:validation:MinLength=1

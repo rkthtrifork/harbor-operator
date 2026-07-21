@@ -80,17 +80,21 @@ spec:
                   Delete removes the corresponding Harbor resource before removing the finalizer.
                   Orphan skips Harbor-side deletion and removes the finalizer so the
                   Kubernetes object can be deleted while leaving the Harbor resource in place.
+                  Defaults to Delete.
                 enum:
                 - Delete
                 - Orphan
                 type: string
               disabled:
-                description: Disabled indicates whether the rule is disabled.
+                default: false
+                description: Disabled indicates whether the rule is disabled. Defaults
+                  to false.
                 type: boolean
               driftDetectionInterval:
                 description: |-
-                  DriftDetectionInterval is the interval at which the operator will check
-                  for drift. A value of 0 (or omitted) disables periodic drift detection.
+                  DriftDetectionInterval is the interval at which the operator checks for drift.
+                  When omitted, the operator's default drift detection interval is used.
+                  An explicit value of 0 disables periodic drift detection.
                 type: string
               harborConnectionRef:
                 description: |-
@@ -98,9 +102,10 @@ spec:
                   When the operator is started with --harbor-connection, this field may be omitted.
                 properties:
                   kind:
+                    default: HarborConnection
                     description: |-
                       Kind selects the Harbor connection object kind.
-                      When omitted, controllers treat it as HarborConnection.
+                      Defaults to HarborConnection.
                     enum:
                     - HarborConnection
                     - ClusterHarborConnection

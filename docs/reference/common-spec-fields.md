@@ -13,6 +13,7 @@ For the exact generated schema, defaults, and validation markers, see
 - **`spec.harborConnectionRef`**
   Selects the Harbor connection object to use. Set `name` and, when needed,
   `kind` to choose between `HarborConnection` and `ClusterHarborConnection`.
+  The `kind` defaults to `HarborConnection`.
   When the operator is started with `--harbor-connection`, this field may be
   omitted and the operator-wide `ClusterHarborConnection` is used instead.
 
@@ -20,7 +21,7 @@ For the exact generated schema, defaults, and validation markers, see
   Controls what happens when the Kubernetes object is deleted. `Delete`
   attempts Harbor-side cleanup before removing the finalizer. `Orphan` skips
   Harbor-side deletion and removes the finalizer so the Kubernetes object can
-  be deleted immediately.
+  be deleted immediately. Defaults to `Delete`.
 
 - **`spec.driftDetectionInterval`**
   Enables periodic drift checks between the desired state in Kubernetes and the

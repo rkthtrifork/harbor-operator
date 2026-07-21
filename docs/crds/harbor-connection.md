@@ -43,13 +43,13 @@ spec:
 
 - **spec.credentials** (object, optional)
 
-  - **type** (string) – currently `basic` is supported.
+  - **type** (string, optional) – currently `basic` is supported and is the default.
   - **username** (string) – username for Harbor.
   - **passwordSecretRef** (object) – Secret reference with `name`, optional
     `namespace`, and `key`.
 
 - **spec.caBundle** (string, optional)
-  PEM-encoded CA bundle.
+  PEM-encoded CA bundle. When neither CA field is set, the system trust store is used.
 
 - **spec.caBundleSecretRef** (object, optional)
   Secret reference containing a PEM-encoded CA bundle (defaults to `ca.crt`).

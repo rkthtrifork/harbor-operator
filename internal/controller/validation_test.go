@@ -5,8 +5,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -40,9 +42,61 @@ var _ = Describe("CRD validation and defaulting", func() {
 		var stored harborv1alpha1.Project
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(project), &stored)).To(Succeed())
 		Expect(stored.Spec.HarborConnectionRef).NotTo(BeNil())
-		Expect(stored.Spec.HarborConnectionRef.Kind).To(BeEmpty())
+		Expect(stored.Spec.HarborConnectionRef.Kind).To(Equal(harborv1alpha1.HarborConnectionReferenceKindNamespaced))
 		Expect(stored.Spec.DeletionPolicy).To(Equal(harborv1alpha1.DeletionPolicyDelete))
 		Expect(stored.Spec.CreationPolicy).To(BeEmpty())
+	})
+
+	It("defaults optional connection and registry fields", func() {
+		connection := &harborv1alpha1.HarborConnection{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      "defaults-connection",
+			},
+			Spec: harborv1alpha1.HarborConnectionSpec{
+				BaseURL: "https://harbor.example.com",
+				Credentials: &harborv1alpha1.Credentials{
+					Username: "admin",
+					PasswordSecretRef: harborv1alpha1.SecretReference{
+						Name: "harbor-password",
+					},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, connection)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(ctx, connection) })
+
+		var storedConnection harborv1alpha1.HarborConnection
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(connection), &storedConnection)).To(Succeed())
+		Expect(storedConnection.Spec.Credentials).NotTo(BeNil())
+		Expect(storedConnection.Spec.Credentials.Type).To(Equal("basic"))
+
+		registry := &harborv1alpha1.Registry{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      "defaults-registry",
+			},
+			Spec: harborv1alpha1.RegistrySpec{
+				HarborSpecBase: harborv1alpha1.HarborSpecBase{
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connection.Name},
+				},
+				Type: "docker-registry",
+				URL:  "https://registry.example.com",
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, registry)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(ctx, registry) })
+
+		storedRegistry := &unstructured.Unstructured{}
+		storedRegistry.SetAPIVersion(harborv1alpha1.GroupVersion.String())
+		storedRegistry.SetKind("Registry")
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(registry), storedRegistry)).To(Succeed())
+		insecure, found, err := unstructured.NestedBool(storedRegistry.Object, "spec", "insecure")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeTrue())
+		Expect(insecure).To(BeFalse())
 	})
 
 	It("rejects unsupported creation policies", func() {
@@ -56,6 +110,37 @@ var _ = Describe("CRD validation and defaulting", func() {
 					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
 				},
 				CreationPolicy: "Replace",
+			},
+		})
+	})
+
+	It("requires a user password secret reference", func() {
+		expectInvalid(&harborv1alpha1.User{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      "missing-user-password",
+			},
+			Spec: harborv1alpha1.UserSpec{
+				HarborSpecBase: harborv1alpha1.HarborSpecBase{
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
+				},
+				Email: "user@example.com",
+			},
+		})
+
+		expectInvalid(&harborv1alpha1.User{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      "empty-user-password-secret-name",
+			},
+			Spec: harborv1alpha1.UserSpec{
+				HarborSpecBase: harborv1alpha1.HarborSpecBase{
+					HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: "conn"},
+				},
+				Email: "user@example.com",
+				PasswordSecretRef: corev1.SecretKeySelector{
+					Key: "password",
+				},
 			},
 		})
 	})

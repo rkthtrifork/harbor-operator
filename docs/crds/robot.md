@@ -42,7 +42,11 @@ spec:
 - **spec.permissions** (array, required)
   Permissions granted to the robot. Each permission includes a `kind`, optional
   `namespace`, and one or more access rules. The `namespace` is the Harbor
-  project name for `kind: project`.
+  project name for `kind: project`. Each access rule's `effect` defaults to `allow`.
+
+- **spec.disable** (bool, optional)
+  Controls whether the robot is disabled. When omitted, the operator leaves the
+  value unset during creation and preserves the current value during updates.
 
 - **spec.duration** (int, optional)
   Duration in days. Use `-1` for never expires. If omitted, it defaults to `-1`.
@@ -53,7 +57,7 @@ spec:
   If the Secret already exists, it must already be managed by the same `Robot`.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the robot is created, adopted, or either. Defaults to `Create`.
+  Controls whether the robot is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 Robot secrets are rotated automatically once Harbor reports that the robot
 credential has expired (based on `expires_at`). The operator then refreshes the

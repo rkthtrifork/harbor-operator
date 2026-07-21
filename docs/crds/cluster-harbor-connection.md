@@ -30,9 +30,11 @@ spec:
 - **spec.credentials** (object, optional)
   Username plus a Secret reference containing the password or token. For a
   cluster-scoped connection, set `passwordSecretRef.namespace` explicitly.
+  The credential `type` defaults to `basic`.
 
 - **spec.caBundle** / **spec.caBundleSecretRef** (optional)
-  PEM-encoded CA material for validating Harbor TLS certificates.
+  PEM-encoded CA material for validating Harbor TLS certificates. When omitted,
+  the system trust store is used.
 
 ## Notes
 

@@ -26,17 +26,11 @@ spec:
 
   creationPolicy: Create
 
-  # Optional admin flag.
-  admin: false
-
-  # Optional: reference to a secret with the initial password.
-  passwordSecretRef: "harbor-user-alice-password"
-
-  # Optional: if true, delete the user in Harbor when the CR is deleted.
-  manageLifecycle: true
+  # Required reference to the Secret key containing the user's password.
+  passwordSecretRef:
+    name: harbor-user-alice-password
+    key: password
 ```
-
-> Exact field names depend on your CRD schema; adjust the example to match your spec.
 
 ## Key Fields
 
@@ -50,14 +44,13 @@ spec:
   Email associated with the user.
 
 - **spec.realname** (string, optional)
-  Full name / display name.
+  Full name / display name. Defaults to `metadata.name`.
 
-- **spec.passwordSecretRef** (string, optional)
-  Secret that contains the user’s password (key name depends on your schema,
-  e.g. `password`).
+- **spec.passwordSecretRef** (object, required)
+  Reference containing the Secret `name` and `key` for the user's password.
 
 - **spec.creationPolicy** (string, optional)
-  Controls whether the user is created, adopted, or either. Defaults to `Create`.
+  Controls whether the user is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
 
 ## Common Fields
 
@@ -71,15 +64,14 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
   - Creates the Harbor user with the given username/email/password.
   - Applies `creationPolicy` when the user is not yet recorded in status.
-  - Optionally sets admin flag.
 
 - **Update**
 
-  - Updates mutable fields (e.g. email, realname, admin) to match the CR.
+  - Updates mutable fields such as email and real name to match the CR.
 
 - **Delete**
 
-  - If `manageLifecycle` is `true`, attempts to delete the user in Harbor.
+  - Uses `spec.deletionPolicy` to delete or orphan the Harbor user.
   - If the user is already gone, deletion is considered successful.
 
 - **Interaction with Member**

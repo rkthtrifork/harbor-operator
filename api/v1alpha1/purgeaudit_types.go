@@ -12,7 +12,8 @@ type PurgeAuditParameters struct {
 	// +optional
 	IncludeEventTypes string `json:"includeEventTypes,omitempty"`
 
-	// DryRun indicates whether to run in dry-run mode.
+	// DryRun indicates whether to run in dry-run mode. Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
 	DryRun bool `json:"dryRun,omitempty"`
 }

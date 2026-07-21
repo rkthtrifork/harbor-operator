@@ -43,7 +43,8 @@ spec:
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.rules** (array, required)
-  Retention rules matching the Harbor retention API schema.
+  Retention rules matching the Harbor retention API schema. A rule's `disabled`
+  field defaults to `false`.
 
 - **spec.projectRef** (object, optional)
   Reference to a Project CR. When set, the controller derives the Harbor project
