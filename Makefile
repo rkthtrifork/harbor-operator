@@ -7,6 +7,9 @@ HARBOR_OPENAPI_URL ?= https://raw.githubusercontent.com/goharbor/harbor/refs/hea
 CRD_REF_DOCS_OUTPUT ?= docs/reference/api.md
 DOCS_CONTAINER_IMAGE ?= squidfunk/mkdocs-material:9.7
 MKDOCS_CONFIG ?= hack/mkdocs.yml
+# Linked worktrees keep Git metadata outside CURDIR and reference it by its host path.
+DOCS_GIT_COMMON_DIR = $(shell git rev-parse --path-format=absolute --git-common-dir)
+DOCS_CONTAINER_MOUNTS = -v "$(CURDIR)":/docs -v "$(DOCS_GIT_COMMON_DIR)":"$(DOCS_GIT_COMMON_DIR)":ro
 ## Kind CNI: default or cilium (with Hubble).
 KIND_CNI ?= default
 
@@ -106,7 +109,7 @@ generate-api-reference: $(CRD_REF_DOCS) ## Generate the CRD API reference.
 
 .PHONY: build-docs-site
 build-docs-site: ## Build the site without regenerating its API reference.
-	docker run --rm -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
+	docker run --rm $(DOCS_CONTAINER_MOUNTS) $(DOCS_CONTAINER_IMAGE) build --strict -f $(MKDOCS_CONFIG)
 
 .PHONY: docs-build
 docs-build: ## Generate the API reference and build the site.
@@ -115,7 +118,7 @@ docs-build: ## Generate the API reference and build the site.
 
 .PHONY: docs-serve
 docs-serve: generate-api-reference ## Generate and serve the site locally.
-	docker run --rm -p 8000:8000 -v "$(CURDIR)":/docs $(DOCS_CONTAINER_IMAGE) serve --dev-addr 0.0.0.0:8000 -f $(MKDOCS_CONFIG)
+	docker run --rm -p 8000:8000 $(DOCS_CONTAINER_MOUNTS) $(DOCS_CONTAINER_IMAGE) serve --dev-addr 0.0.0.0:8000 -f $(MKDOCS_CONFIG)
 
 .PHONY: update-harbor-openapi
 update-harbor-openapi: ## Refresh the checked-in Harbor OpenAPI specification.
