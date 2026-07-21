@@ -17,8 +17,9 @@ import (
 
 type RegistryReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=registries,verbs=get;list;watch;create;update;patch;delete
@@ -43,7 +44,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Harbor client
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -64,7 +65,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Defaults & adoption
-	if cr.Status.HarborRegistryID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborRegistryID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
@@ -83,7 +84,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Create / Update
 	if cr.Status.HarborRegistryID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		id, err := hc.CreateRegistry(ctx, createReq)
@@ -96,7 +97,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created registry", "ID", id)
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetRegistryByID(ctx, cr.Status.HarborRegistryID)
@@ -126,7 +127,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		}
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *RegistryReconciler) deleteRegistry(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Registry) error {
@@ -212,7 +213,7 @@ func (r *RegistryReconciler) buildRegistryCredential(ctx context.Context, cr *ha
 		if cr.Spec.CACertificate != "" {
 			return nil, "", "", fmt.Errorf("spec.caCertificate and spec.caCertificateRef are mutually exclusive")
 		}
-		secretValue, err := readSecretValue(ctx, r.Client, *cr.Spec.CACertificateRef, cr.Namespace, "ca.crt")
+		secretValue, err := readSecretValue(ctx, r.Options, r.Client, *cr.Spec.CACertificateRef, cr.Namespace, "ca.crt")
 		if err != nil {
 			return nil, "", "", fmt.Errorf("failed to read caCertificateRef: %w", err)
 		}
@@ -235,11 +236,11 @@ func (r *RegistryReconciler) buildRegistryCredential(ctx context.Context, cr *ha
 	if cred.AccessSecretSecretRef.Name == "" {
 		return nil, "", "", fmt.Errorf("spec.credential.accessSecretSecretRef.name is required")
 	}
-	accessKey, err := readSecretValue(ctx, r.Client, cred.AccessKeySecretRef, cr.Namespace, "access_key")
+	accessKey, err := readSecretValue(ctx, r.Options, r.Client, cred.AccessKeySecretRef, cr.Namespace, "access_key")
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to read access key secret: %w", err)
 	}
-	accessSecret, err := readSecretValue(ctx, r.Client, cred.AccessSecretSecretRef, cr.Namespace, "access_secret")
+	accessSecret, err := readSecretValue(ctx, r.Options, r.Client, cred.AccessSecretSecretRef, cr.Namespace, "access_secret")
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to read access secret: %w", err)
 	}
@@ -259,6 +260,7 @@ func (r *RegistryReconciler) buildRegistryCredential(ctx context.Context, cr *ha
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Registry{},
 		func() client.ObjectList { return &harborv1alpha1.RegistryList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

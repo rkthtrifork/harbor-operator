@@ -65,9 +65,9 @@ spec:
                 description: Action defines the rule action.
                 type: string
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor rule.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor rule.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

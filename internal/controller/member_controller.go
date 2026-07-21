@@ -20,8 +20,9 @@ import (
 // MemberReconciler reconciles a Member object.
 type MemberReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // RBAC permissions.
@@ -49,7 +50,7 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Resolve Harbor connection + typed client
-	hc, err := getHarborClient(ctx, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &member, member.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -89,7 +90,7 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	return returnWithDriftDetection(&member.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &member.Spec.HarborSpecBase)
 }
 
 // ensureMemberPresent makes sure the Harbor project member exists and has the desired role.
@@ -129,7 +130,7 @@ func (r *MemberReconciler) ensureMemberPresent(
 	}
 
 	if existing == nil {
-		if err := requireCreationAllowed(member.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, member.Spec.CreationPolicy); err != nil {
 			return err
 		}
 		newID, err := hc.CreateProjectMember(ctx, projectKey, reqBody)
@@ -155,10 +156,10 @@ func (r *MemberReconciler) ensureMemberPresent(
 
 	// A ready Member already manages this identity. Otherwise, an existing
 	// membership can only be acquired by a policy that permits adoption.
-	if !member.Spec.CreationPolicy.AllowsAdoption() {
+	if !allowsAdoption(r.Options, member.Spec.CreationPolicy) {
 		cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
 		if cond == nil || cond.Status != metav1.ConditionTrue {
-			return fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", member.Spec.CreationPolicy)
+			return fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", r.Options.effectiveCreationPolicy(member.Spec.CreationPolicy))
 		}
 	}
 
@@ -310,6 +311,7 @@ func convertRoleNameToID(role string) (int, error) {
 func (r *MemberReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Member{},
 		func() client.ObjectList { return &harborv1alpha1.MemberList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

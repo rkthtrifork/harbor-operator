@@ -18,8 +18,9 @@ import (
 
 type QuotaReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=quotas,verbs=get;list;watch;create;update;patch;delete
@@ -43,7 +44,7 @@ func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), false, err); done {
 			return ctrl.Result{}, finalErr
@@ -98,12 +99,13 @@ func (r *QuotaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Quota reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *QuotaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Quota{},
 		func() client.ObjectList { return &harborv1alpha1.QuotaList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

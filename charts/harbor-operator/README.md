@@ -32,6 +32,9 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
 
 - `harborConnection` sets the operator-wide `ClusterHarborConnection` used for all Harbor-backed resources.
 - `watchNamespaces` scopes the operator cache and reconcilers to a fixed list of namespaces.
+- `defaultCreationPolicy` supplies `Create`, `Adopt`, or `CreateOrAdopt` when a resource omits `spec.creationPolicy`; an explicit resource value takes precedence.
+- `defaultDriftDetectionInterval` supplies the periodic reconciliation interval when a resource omits `spec.driftDetectionInterval`; `0s` disables it by default, while an explicit resource value, including `0s`, takes precedence.
+- `harborRequestTimeout` limits each request to the Harbor API and must be greater than zero.
 
 When `metrics.enabled=true` and `metrics.secure=true`, the chart also installs the delegated authentication RBAC needed for authenticated access to `/metrics` (`tokenreviews`, `subjectaccessreviews`, `system:auth-delegator`, and `extension-apiserver-authentication-reader`).
 

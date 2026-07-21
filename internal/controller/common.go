@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -47,23 +46,29 @@ type connectionConfig struct {
 	displayName       string
 }
 
-func requireCreationAllowed(policy harborv1alpha1.CreationPolicy) error {
+func requireCreationAllowed(options OperatorOptions, policy harborv1alpha1.CreationPolicy) error {
+	policy = options.effectiveCreationPolicy(policy)
 	if policy.AllowsCreation() {
 		return nil
 	}
 	return fmt.Errorf("creationPolicy %q requires an existing Harbor resource to adopt", policy)
 }
 
+func allowsAdoption(options OperatorOptions, policy harborv1alpha1.CreationPolicy) bool {
+	return options.effectiveCreationPolicy(policy).AllowsAdoption()
+}
+
 type harborConnectionRefAccessor func(client.Object) *harborv1alpha1.HarborConnectionReference
 
 func setupHarborBackedController(
 	mgr ctrl.Manager,
+	options OperatorOptions,
 	obj client.Object,
 	newList func() client.ObjectList,
 	getRef harborConnectionRefAccessor,
 	name string,
 ) (*builder.TypedBuilder[reconcile.Request], error) {
-	if forcedName := ForcedHarborConnection(); forcedName != "" {
+	if forcedName := options.forcedHarborConnection; forcedName != "" {
 		// In operator-wide connection mode, every Harbor-backed object depends on
 		// the same ClusterHarborConnection. We still watch that object so a
 		// connection update fans out reconciles across all dependent CRs.
@@ -171,8 +176,8 @@ func requestsForAllHarborBackedObjects(
 	return requests
 }
 
-func resolveHarborConnection(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*connectionConfig, error) {
-	if forcedName := ForcedHarborConnection(); forcedName != "" {
+func resolveHarborConnection(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*connectionConfig, error) {
+	if forcedName := options.forcedHarborConnection; forcedName != "" {
 		if ref != nil && ref.Name != "" {
 			normalized := normalizedHarborConnectionRef(ref)
 			ref = &normalized
@@ -229,11 +234,11 @@ func resolveHarborConnection(ctx context.Context, c client.Client, namespace str
 	}
 }
 
-func getHarborAuth(ctx context.Context, c client.Client, conn *connectionConfig) (string, string, error) {
+func getHarborAuth(ctx context.Context, options OperatorOptions, c client.Client, conn *connectionConfig) (string, string, error) {
 	if conn.credentials == nil {
 		return "", "", fmt.Errorf("%s has no credentials configured", conn.displayName)
 	}
-	pass, err := readSecretValue(ctx, c, harborv1alpha1.SecretReference{
+	pass, err := readSecretValue(ctx, options, c, harborv1alpha1.SecretReference{
 		Name:      conn.credentials.PasswordSecretRef.Name,
 		Key:       conn.credentials.PasswordSecretRef.Key,
 		Namespace: conn.credentials.PasswordSecretRef.Namespace,
@@ -244,19 +249,19 @@ func getHarborAuth(ctx context.Context, c client.Client, conn *connectionConfig)
 	return conn.credentials.Username, pass, nil
 }
 
-func getHarborClient(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
-	conn, err := resolveHarborConnection(ctx, c, namespace, ref)
+func getHarborClient(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
+	conn, err := resolveHarborConnection(ctx, options, c, namespace, ref)
 	if err != nil {
 		return nil, err
 	}
-	return buildHarborClient(ctx, c, conn, true)
+	return buildHarborClient(ctx, options, c, conn, true)
 }
 
-func buildHarborClient(ctx context.Context, c client.Client, conn *connectionConfig, requireCredentials bool) (*harborclient.Client, error) {
+func buildHarborClient(ctx context.Context, options OperatorOptions, c client.Client, conn *connectionConfig, requireCredentials bool) (*harborclient.Client, error) {
 	user, pass := "", ""
 	if conn.credentials != nil {
 		var err error
-		user, pass, err = getHarborAuth(ctx, c, conn)
+		user, pass, err = getHarborAuth(ctx, options, c, conn)
 		if err != nil {
 			return nil, err
 		}
@@ -264,20 +269,20 @@ func buildHarborClient(ctx context.Context, c client.Client, conn *connectionCon
 		return nil, fmt.Errorf("%s has no credentials configured", conn.displayName)
 	}
 
-	caBundle, err := resolveConnectionCABundle(ctx, c, conn)
+	caBundle, err := resolveConnectionCABundle(ctx, options, c, conn)
 	if err != nil {
 		return nil, err
 	}
-	return newHarborClient(conn.baseURL, user, pass, caBundle)
+	return newHarborClient(options, conn.baseURL, user, pass, caBundle)
 }
 
-func resolveConnectionCABundle(ctx context.Context, c client.Client, conn *connectionConfig) (string, error) {
+func resolveConnectionCABundle(ctx context.Context, options OperatorOptions, c client.Client, conn *connectionConfig) (string, error) {
 	caBundle := conn.caBundle
 	if conn.caBundleSecretRef != nil {
 		if caBundle != "" {
 			return "", fmt.Errorf("caBundle and caBundleSecretRef are mutually exclusive")
 		}
-		value, err := readSecretValue(ctx, c, *conn.caBundleSecretRef, conn.namespace, "ca.crt")
+		value, err := readSecretValue(ctx, options, c, *conn.caBundleSecretRef, conn.namespace, "ca.crt")
 		if err != nil {
 			return "", fmt.Errorf("failed to read caBundleSecretRef: %w", err)
 		}
@@ -286,22 +291,21 @@ func resolveConnectionCABundle(ctx context.Context, c client.Client, conn *conne
 	return caBundle, nil
 }
 
-func newHarborClient(baseURL, user, pass, caBundle string) (*harborclient.Client, error) {
+func newHarborClient(options OperatorOptions, baseURL, user, pass, caBundle string) (*harborclient.Client, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if caBundle != "" {
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
 			return nil, fmt.Errorf("invalid caBundle: no certificates found")
 		}
-		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig = &tls.Config{RootCAs: pool}
-		httpClient := &http.Client{
-			Timeout:   30 * time.Second,
-			Transport: transport,
-		}
-		return harborclient.NewWithHTTPClient(baseURL, user, pass, httpClient), nil
 	}
 
-	return harborclient.New(baseURL, user, pass), nil
+	httpClient := &http.Client{
+		Timeout:   options.requestTimeout(),
+		Transport: transport,
+	}
+	return harborclient.NewWithHTTPClient(baseURL, user, pass, httpClient), nil
 }
 
 func ensureFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
@@ -355,14 +359,18 @@ type DriftDetectable interface {
 	GetDriftDetectionInterval() *metav1.Duration
 }
 
-func returnWithDriftDetection(obj DriftDetectable) (reconcile.Result, error) {
-	if obj.GetDriftDetectionInterval() == nil || obj.GetDriftDetectionInterval().Duration == 0 {
+func returnWithDriftDetection(options OperatorOptions, obj DriftDetectable) (reconcile.Result, error) {
+	interval := options.defaultDriftDetectionInterval
+	if configured := obj.GetDriftDetectionInterval(); configured != nil {
+		interval = configured.Duration
+	}
+	if interval == 0 {
 		return reconcile.Result{}, nil
 	}
-	if obj.GetDriftDetectionInterval().Duration < 0 {
-		return reconcile.Result{}, fmt.Errorf("drift detection interval must be greater than 0")
+	if interval < 0 {
+		return reconcile.Result{}, fmt.Errorf("drift detection interval must not be negative")
 	}
-	return reconcile.Result{RequeueAfter: obj.GetDriftDetectionInterval().Duration}, nil
+	return reconcile.Result{RequeueAfter: interval}, nil
 }
 
 type HarborDeletionPolicyAware interface {

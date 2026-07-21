@@ -105,6 +105,7 @@ nav:
       - Singleton APIs: examples/singletons.md
   - Contributing:
       - Overview: contributing/index.md
+      - Backlog: backlog.md
       - Local Development: contributing/local-development.md
       - Documentation: development.md
       - Testing and Verification: contributing/testing.md

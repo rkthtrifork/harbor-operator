@@ -20,8 +20,9 @@ import (
 
 type RobotReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=robots,verbs=get;list;watch;create;update;patch;delete
@@ -44,7 +45,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -71,7 +72,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	if cr.Status.HarborRobotID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborRobotID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
@@ -80,7 +81,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if cr.Status.HarborRobotID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		return r.createRobot(ctx, hc, &cr, secretRef)
@@ -117,7 +118,7 @@ func (r *RobotReconciler) createRobot(
 		return ctrl.Result{}, err
 	}
 	r.logger.Info("Created robot", "ID", created.ID)
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *RobotReconciler) reconcileExisting(
@@ -175,7 +176,7 @@ func (r *RobotReconciler) reconcileExisting(
 		}
 	}
 
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 func (r *RobotReconciler) deleteRobot(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Robot) error {
 	if cr.Status.HarborRobotID == 0 {
@@ -429,6 +430,7 @@ func updateRobotExpiryStatus(cr *harborv1alpha1.Robot, expiresAt int) bool {
 func (r *RobotReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Robot{},
 		func() client.ObjectList { return &harborv1alpha1.RobotList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

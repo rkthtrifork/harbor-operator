@@ -87,9 +87,9 @@ spec:
                 - name
                 type: object
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor registry.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor registry.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

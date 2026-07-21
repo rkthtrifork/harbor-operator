@@ -18,8 +18,9 @@ import (
 
 type ProjectReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects,verbs=get;list;watch;create;update;patch;delete
@@ -44,7 +45,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Resolve Harbor connection + typed client
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -65,7 +66,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Defaults & adoption
-	if cr.Status.HarborProjectID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborProjectID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		if adopted, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if adopted {
@@ -82,7 +83,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Create / Update path
 	if cr.Status.HarborProjectID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		// create
@@ -95,7 +96,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("Created project", "ID", newID)
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	// get current state
@@ -120,7 +121,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Project reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *ProjectReconciler) deleteProject(ctx context.Context, hc *harborclient.Client,
@@ -273,6 +274,7 @@ func projectNeedsUpdate(desired harborclient.CreateProjectRequest,
 func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Project{},
 		func() client.ObjectList { return &harborv1alpha1.ProjectList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

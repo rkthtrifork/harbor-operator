@@ -22,8 +22,9 @@ import (
 
 type RetentionPolicyReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=retentionpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -46,7 +47,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -112,7 +113,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Retention policy created"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetRetentionByID(ctx, cr.Status.HarborRetentionID)
@@ -135,7 +136,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Retention policy reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func toRetentionPolicy(cr harborv1alpha1.RetentionPolicy) (harborclient.RetentionPolicy, error) {
@@ -302,6 +303,7 @@ func normalizeRetentionParamsAny(in any) any {
 func (r *RetentionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.RetentionPolicy{},
 		func() client.ObjectList { return &harborv1alpha1.RetentionPolicyList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

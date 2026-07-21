@@ -54,6 +54,9 @@ spec:
             {{- if .Values.harborConnection }}
             - --harbor-connection={{ .Values.harborConnection }}
             {{- end }}
+            - --default-creation-policy={{ .Values.defaultCreationPolicy }}
+            - --default-drift-detection-interval={{ .Values.defaultDriftDetectionInterval }}
+            - --harbor-request-timeout={{ .Values.harborRequestTimeout }}
             {{- if .Values.metrics.enabled }}
             - --metrics-bind-address={{ .Values.metrics.bindAddress }}
             - --metrics-secure={{ .Values.metrics.secure }}

@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -67,6 +68,9 @@ func main() {
 	var enableHTTP2 bool
 	var watchNamespaces string
 	var harborConnection string
+	var defaultCreationPolicy string
+	var defaultDriftDetectionInterval time.Duration
+	var harborRequestTimeout time.Duration
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -90,6 +94,13 @@ func main() {
 	flag.StringVar(&harborConnection, "harbor-connection", "",
 		"ClusterHarborConnection name to use for all Harbor-backed resources. "+
 			"Leave empty to use each resource's spec.harborConnectionRef.")
+	flag.StringVar(&defaultCreationPolicy, "default-creation-policy", string(harborv1alpha1.CreationPolicyCreate),
+		"Creation policy to use when a resource omits spec.creationPolicy. One of Create, Adopt, or CreateOrAdopt.")
+	flag.DurationVar(&defaultDriftDetectionInterval, "default-drift-detection-interval", 0,
+		"Drift detection interval to use when a resource omits spec.driftDetectionInterval. "+
+			"Leave at 0 to disable it by default.")
+	flag.DurationVar(&harborRequestTimeout, "harbor-request-timeout", 30*time.Second,
+		"Timeout for each request to the Harbor API. Must be greater than 0.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -97,6 +108,16 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	operatorOptions, err := controller.NewOperatorOptions(controller.OperatorConfig{
+		ForcedHarborConnection:        harborConnection,
+		DefaultCreationPolicy:         harborv1alpha1.CreationPolicy(defaultCreationPolicy),
+		DefaultDriftDetectionInterval: defaultDriftDetectionInterval,
+		HarborRequestTimeout:          harborRequestTimeout,
+	})
+	if err != nil {
+		setupLog.Error(err, "invalid operator configuration")
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -185,8 +206,6 @@ func main() {
 		})
 	}
 
-	controller.SetForcedHarborConnection(harborConnection)
-
 	cacheOptions := cache.Options{}
 	if watchNamespaces != "" {
 		cacheOptions.DefaultNamespaces = map[string]cache.Config{}
@@ -224,137 +243,156 @@ func main() {
 		os.Exit(1)
 	}
 
-	controller.SetSecretReader(mgr.GetAPIReader())
+	operatorOptions = operatorOptions.WithSecretReader(mgr.GetAPIReader())
 
 	if err = (&controller.RegistryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Registry")
 		os.Exit(1)
 	}
 	if err = (&controller.ProjectReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Project")
 		os.Exit(1)
 	}
 	if err = (&controller.UserReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "User")
 		os.Exit(1)
 	}
 	if err = (&controller.MemberReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Member")
 		os.Exit(1)
 	}
 	if err = (&controller.RobotReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Robot")
 		os.Exit(1)
 	}
 	if err = (&controller.ConfigurationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 		os.Exit(1)
 	}
 	if err = (&controller.GCScheduleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GCSchedule")
 		os.Exit(1)
 	}
 	if err = (&controller.PurgeAuditScheduleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PurgeAuditSchedule")
 		os.Exit(1)
 	}
 	if err = (&controller.RetentionPolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RetentionPolicy")
 		os.Exit(1)
 	}
 	if err = (&controller.ReplicationPolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReplicationPolicy")
 		os.Exit(1)
 	}
 	if err = (&controller.WebhookPolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "WebhookPolicy")
 		os.Exit(1)
 	}
 	if err = (&controller.ImmutableTagRuleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ImmutableTagRule")
 		os.Exit(1)
 	}
 	if err = (&controller.LabelReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Label")
 		os.Exit(1)
 	}
 	if err = (&controller.UserGroupReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserGroup")
 		os.Exit(1)
 	}
 	if err = (&controller.ScannerRegistrationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ScannerRegistration")
 		os.Exit(1)
 	}
 	if err = (&controller.ScanAllScheduleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ScanAllSchedule")
 		os.Exit(1)
 	}
 	if err = (&controller.QuotaReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Quota")
 		os.Exit(1)
 	}
 	if err = (&controller.HarborConnectionReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HarborConnection")
 		os.Exit(1)
 	}
 	if err = (&controller.ClusterHarborConnectionReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterHarborConnection")
 		os.Exit(1)

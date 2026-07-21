@@ -20,8 +20,9 @@ import (
 
 type ImmutableTagRuleReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=immutabletagrules,verbs=get;list;watch;create;update;patch;delete
@@ -45,7 +46,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -89,7 +90,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		ScopeSelectors: toImmutableScopeSelectors(cr.Spec.ScopeSelectors),
 	}
 
-	if cr.Status.HarborImmutableRuleID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborImmutableRuleID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		adopted, err := r.adoptExisting(ctx, hc, projectKey, &cr, desired)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -101,7 +102,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if cr.Status.HarborImmutableRuleID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		if err := hc.CreateImmutableRule(ctx, projectKey, desired); err != nil {
@@ -115,7 +116,7 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Immutable tag rule created"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := r.getImmutableRule(ctx, hc, projectKey, cr.Status.HarborImmutableRuleID)
@@ -138,12 +139,13 @@ func (r *ImmutableTagRuleReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Immutable tag rule reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *ImmutableTagRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.ImmutableTagRule{},
 		func() client.ObjectList { return &harborv1alpha1.ImmutableTagRuleList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

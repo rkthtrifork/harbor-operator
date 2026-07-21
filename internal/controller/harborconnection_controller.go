@@ -17,8 +17,9 @@ import (
 // HarborConnectionReconciler reconciles a HarborConnection object.
 type HarborConnectionReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections,verbs=get;list;watch;create;update;patch;delete
@@ -51,7 +52,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// If no credentials are provided, perform a non-authenticated connectivity check.
 	if conn.Spec.Credentials == nil {
-		hc, err := buildHarborClient(ctx, r.Client, &connectionConfig{
+		hc, err := buildHarborClient(ctx, r.Options, r.Client, &connectionConfig{
 			baseURL:           conn.Spec.BaseURL,
 			namespace:         conn.Namespace,
 			credentials:       conn.Spec.Credentials,
@@ -74,7 +75,7 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Otherwise, perform an authenticated check.
-	hc, err := buildHarborClient(ctx, r.Client, &connectionConfig{
+	hc, err := buildHarborClient(ctx, r.Options, r.Client, &connectionConfig{
 		baseURL:           conn.Spec.BaseURL,
 		namespace:         conn.Namespace,
 		credentials:       conn.Spec.Credentials,

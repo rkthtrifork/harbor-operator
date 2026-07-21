@@ -74,8 +74,8 @@ func singletonOwnerConflict(current client.Object, harborInstance string, peers 
 	)
 }
 
-func ensureConfigurationSingletonOwner(ctx context.Context, c client.Client, current *harborv1alpha1.Configuration) error {
-	currentConn, err := resolveHarborConnection(ctx, c, current.Namespace, current.Spec.HarborConnectionRef)
+func ensureConfigurationSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.Configuration) error {
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func ensureConfigurationSingletonOwner(ctx context.Context, c client.Client, cur
 		if !item.DeletionTimestamp.IsZero() {
 			continue
 		}
-		itemConn, err := resolveHarborConnection(ctx, c, item.Namespace, item.Spec.HarborConnectionRef)
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
 		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
 			continue
 		}
@@ -105,8 +105,8 @@ func ensureConfigurationSingletonOwner(ctx context.Context, c client.Client, cur
 	return singletonOwnerConflict(current, currentConn.baseURL, peers, "Configuration")
 }
 
-func ensureGCScheduleSingletonOwner(ctx context.Context, c client.Client, current *harborv1alpha1.GCSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, c, current.Namespace, current.Spec.HarborConnectionRef)
+func ensureGCScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.GCSchedule) error {
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func ensureGCScheduleSingletonOwner(ctx context.Context, c client.Client, curren
 		if !item.DeletionTimestamp.IsZero() {
 			continue
 		}
-		itemConn, err := resolveHarborConnection(ctx, c, item.Namespace, item.Spec.HarborConnectionRef)
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
 		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
 			continue
 		}
@@ -136,8 +136,8 @@ func ensureGCScheduleSingletonOwner(ctx context.Context, c client.Client, curren
 	return singletonOwnerConflict(current, currentConn.baseURL, peers, "GCSchedule")
 }
 
-func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, c client.Client, current *harborv1alpha1.PurgeAuditSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, c, current.Namespace, current.Spec.HarborConnectionRef)
+func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.PurgeAuditSchedule) error {
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, c client.Client
 		if !item.DeletionTimestamp.IsZero() {
 			continue
 		}
-		itemConn, err := resolveHarborConnection(ctx, c, item.Namespace, item.Spec.HarborConnectionRef)
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
 		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
 			continue
 		}
@@ -167,8 +167,8 @@ func ensurePurgeAuditScheduleSingletonOwner(ctx context.Context, c client.Client
 	return singletonOwnerConflict(current, currentConn.baseURL, peers, "PurgeAuditSchedule")
 }
 
-func ensureScanAllScheduleSingletonOwner(ctx context.Context, c client.Client, current *harborv1alpha1.ScanAllSchedule) error {
-	currentConn, err := resolveHarborConnection(ctx, c, current.Namespace, current.Spec.HarborConnectionRef)
+func ensureScanAllScheduleSingletonOwner(ctx context.Context, options OperatorOptions, c client.Client, current *harborv1alpha1.ScanAllSchedule) error {
+	currentConn, err := resolveHarborConnection(ctx, options, c, current.Namespace, current.Spec.HarborConnectionRef)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func ensureScanAllScheduleSingletonOwner(ctx context.Context, c client.Client, c
 		if !item.DeletionTimestamp.IsZero() {
 			continue
 		}
-		itemConn, err := resolveHarborConnection(ctx, c, item.Namespace, item.Spec.HarborConnectionRef)
+		itemConn, err := resolveHarborConnection(ctx, options, c, item.Namespace, item.Spec.HarborConnectionRef)
 		if err != nil || normalizeBaseURL(itemConn.baseURL) != normalizeBaseURL(currentConn.baseURL) {
 			continue
 		}

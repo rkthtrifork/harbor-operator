@@ -23,7 +23,7 @@ const (
 	ownerNamespaceAnnKey   = "harbor.harbor-operator.io/owner-namespace"
 )
 
-func readSecretValue(ctx context.Context, c client.Client, ref harborv1alpha1.SecretReference, defaultNamespace, defaultKey string) (string, error) {
+func readSecretValue(ctx context.Context, options OperatorOptions, c client.Client, ref harborv1alpha1.SecretReference, defaultNamespace, defaultKey string) (string, error) {
 	namespace := ref.Namespace
 	if namespace == "" {
 		namespace = defaultNamespace
@@ -38,7 +38,7 @@ func readSecretValue(ctx context.Context, c client.Client, ref harborv1alpha1.Se
 
 	var secret corev1.Secret
 	reader := client.Reader(c)
-	if uncached := SecretReader(); uncached != nil {
+	if uncached := options.secretReader; uncached != nil {
 		reader = uncached
 	}
 	if err := reader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, &secret); err != nil {

@@ -18,8 +18,9 @@ import (
 
 type ConfigurationReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=configurations,verbs=get;list;watch;create;update;patch;delete
@@ -42,7 +43,7 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), false, err); done {
 			return ctrl.Result{}, finalErr
@@ -57,7 +58,7 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := ensureConfigurationSingletonOwner(ctx, r.Client, &cr); err != nil {
+	if err := ensureConfigurationSingletonOwner(ctx, r.Options, r.Client, &cr); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
@@ -70,7 +71,7 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Noop", "No configuration changes to apply"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetConfigurations(ctx)
@@ -92,7 +93,7 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "Configuration reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *ConfigurationReconciler) buildDesiredSettings(ctx context.Context, cr *harborv1alpha1.Configuration) (map[string]any, error) {
@@ -110,7 +111,7 @@ func (r *ConfigurationReconciler) buildDesiredSettings(ctx context.Context, cr *
 	}
 
 	for key, ref := range cr.Spec.SecretSettings {
-		secretValue, err := readSecretValue(ctx, r.Client, ref, cr.Namespace, "value")
+		secretValue, err := readSecretValue(ctx, r.Options, r.Client, ref, cr.Namespace, "value")
 		if err != nil {
 			return nil, fmt.Errorf("failed to read secret for %q: %w", key, err)
 		}
@@ -170,6 +171,7 @@ func jsonValuesEqual(desired any, current json.RawMessage) bool {
 func (r *ConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.Configuration{},
 		func() client.ObjectList { return &harborv1alpha1.ConfigurationList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
