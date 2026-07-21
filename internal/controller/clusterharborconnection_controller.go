@@ -16,8 +16,9 @@ import (
 
 type ClusterHarborConnectionReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=clusterharborconnections,verbs=get;list;watch;create;update;patch;delete
@@ -56,7 +57,7 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	if conn.Spec.Credentials == nil {
-		hc, err := buildHarborClient(ctx, r.Client, cfg, false)
+		hc, err := buildHarborClient(ctx, r.Options, r.Client, cfg, false)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 		}
@@ -70,7 +71,7 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, nil
 	}
 
-	hc, err := buildHarborClient(ctx, r.Client, cfg, true)
+	hc, err := buildHarborClient(ctx, r.Options, r.Client, cfg, true)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}

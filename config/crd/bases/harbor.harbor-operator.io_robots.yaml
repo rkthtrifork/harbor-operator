@@ -62,9 +62,9 @@ spec:
             description: RobotSpec defines the desired state of Robot.
             properties:
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor robot.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor robot.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

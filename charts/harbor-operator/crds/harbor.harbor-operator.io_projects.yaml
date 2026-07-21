@@ -62,9 +62,9 @@ spec:
             description: ProjectSpec defines the desired state of Project.
             properties:
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor project.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor project.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

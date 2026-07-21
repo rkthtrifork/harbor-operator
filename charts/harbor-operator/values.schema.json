@@ -79,6 +79,12 @@
       "items": { "type": "string" }
     },
     "harborConnection": { "type": "string" },
+    "defaultCreationPolicy": {
+      "type": "string",
+      "enum": ["Create", "Adopt", "CreateOrAdopt"]
+    },
+    "defaultDriftDetectionInterval": { "type": "string" },
+    "harborRequestTimeout": { "type": "string" },
     "pdb": {
       "type": "object",
       "additionalProperties": false,

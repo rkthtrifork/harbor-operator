@@ -17,8 +17,9 @@ import (
 
 type UserReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=users,verbs=get;list;watch;create;update;patch;delete
@@ -43,7 +44,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Harbor client
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -64,7 +65,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Defaults & adoption
-	if cr.Status.HarborUserID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborUserID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		if ok, err := r.adoptExisting(ctx, hc, &cr); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		} else if ok {
@@ -81,7 +82,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Create / Update
 	if cr.Status.HarborUserID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		id, err := hc.CreateUser(ctx, createReq)
@@ -92,7 +93,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "User created"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetUserByID(ctx, cr.Status.HarborUserID)
@@ -113,11 +114,11 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "User reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *UserReconciler) getUserPassword(ctx context.Context, cr harborv1alpha1.User) (string, error) {
-	password, err := readSecretValue(ctx, r.Client, harborv1alpha1.SecretReference{
+	password, err := readSecretValue(ctx, r.Options, r.Client, harborv1alpha1.SecretReference{
 		Name: cr.Spec.PasswordSecretRef.Name,
 		Key:  cr.Spec.PasswordSecretRef.Key,
 	}, cr.Namespace, "")
@@ -176,6 +177,7 @@ func userNeedsUpdate(desired harborclient.CreateUserRequest, current harborclien
 func (r *UserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.User{},
 		func() client.ObjectList { return &harborv1alpha1.UserList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

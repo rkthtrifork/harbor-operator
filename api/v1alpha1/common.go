@@ -33,7 +33,8 @@ const (
 )
 
 // AllowsCreation reports whether the policy permits creating a Harbor resource.
-// The zero value is treated as Create so direct Go clients receive the API default.
+// The zero value is treated as Create. Controllers resolve operator defaults
+// before checking the policy.
 func (policy CreationPolicy) AllowsCreation() bool {
 	return policy == "" || policy == CreationPolicyCreate || policy == CreationPolicyCreateOrAdopt
 }

@@ -19,8 +19,9 @@ import (
 
 type WebhookPolicyReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=webhookpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -44,7 +45,7 @@ func (r *WebhookPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -94,7 +95,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 		policy.ProjectID = projectID
 	}
 
-	if cr.Status.HarborWebhookPolicyID == 0 && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborWebhookPolicyID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		adopted, err := r.adoptExisting(ctx, hc, projectKey, cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -106,7 +107,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 	}
 
 	if cr.Status.HarborWebhookPolicyID == 0 {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		id, err := hc.CreateWebhookPolicy(ctx, projectKey, policy)
@@ -118,7 +119,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 		if err := setReadyStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Webhook policy created"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetWebhookPolicy(ctx, projectKey, cr.Status.HarborWebhookPolicyID)
@@ -149,7 +150,7 @@ func (r *WebhookPolicyReconciler) reconcileWebhookPolicy(ctx context.Context, hc
 			return ctrl.Result{}, err
 		}
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *WebhookPolicyReconciler) buildTargets(ctx context.Context, cr *harborv1alpha1.WebhookPolicy) ([]harborclient.WebhookTarget, string, error) {
@@ -164,7 +165,7 @@ func (r *WebhookPolicyReconciler) buildTargets(ctx context.Context, cr *harborv1
 			if t.AuthHeader != "" {
 				return nil, "", fmt.Errorf("spec.targets[%d]: authHeader and authHeaderSecretRef are mutually exclusive", i)
 			}
-			value, err := readSecretValue(ctx, r.Client, *t.AuthHeaderSecretRef, cr.Namespace, "authHeader")
+			value, err := readSecretValue(ctx, r.Options, r.Client, *t.AuthHeaderSecretRef, cr.Namespace, "authHeader")
 			if err != nil {
 				return nil, "", fmt.Errorf("spec.targets[%d]: failed to read authHeaderSecretRef: %w", i, err)
 			}
@@ -199,6 +200,7 @@ func (r *WebhookPolicyReconciler) adoptExisting(ctx context.Context, hc *harborc
 func (r *WebhookPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.WebhookPolicy{},
 		func() client.ObjectList { return &harborv1alpha1.WebhookPolicyList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

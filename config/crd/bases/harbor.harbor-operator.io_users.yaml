@@ -62,9 +62,9 @@ spec:
                 description: Comment is an optional comment for the user.
                 type: string
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor user.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor user.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

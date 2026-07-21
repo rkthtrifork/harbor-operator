@@ -42,7 +42,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 		Expect(stored.Spec.HarborConnectionRef).NotTo(BeNil())
 		Expect(stored.Spec.HarborConnectionRef.Kind).To(BeEmpty())
 		Expect(stored.Spec.DeletionPolicy).To(Equal(harborv1alpha1.DeletionPolicyDelete))
-		Expect(stored.Spec.CreationPolicy).To(Equal(harborv1alpha1.CreationPolicyCreate))
+		Expect(stored.Spec.CreationPolicy).To(BeEmpty())
 	})
 
 	It("rejects unsupported creation policies", func() {

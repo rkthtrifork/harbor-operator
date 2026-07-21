@@ -68,9 +68,9 @@ spec:
                 description: CopyByChunk indicates whether to enable copy by chunk.
                 type: boolean
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor policy.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor policy.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

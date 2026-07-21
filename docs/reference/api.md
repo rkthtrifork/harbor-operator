@@ -426,7 +426,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor rule. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor rule.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID. |  | Optional: \{\} <br /> |
 | `disabled` _boolean_ | Disabled indicates whether the rule is disabled. |  | Optional: \{\} <br /> |
 | `action` _string_ | Action defines the rule action. |  | Optional: \{\} <br /> |
@@ -472,7 +472,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor label. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor label.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `color` _string_ | Color is the label color, e.g. #3366ff. |  | Optional: \{\} <br /> |
 | `scope` _string_ | Scope is the label scope. Valid values are g (global) and p (project). |  | Enum: [g p] <br />Optional: \{\} <br /> |
@@ -530,7 +530,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor membership. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor membership.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references the project where the member should be added. |  |  |
 | `role` _string_ | Role is the human‑readable name of the role.<br />Allowed values: "admin", "maintainer", "developer", "guest" |  | Enum: [admin maintainer developer guest] <br />Required: \{\} <br /> |
 | `memberUser` _[MemberUser](#memberuser)_ | MemberUser defines the member if it is a user. |  | Optional: \{\} <br /> |
@@ -635,7 +635,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor project. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor project.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `public` _boolean_ | Public indicates whether the project is public. |  |  |
 | `owner` _string_ | Owner is an optional field for the project owner. |  | Optional: \{\} <br /> |
 | `metadata` _[ProjectMetadata](#projectmetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
@@ -811,7 +811,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor registry. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor registry.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `type` _string_ | Type of the registry, e.g., "github-ghcr". |  | Enum: [github-ghcr ali-acr aws-ecr azure-acr docker-hub docker-registry google-gcr harbor huawei-SWR jfrog-artifactory tencent-tcr volcengine-cr] <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `url` _string_ | URL is the registry URL. |  | Format: url <br /> |
@@ -874,7 +874,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor policy. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor policy.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional policy description. |  | Optional: \{\} <br /> |
 | `sourceRegistryRef` _[RegistryReference](#registryreference)_ | SourceRegistryRef references a Registry CR to use as the source. |  | Optional: \{\} <br /> |
 | `destinationRegistryRef` _[RegistryReference](#registryreference)_ | DestinationRegistryRef references a Registry CR to use as the destination. |  | Optional: \{\} <br /> |
@@ -1191,7 +1191,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor robot. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor robot.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `description` _string_ | Description of the robot account. |  | Optional: \{\} <br /> |
 | `level` _string_ | Level is the scope of the robot account.<br />Allowed values: "system", "project". |  | Enum: [system project] <br /> |
 | `permissions` _[RobotPermission](#robotpermission) array_ | Permissions define the access granted to the robot account. |  | MinItems: 1 <br /> |
@@ -1274,7 +1274,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor scanner registration. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor scanner registration.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional description. |  | Optional: \{\} <br /> |
 | `url` _string_ | URL is the scanner adapter base URL. |  | Format: uri <br /> |
 | `auth` _string_ | Auth defines the authentication approach (e.g. Basic, Bearer, X-ScannerAdapter-API-Key). |  | Optional: \{\} <br /> |
@@ -1401,7 +1401,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user group. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user group.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `groupType` _integer_ | GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC). |  | Enum: [1 2 3] <br /> |
 | `ldapGroupDN` _string_ | LDAPGroupDN is the DN of the LDAP group when GroupType is LDAP. |  | Optional: \{\} <br /> |
 
@@ -1440,7 +1440,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `email` _string_ | Email address of the user. |  | Format: email <br /> |
 | `realname` _string_ | Realname is an optional full name. |  | Optional: \{\} <br /> |
 | `comment` _string_ | Comment is an optional comment for the user. |  | Optional: \{\} <br /> |
@@ -1482,7 +1482,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator will check<br />for drift. A value of 0 (or omitted) disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor webhook policy. | Create | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor webhook policy.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references a Project CR to derive the Harbor project ID. |  | Optional: \{\} <br /> |
 | `description` _string_ | Description is an optional policy description. |  | Optional: \{\} <br /> |
 | `enabled` _boolean_ | Enabled indicates whether the policy is enabled. | true | Optional: \{\} <br /> |

@@ -47,7 +47,7 @@ type ReplicationPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 
 	// CreationPolicy controls whether the operator creates or adopts the Harbor policy.
-	// +kubebuilder:default=Create
+	// When omitted, the operator's default creation policy is used.
 	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
 	// +optional
 	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`

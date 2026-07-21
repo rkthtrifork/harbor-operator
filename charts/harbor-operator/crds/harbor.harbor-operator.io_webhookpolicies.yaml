@@ -62,9 +62,9 @@ spec:
             description: WebhookPolicySpec defines the desired state of WebhookPolicy.
             properties:
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor webhook policy.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor webhook policy.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

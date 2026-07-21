@@ -17,8 +17,9 @@ import (
 
 type ScannerRegistrationReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	logger logr.Logger
+	Scheme  *runtime.Scheme
+	Options OperatorOptions
+	logger  logr.Logger
 }
 
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=scannerregistrations,verbs=get;list;watch;create;update;patch;delete
@@ -41,7 +42,7 @@ func (r *ScannerRegistrationReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -82,7 +83,7 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 		Disabled:         cr.Spec.Disabled,
 	}
 
-	if cr.Status.HarborScannerID == "" && cr.Spec.CreationPolicy.AllowsAdoption() {
+	if cr.Status.HarborScannerID == "" && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
 		adopted, err := r.adoptExisting(ctx, hc, cr)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -94,7 +95,7 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 	}
 
 	if cr.Status.HarborScannerID == "" {
-		if err := requireCreationAllowed(cr.Spec.CreationPolicy); err != nil {
+		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		id, err := hc.CreateScanner(ctx, reqBody)
@@ -106,7 +107,7 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 		if err := setReadyStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "Scanner registration created"); err != nil {
 			return ctrl.Result{}, err
 		}
-		return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 	}
 
 	current, err := hc.GetScanner(ctx, cr.Status.HarborScannerID)
@@ -144,7 +145,7 @@ func (r *ScannerRegistrationReconciler) reconcileScannerRegistration(ctx context
 			return ctrl.Result{}, err
 		}
 	}
-	return returnWithDriftDetection(&cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
 }
 
 func (r *ScannerRegistrationReconciler) resolveCredential(ctx context.Context, cr *harborv1alpha1.ScannerRegistration) (string, string, error) {
@@ -153,7 +154,7 @@ func (r *ScannerRegistrationReconciler) resolveCredential(ctx context.Context, c
 	}
 	credential := cr.Spec.AccessCredential
 	if cr.Spec.AccessCredentialSecretRef != nil {
-		value, err := readSecretValue(ctx, r.Client, *cr.Spec.AccessCredentialSecretRef, cr.Namespace, "accessCredential")
+		value, err := readSecretValue(ctx, r.Options, r.Client, *cr.Spec.AccessCredentialSecretRef, cr.Namespace, "accessCredential")
 		if err != nil {
 			return "", "", fmt.Errorf("failed to read accessCredentialSecretRef: %w", err)
 		}
@@ -182,6 +183,7 @@ func (r *ScannerRegistrationReconciler) adoptExisting(ctx context.Context, hc *h
 func (r *ScannerRegistrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
+		r.Options,
 		&harborv1alpha1.ScannerRegistration{},
 		func() client.ObjectList { return &harborv1alpha1.ScannerRegistrationList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {

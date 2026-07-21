@@ -68,9 +68,9 @@ spec:
             description: MemberSpec defines the desired state of Member.
             properties:
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor membership.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor membership.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

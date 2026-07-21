@@ -54,6 +54,14 @@ watchNamespaces: []
 
 harborConnection: ""
 
+# Used when a Harbor resource omits spec.creationPolicy.
+defaultCreationPolicy: Create
+
+# Used when a Harbor resource omits spec.driftDetectionInterval. Set to 0s to disable periodic drift detection by default.
+defaultDriftDetectionInterval: 0s
+
+harborRequestTimeout: 30s
+
 pdb:
   enabled: false
   minAvailable: 1

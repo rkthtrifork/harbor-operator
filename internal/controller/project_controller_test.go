@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -221,6 +222,32 @@ var _ = Describe("Project Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			Expect(project.Status.HarborProjectID).To(Equal(42))
+		})
+
+		It("uses the operator default when creation policy is omitted", func() {
+			options, err := NewOperatorOptions(OperatorConfig{
+				DefaultCreationPolicy: harborv1alpha1.CreationPolicyAdopt,
+				HarborRequestTimeout:  30 * time.Second,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			project.Spec.CreationPolicy = ""
+			Expect(k8sClient.Update(ctx, project)).To(Succeed())
+
+			controllerReconciler := &ProjectReconciler{
+				Client:  k8sClient,
+				Scheme:  k8sClient.Scheme(),
+				Options: options,
+			}
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Get(ctx, typeNamespacedName, project)).To(Succeed())
+			Expect(project.Spec.CreationPolicy).To(BeEmpty())
 			Expect(project.Status.HarborProjectID).To(Equal(42))
 		})
 	})

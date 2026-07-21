@@ -59,9 +59,9 @@ spec:
             description: UserGroupSpec defines the desired state of UserGroup.
             properties:
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor user group.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor user group.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

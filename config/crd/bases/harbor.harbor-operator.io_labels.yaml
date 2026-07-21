@@ -65,9 +65,9 @@ spec:
                 description: 'Color is the label color, e.g. #3366ff.'
                 type: string
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor label.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor label.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt

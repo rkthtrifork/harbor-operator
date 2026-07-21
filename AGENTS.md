@@ -68,6 +68,7 @@ Renovate must keep semantic commit titles and strict PR titles. Required pull-re
 - **Contributor contract** → [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Harbor API semantics** → [hack/harbor-openapi.yaml](hack/harbor-openapi.yaml)
 - **Release process** → [docs/contributing/releases.md](docs/contributing/releases.md) and [`.agents/skills/harbor-release.md`](.agents/skills/harbor-release.md)
+- **Planned work** → [docs/backlog.md](docs/backlog.md)
 - **Shared agent workflows** → [`.agents/skills/`](.agents/skills/)
 
 ## Maintaining this file

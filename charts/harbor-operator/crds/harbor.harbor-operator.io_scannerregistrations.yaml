@@ -91,9 +91,9 @@ spec:
                   Bearer, X-ScannerAdapter-API-Key).
                 type: string
               creationPolicy:
-                default: Create
-                description: CreationPolicy controls whether the operator creates
-                  or adopts the Harbor scanner registration.
+                description: |-
+                  CreationPolicy controls whether the operator creates or adopts the Harbor scanner registration.
+                  When omitted, the operator's default creation policy is used.
                 enum:
                 - Create
                 - Adopt
