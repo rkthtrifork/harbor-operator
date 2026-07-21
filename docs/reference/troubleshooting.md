@@ -12,9 +12,13 @@ kubectl get <resource> <name> -o yaml
 
 Look for the `Ready` condition and its `reason` and `message`.
 
+## `kubectl` format warnings
+
+Some `kubectl` versions warn about `unrecognized format "int64"` when applying the CRDs. This is a client-side validation warning and does not prevent the CRDs from being installed.
+
 ## Common Failure Cases
 
-## Harbor Authentication or Connectivity Failures
+### Harbor Authentication or Connectivity Failures
 
 Typical causes:
 
@@ -28,7 +32,7 @@ Relevant resources:
 - `HarborConnection`
 - `ClusterHarborConnection`
 
-## Singleton Conflict
+### Singleton Conflict
 
 If a singleton resource reports a conflict, another CR already owns that singleton API for the same Harbor instance.
 
@@ -41,7 +45,7 @@ Check for:
 
 that resolves to the same Harbor base URL.
 
-## Stuck Finalizer
+### Stuck Finalizer
 
 If a resource is stuck in `Terminating`, check:
 
@@ -51,7 +55,7 @@ If a resource is stuck in `Terminating`, check:
 
 If you explicitly want to remove the Kubernetes object without Harbor cleanup, switch to `deletionPolicy: Orphan`.
 
-## Robot Secret Write Failures
+### Robot Secret Write Failures
 
 If a `Robot` fails while writing its secret:
 

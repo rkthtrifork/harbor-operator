@@ -2,7 +2,7 @@
 
 `harbor-operator` manages Harbor resources through Kubernetes custom resources.
 
-This site is split into introduction material, API documentation, worked examples, and contributor guidance.
+This site is split into introduction material, API documentation, worked examples, project knowledge, and contributor guidance.
 
 ## Start Here
 
@@ -12,9 +12,9 @@ This site is split into introduction material, API documentation, worked example
 
     ---
 
-    Start locally, understand the model, and find the main operator concepts.
+    Install the operator, connect Harbor, and create your first resources.
 
-    [Open introduction](index.md)
+    [Get started](quickstart.md)
 
 -   :material-book-open-page-variant-outline: __API__
 

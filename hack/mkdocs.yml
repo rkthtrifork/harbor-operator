@@ -103,10 +103,14 @@ nav:
       - Connection and Project: examples/connection-and-project.md
       - Robot Credentials: examples/robot.md
       - Singleton APIs: examples/singletons.md
+  - Project:
+      - Technical Architecture: technical-architecture.md
+      - Decisions: decisions/index.md
+      - Backlog: backlog.md
+      - Technical Debt: tech-debt.md
   - Contributing:
       - Overview: contributing/index.md
-      - Backlog: backlog.md
       - Local Development: contributing/local-development.md
-      - Documentation: development.md
+      - Documentation: contributing/documentation.md
       - Testing and Verification: contributing/testing.md
       - Releases: contributing/releases.md

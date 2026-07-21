@@ -1,89 +1,37 @@
 # Quickstart
 
-This operator assumes Harbor already exists. The local development flow uses Kind only as a convenient way to run Harbor and the operator together.
+This operator manages an existing Harbor installation. You need a reachable Harbor instance, credentials, and permission to install CRDs and the operator in Kubernetes.
 
-## Start a Local Stack
-
-For the fastest local cluster:
+## Install the operator
 
 ```sh
-make kind-up
+helm registry login ghcr.io
+helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \
+  --namespace harbor-operator-system \
+  --create-namespace \
+  --version <chart-version>
 ```
 
-For a local cluster with Cilium and Hubble:
+See [Installation](introduction/installation.md) for chart settings such as namespace scoping, an operator-wide connection, metrics, and request defaults.
+
+## Connect Harbor
+
+Create either:
+
+- a namespaced `HarborConnection` for tenant-local use
+- a cluster-scoped `ClusterHarborConnection` for shared access
+
+The connection contains Harbor's base URL and may reference credentials and custom CA material. Follow the [connection and project example](examples/connection-and-project.md) for complete manifests.
+
+## Create resources
+
+Create Harbor-backed custom resources that reference the connection. The operator reports progress and failures through status conditions:
 
 ```sh
-make kind-up KIND_CNI=cilium
+kubectl get projects.harbor.harbor-operator.io
+kubectl get project <name> -o yaml
 ```
 
-Both configurations:
+Continue with [Concepts](introduction/concepts.md), the [API overview](reference/index.md), and the [resource guides](crds/index.md).
 
-- create a Kind cluster
-- install Traefik
-- install Harbor from the official Helm chart
-- build and deploy the operator
-
-## Core Workflow
-
-1. Start the stack with `make kind-up` or `make kind-up KIND_CNI=cilium`
-2. Change code or CRD types
-3. Redeploy with `make kind-refresh`
-4. Exercise the operator with sample CRs or focused manifests
-
-## Refresh the Operator
-
-After changing controller code, CRD types, generated assets, or chart wiring:
-
-```sh
-make kind-refresh
-```
-
-That rebuilds the image, reloads it into Kind, regenerates assets, reapplies CRDs, and redeploys the operator.
-
-## Apply Sample Resources
-
-```sh
-make apply-samples
-```
-
-To remove Harbor custom resources again:
-
-```sh
-make delete-harbor-crs
-```
-
-## Useful Commands
-
-```sh
-make kind-refresh
-make kind-redeploy
-make test
-make test-e2e
-```
-
-- `kind-refresh` redeploys the operator onto the current Kind cluster
-- `kind-redeploy` resets operator-managed state and deploys again
-- `test` runs the non-E2E test suite
-- `test-e2e` runs the live end-to-end suite against the current Kind cluster
-
-## Build the Docs
-
-Generate the CRD API reference:
-
-```sh
-make generate-api-reference
-```
-
-Build the site:
-
-```sh
-make docs-build
-```
-
-Serve it locally:
-
-```sh
-make docs-serve
-```
-
-The docs site always runs through the `squidfunk/mkdocs-material` container image.
+For a local contributor stack that installs Harbor and the operator in Kind, use the [local development guide](contributing/local-development.md).
