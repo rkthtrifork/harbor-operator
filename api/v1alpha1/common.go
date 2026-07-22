@@ -100,7 +100,9 @@ type SecretReference struct {
 	// reference will apply a sensible default.
 	// +optional
 	Key string `json:"key,omitempty"`
-	// Namespace of the Secret. Omit to use the HarborConnection namespace.
+	// Namespace of the Secret. When omitted, the controller uses the namespace of
+	// the referencing namespaced resource. References from cluster-scoped resources
+	// must set this field explicitly because they have no namespace.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }
