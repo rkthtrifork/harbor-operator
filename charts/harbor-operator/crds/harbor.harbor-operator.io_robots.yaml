@@ -20,6 +20,9 @@ spec:
     - jsonPath: .metadata.name
       name: Name
       type: string
+    - jsonPath: .status.username
+      name: Username
+      type: string
     - jsonPath: .spec.level
       name: Level
       type: string
@@ -236,6 +239,8 @@ spec:
                   SecretRef references the operator-managed secret key holding the robot secret.
                   The operator writes the generated robot secret to this location and expects
                   the Secret to either not exist yet or already be managed by this Robot.
+                  The Secret also contains the canonical Harbor robot username under the
+                  reserved key "username".
                   If omitted, the operator will create a Secret named "<metadata.name>-secret"
                   in the same namespace with key "secret".
                 properties:
@@ -340,6 +345,10 @@ spec:
                   by the controller.
                 format: int64
                 type: integer
+              username:
+                description: Username is the canonical robot username reported by
+                  Harbor.
+                type: string
             type: object
         type: object
     served: true

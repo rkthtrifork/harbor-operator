@@ -53,7 +53,9 @@ spec:
 
 - **spec.secretRef** (object, optional)
   Reference to the operator-managed secret where the generated robot secret is written.
-  If omitted, the operator creates `<metadata.name>-secret` with key `secret`.
+  If omitted, the operator creates `<metadata.name>-secret` with the token under
+  `secret`. The Secret also contains Harbor's canonical robot username under
+  `username`; that key is reserved and cannot be selected for the token.
   If the Secret already exists, it must already be managed by the same `Robot`.
 
 - **spec.creationPolicy** (string, optional)
@@ -75,11 +77,13 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
   - Creates the robot account with the requested permissions.
   - Uses `metadata.name` as the Harbor robot name.
+  - Records Harbor's canonical username in `status.username` and the managed Secret.
   - Applies `creationPolicy` when the robot is not yet recorded in status.
 
 - **Update**
 
   - Updates description, permissions, disabled state, and duration.
+  - Keeps `status.username` and the managed Secret's `username` key synchronized with Harbor.
   - Rotates the Harbor credential when Harbor reports the current secret as expired.
   - Writes the rotated value back to the operator-managed Secret.
 

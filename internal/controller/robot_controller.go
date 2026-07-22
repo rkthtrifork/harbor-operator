@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -102,6 +105,7 @@ func (r *RobotReconciler) createRobot(
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	cr.Status.HarborRobotID = created.ID
+	cr.Status.Username = created.Name
 	storedSecret := created.Secret
 	if storedSecret == "" {
 		storedSecret, err = rotateRobotSecret(ctx, hc, cr.Status.HarborRobotID)
@@ -109,7 +113,7 @@ func (r *RobotReconciler) createRobot(
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 	}
-	if err := upsertOwnedSecretValue(ctx, r.Client, cr, "Robot", secretRef.Namespace, secretRef.Name, secretRef.Key, storedSecret); err != nil {
+	if err := upsertRobotSecret(ctx, r.Client, cr, secretRef, created.Name, storedSecret); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 	now := metav1.Now()
@@ -140,6 +144,13 @@ func (r *RobotReconciler) reconcileExisting(
 	if !robotLevelMatches(cr.Spec.Level, current.Level) {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("robot level mismatch: desired %q, current %q", cr.Spec.Level, current.Level))
 	}
+	if current.Name == "" {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, fmt.Errorf("harbor returned an empty robot username"))
+	}
+	statusChanged := setRobotUsernameStatus(cr, current.Name)
+	if err := syncRobotUsernameSecret(ctx, r.Client, cr, secretRef, current.Name); err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
 
 	desired := buildRobotUpdateRequest(cr, current)
 	if robotNeedsUpdate(desired, current) {
@@ -149,14 +160,14 @@ func (r *RobotReconciler) reconcileExisting(
 		r.logger.Info("Updated robot", "ID", current.ID)
 	}
 
-	statusChanged := updateRobotExpiryStatus(cr, current.ExpiresAt)
+	statusChanged = updateRobotExpiryStatus(cr, current.ExpiresAt) || statusChanged
 
 	if shouldRotateRobot(cr) {
 		rotatedSecret, err := rotateRobotSecret(ctx, hc, current.ID)
 		if err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
-		if err := upsertOwnedSecretValue(ctx, r.Client, cr, "Robot", secretRef.Namespace, secretRef.Name, secretRef.Key, rotatedSecret); err != nil {
+		if err := upsertRobotSecret(ctx, r.Client, cr, secretRef, current.Name, rotatedSecret); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 		}
 		now := metav1.Now()
@@ -177,6 +188,39 @@ func (r *RobotReconciler) reconcileExisting(
 	}
 
 	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
+}
+
+func upsertRobotSecret(ctx context.Context, c client.Client, cr *harborv1alpha1.Robot, ref harborv1alpha1.SecretReference, username, token string) error {
+	if username == "" {
+		return fmt.Errorf("harbor returned an empty robot username")
+	}
+	return upsertOwnedSecretValues(ctx, c, cr, "Robot", ref.Namespace, ref.Name, map[string]string{
+		ref.Key:    token,
+		"username": username,
+	})
+}
+
+func syncRobotUsernameSecret(ctx context.Context, c client.Client, cr *harborv1alpha1.Robot, ref harborv1alpha1.SecretReference, username string) error {
+	var secret corev1.Secret
+	err := c.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, &secret)
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !secretOwnedBy(&secret, cr, "Robot") {
+		return fmt.Errorf("secret %s/%s already exists and is not managed by Robot %s/%s", ref.Namespace, ref.Name, cr.Namespace, cr.Name)
+	}
+	return upsertOwnedSecretValues(ctx, c, cr, "Robot", ref.Namespace, ref.Name, map[string]string{"username": username})
+}
+
+func setRobotUsernameStatus(cr *harborv1alpha1.Robot, username string) bool {
+	if cr.Status.Username == username {
+		return false
+	}
+	cr.Status.Username = username
+	return true
 }
 func (r *RobotReconciler) deleteRobot(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.Robot) error {
 	if cr.Status.HarborRobotID == 0 {
@@ -242,6 +286,9 @@ func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretRefer
 	}
 	if ref.Key == "" {
 		ref.Key = "secret"
+	}
+	if ref.Key == "username" {
+		return harborv1alpha1.SecretReference{}, fmt.Errorf("spec.secretRef.key %q is reserved for the canonical Harbor username", ref.Key)
 	}
 	return ref, nil
 }
