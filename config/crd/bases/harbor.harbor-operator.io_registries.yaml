@@ -80,8 +80,10 @@ spec:
                     minLength: 1
                     type: string
                   namespace:
-                    description: Namespace of the Secret. Omit to use the HarborConnection
-                      namespace.
+                    description: |-
+                      Namespace of the Secret. When omitted, the controller uses the namespace of
+                      the referencing namespaced resource. References from cluster-scoped resources
+                      must set this field explicitly because they have no namespace.
                     type: string
                 required:
                 - name
@@ -112,8 +114,10 @@ spec:
                         minLength: 1
                         type: string
                       namespace:
-                        description: Namespace of the Secret. Omit to use the HarborConnection
-                          namespace.
+                        description: |-
+                          Namespace of the Secret. When omitted, the controller uses the namespace of
+                          the referencing namespaced resource. References from cluster-scoped resources
+                          must set this field explicitly because they have no namespace.
                         type: string
                     required:
                     - name
@@ -132,8 +136,10 @@ spec:
                         minLength: 1
                         type: string
                       namespace:
-                        description: Namespace of the Secret. Omit to use the HarborConnection
-                          namespace.
+                        description: |-
+                          Namespace of the Secret. When omitted, the controller uses the namespace of
+                          the referencing namespaced resource. References from cluster-scoped resources
+                          must set this field explicitly because they have no namespace.
                         type: string
                     required:
                     - name

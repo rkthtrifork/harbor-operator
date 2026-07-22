@@ -1328,7 +1328,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `name` _string_ | Name of the Secret. |  | MinLength: 1 <br /> |
 | `key` _string_ | Key inside the Secret data. When omitted, the controller using this<br />reference will apply a sensible default. |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace of the Secret. Omit to use the HarborConnection namespace. |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace of the Secret. When omitted, the controller uses the namespace of<br />the referencing namespaced resource. References from cluster-scoped resources<br />must set this field explicitly because they have no namespace. |  | Optional: \{\} <br /> |
 
 
 #### User
