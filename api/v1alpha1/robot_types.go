@@ -134,6 +134,8 @@ type RobotSpec struct {
 	// SecretRef references the operator-managed secret key holding the robot secret.
 	// The operator writes the generated robot secret to this location and expects
 	// the Secret to either not exist yet or already be managed by this Robot.
+	// The Secret also contains the canonical Harbor robot username under the
+	// reserved key "username".
 	// If omitted, the operator will create a Secret named "<metadata.name>-secret"
 	// in the same namespace with key "secret".
 	// +optional
@@ -147,6 +149,10 @@ type RobotStatus struct {
 	// HarborRobotID is the ID of the robot in Harbor.
 	HarborRobotID int `json:"harborRobotID,omitempty"`
 
+	// Username is the canonical robot username reported by Harbor.
+	// +optional
+	Username string `json:"username,omitempty"`
+
 	// LastRotatedAt is the time when the robot secret was last rotated.
 	LastRotatedAt *metav1.Time `json:"lastRotatedAt,omitempty"`
 
@@ -159,6 +165,7 @@ type RobotStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.metadata.name`
+// +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.status.username`
 // +kubebuilder:printcolumn:name="Level",type=string,JSONPath=`.spec.level`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

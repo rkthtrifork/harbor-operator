@@ -1197,7 +1197,7 @@ _Appears in:_
 | `permissions` _[RobotPermission](#robotpermission) array_ | Permissions define the access granted to the robot account. |  | MinItems: 1 <br /> |
 | `disable` _boolean_ | Disable controls whether the robot account is disabled.<br />When omitted, the operator leaves it unset on creation and preserves the current value on update. |  | Optional: \{\} <br /> |
 | `duration` _integer_ | Duration is the token duration in days. Use -1 for never expires.<br />If omitted, it defaults to -1. | -1 | Optional: \{\} <br /> |
-| `secretRef` _[SecretReference](#secretreference)_ | SecretRef references the operator-managed secret key holding the robot secret.<br />The operator writes the generated robot secret to this location and expects<br />the Secret to either not exist yet or already be managed by this Robot.<br />If omitted, the operator will create a Secret named "<metadata.name>-secret"<br />in the same namespace with key "secret". |  | Optional: \{\} <br /> |
+| `secretRef` _[SecretReference](#secretreference)_ | SecretRef references the operator-managed secret key holding the robot secret.<br />The operator writes the generated robot secret to this location and expects<br />the Secret to either not exist yet or already be managed by this Robot.<br />The Secret also contains the canonical Harbor robot username under the<br />reserved key "username".<br />If omitted, the operator will create a Secret named "<metadata.name>-secret"<br />in the same namespace with key "secret". |  | Optional: \{\} <br /> |
 
 
 #### ScanAllSchedule

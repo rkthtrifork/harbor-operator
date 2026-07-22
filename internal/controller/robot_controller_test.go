@@ -53,12 +53,12 @@ var _ = Describe("Robot Controller", func() {
 				}
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v2.0/robots" {
 					w.Header().Set("Content-Type", "application/json")
-					_, _ = w.Write([]byte(`{"id":9,"name":"robot$test","secret":"RobotSecret123","expires_at":0}`))
+					_, _ = w.Write([]byte(`{"id":9,"name":"robot$demo+test-resource","secret":"RobotSecret123","expires_at":0}`))
 					return
 				}
 				if r.Method == http.MethodGet && r.URL.Path == "/api/v2.0/robots/9" {
 					w.Header().Set("Content-Type", "application/json")
-					_, _ = w.Write([]byte(`{"id":9,"name":"robot$test","level":"project","description":"","disable":false,"duration":-1,"expires_at":1,"permissions":[{"kind":"project","namespace":"demo","access":[{"resource":"repository","action":"pull","effect":"allow"}]}]}`))
+					_, _ = w.Write([]byte(`{"id":9,"name":"robot$demo+test-resource","level":"project","description":"","disable":false,"duration":-1,"expires_at":1,"permissions":[{"kind":"project","namespace":"demo","access":[{"resource":"repository","action":"pull","effect":"allow"}]}]}`))
 					return
 				}
 				if r.Method == http.MethodPatch && r.URL.Path == "/api/v2.0/robots/9" {
@@ -136,10 +136,12 @@ var _ = Describe("Robot Controller", func() {
 
 			Expect(k8sClient.Get(ctx, typeNamespacedName, robot)).To(Succeed())
 			Expect(robot.Status.HarborRobotID).To(Equal(9))
+			Expect(robot.Status.Username).To(Equal("robot$demo+test-resource"))
 
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)).To(Succeed())
 			Expect(string(secret.Data["secret"])).To(Equal("RobotSecret123"))
+			Expect(string(secret.Data["username"])).To(Equal("robot$demo+test-resource"))
 			Expect(secret.Labels[managedByLabelKey]).To(Equal(managedByLabelValue))
 			Expect(secret.Annotations[ownerKindAnnotationKey]).To(Equal("Robot"))
 			Expect(secret.Annotations[ownerNamespaceAnnKey]).To(Equal("default"))
@@ -153,6 +155,7 @@ var _ = Describe("Robot Controller", func() {
 
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "test-resource-secret", Namespace: "default"}, secret)).To(Succeed())
 			Expect(string(secret.Data["secret"])).To(Equal("RotatedSecret456"))
+			Expect(string(secret.Data["username"])).To(Equal("robot$demo+test-resource"))
 		})
 
 		It("should fail when the destination secret already exists without operator ownership", func() {

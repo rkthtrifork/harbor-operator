@@ -56,9 +56,11 @@ func hashSecret(value string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func upsertOwnedSecretValue(ctx context.Context, c client.Client, owner client.Object, ownerKind, namespace, name, key, value string) error {
-	if key == "" {
-		return fmt.Errorf("secret key must be set for %s/%s", namespace, name)
+func upsertOwnedSecretValues(ctx context.Context, c client.Client, owner client.Object, ownerKind, namespace, name string, values map[string]string) error {
+	for key := range values {
+		if key == "" {
+			return fmt.Errorf("secret key must be set for %s/%s", namespace, name)
+		}
 	}
 	var secret corev1.Secret
 	err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &secret)
@@ -72,10 +74,9 @@ func upsertOwnedSecretValue(ctx context.Context, c client.Client, owner client.O
 				Name:      name,
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{
-				key: []byte(value),
-			},
+			Data: map[string][]byte{},
 		}
+		setSecretValues(&secret, values)
 		ensureSecretOwnershipMetadata(&secret, owner, ownerKind)
 		return c.Create(ctx, &secret)
 	}
@@ -88,14 +89,24 @@ func upsertOwnedSecretValue(ctx context.Context, c client.Client, owner client.O
 		secret.Data = map[string][]byte{}
 		changed = true
 	}
-	if existing, ok := secret.Data[key]; !ok || string(existing) != value {
-		secret.Data[key] = []byte(value)
+	if setSecretValues(&secret, values) {
 		changed = true
 	}
 	if !changed {
 		return nil
 	}
 	return c.Update(ctx, &secret)
+}
+
+func setSecretValues(secret *corev1.Secret, values map[string]string) bool {
+	changed := false
+	for key, value := range values {
+		if existing, ok := secret.Data[key]; !ok || string(existing) != value {
+			secret.Data[key] = []byte(value)
+			changed = true
+		}
+	}
+	return changed
 }
 
 func secretOwnedBy(secret *corev1.Secret, owner client.Object, ownerKind string) bool {
