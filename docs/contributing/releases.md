@@ -34,7 +34,7 @@ The patch train bumps `Chart.yaml`, waits for the required checks on that commit
 
 Unpublished chart changes block the automated patch train. Chart changes already published through a chart-only release do not block a later dependency-only operator patch.
 
-The implementation lives in `hack/release_branch_patch_train.py`; `hack/release-branch-patch-train.sh` is its workflow compatibility wrapper. Required check names live in `hack/required_checks.py`. Run `python3 hack/test_release_branch_patch_train.py` when changing patch-train behavior.
+The implementation lives in `hack/release_branch_patch_train.py`. Required check names live in `hack/required_checks.py`. Run `python3 hack/test_release_branch_patch_train.py` when changing patch-train behavior.
 
 ## Manual and release-candidate releases
 
