@@ -58,8 +58,11 @@ spec:
             - --default-drift-detection-interval={{ .Values.defaultDriftDetectionInterval }}
             - --harbor-request-timeout={{ .Values.harborRequestTimeout }}
             {{- if .Values.metrics.enabled }}
-            - --metrics-bind-address={{ .Values.metrics.bindAddress }}
+            - --metrics-bind-address=:{{ .Values.metrics.port }}
             - --metrics-secure={{ .Values.metrics.secure }}
+            {{- if and .Values.metrics.secure .Values.metrics.tls.certificateSecret }}
+            - --metrics-cert-path=/tmp/k8s-metrics-server/serving-certs
+            {{- end }}
             {{- else }}
             - --metrics-bind-address=0
             {{- end }}
@@ -67,7 +70,14 @@ spec:
           env:
 {{ toYaml .Values.env | nindent 12 }}
           {{- end }}
+          {{- if .Values.metrics.enabled }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          {{- else }}
           ports: []
+          {{- end }}
           securityContext:
 {{ toYaml .Values.containerSecurityContext | nindent 12 }}
           livenessProbe:
@@ -84,6 +94,18 @@ spec:
             periodSeconds: 10
           resources:
 {{ toYaml .Values.resources | nindent 12 }}
+          {{- if and .Values.metrics.enabled .Values.metrics.secure .Values.metrics.tls.certificateSecret }}
+          volumeMounts:
+            - name: metrics-certificate
+              mountPath: /tmp/k8s-metrics-server/serving-certs
+              readOnly: true
+          {{- end }}
+{{- if and .Values.metrics.enabled .Values.metrics.secure .Values.metrics.tls.certificateSecret }}
+      volumes:
+        - name: metrics-certificate
+          secret:
+            secretName: {{ .Values.metrics.tls.certificateSecret }}
+{{- end }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:

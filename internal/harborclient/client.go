@@ -229,13 +229,24 @@ func (c *Client) deleteIgnoringNotFound(ctx context.Context, relURL string, igno
 	return err
 }
 
-var numberPathSegment = regexp.MustCompile(`/\\d+`)
+var (
+	numberPathSegment  = regexp.MustCompile(`^\d+$`)
+	projectPathSegment = regexp.MustCompile(`^(/api/v2\.0/projects)/[^/]+(/(?:immutabletagrules|members|webhook)(?:/.*)?$)`)
+	scannerPathSegment = regexp.MustCompile(`^(/api/v2\.0/scanners)/[^/]+$`)
+)
 
 func normalizeEndpoint(relURL string) string {
 	endpoint := relURL
 	if idx := strings.Index(endpoint, "?"); idx >= 0 {
 		endpoint = endpoint[:idx]
 	}
-	endpoint = numberPathSegment.ReplaceAllString(endpoint, "/:id")
-	return endpoint
+	endpoint = projectPathSegment.ReplaceAllString(endpoint, "$1/:project$2")
+	endpoint = scannerPathSegment.ReplaceAllString(endpoint, "$1/:scanner")
+	segments := strings.Split(endpoint, "/")
+	for i, segment := range segments {
+		if numberPathSegment.MatchString(segment) {
+			segments[i] = ":id"
+		}
+	}
+	return strings.Join(segments, "/")
 }

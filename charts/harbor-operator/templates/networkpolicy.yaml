@@ -23,7 +23,7 @@ spec:
 {{- end }}
       ports:
         - protocol: TCP
-          port: 8443
+          port: {{ .Values.metrics.port }}
   {{- end }}
   egress:
   {{- if and .Values.networkPolicy.egress.allowKubeAPI (gt (len .Values.networkPolicy.egress.kubeAPIPorts) 0) }}

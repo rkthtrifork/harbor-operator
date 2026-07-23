@@ -36,7 +36,7 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
 - `defaultDriftDetectionInterval` supplies the periodic reconciliation interval when a resource omits `spec.driftDetectionInterval`; it defaults to `0s` (disabled), while an explicit resource value, including `0s`, takes precedence.
 - `harborRequestTimeout` limits each request to the Harbor API, defaults to `30s`, and must be greater than zero.
 
-When `metrics.enabled=true` and `metrics.secure=true`, the chart also installs the delegated authentication RBAC needed for authenticated access to `/metrics` (`tokenreviews`, `subjectaccessreviews`, `system:auth-delegator`, and `extension-apiserver-authentication-reader`).
+When `metrics.enabled=true` and `metrics.secure=true`, the endpoint uses HTTPS and Kubernetes token authentication and authorization. The chart binds the operator to the narrowly scoped token and subject-access review permissions it needs. It also creates a `*-metrics-reader` ClusterRole for `GET /metrics`, but does not bind that role because the chart cannot safely infer the Prometheus service account.
 
 Note: set only one of `pdb.minAvailable` or `pdb.maxUnavailable`. If both are set, the chart will prefer `maxUnavailable`.
 
@@ -46,8 +46,38 @@ Note: set only one of `pdb.minAvailable` or `pdb.maxUnavailable`. If both are se
 helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \\
   --version <chart-version> \\
   --set metrics.enabled=true \\
-  --set metrics.serviceMonitor.enabled=true
+  --set metrics.serviceMonitor.enabled=true \\
+  --set metrics.readerRole.binding.create=true \\
+  --set metrics.readerRole.binding.serviceAccount.name=prometheus \\
+  --set metrics.readerRole.binding.serviceAccount.namespace=monitoring
 ```
+
+The default ServiceMonitor uses the Prometheus pod's projected service-account token and accepts controller-runtime's generated development certificate. For production, provide a TLS Secret whose certificate covers the metrics Service DNS name and configure certificate verification:
+
+```yaml
+metrics:
+  enabled: true
+  tls:
+    certificateSecret: harbor-operator-metrics-tls
+  serviceMonitor:
+    enabled: true
+    tlsConfig:
+      insecureSkipVerify: false
+      ca:
+        secret:
+          name: harbor-operator-metrics-ca
+          key: ca.crt
+  readerRole:
+    binding:
+      create: true
+      serviceAccount:
+        name: prometheus
+        namespace: monitoring
+```
+
+When certificate verification is enabled and `tlsConfig.serverName` is omitted, the chart uses the metrics Service DNS name. Use `metrics.serviceMonitor.endpointAdditionalProperties` for Prometheus Operator endpoint options not modeled directly by the chart. Set `metrics.serviceMonitor.bearerTokenFile` to an empty string if authentication is supplied another way.
+
+To expose plain HTTP instead, explicitly set `metrics.secure=false`. This disables the authentication and authorization filter and is suitable only when access is protected by equivalent cluster controls.
 
 ### Network Policy (metrics only)
 

@@ -5,11 +5,13 @@ metadata:
   name: {{ include "harbor-operator.fullname" . }}-metrics
   labels:
 {{ include "harbor-operator.labels" . | indent 4 }}
+    app.kubernetes.io/component: metrics
 spec:
   ports:
-    - name: https
-      port: 8443
-      targetPort: 8443
+    - name: {{ ternary "https" "http" .Values.metrics.secure }}
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
   selector:
     app.kubernetes.io/name: {{ include "harbor-operator.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}

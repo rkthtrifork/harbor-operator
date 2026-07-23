@@ -11,12 +11,37 @@ replicaCount: 1
 metrics:
   enabled: false
   secure: true
-  bindAddress: ":8443"
+  port: 8443
+  tls:
+    # Existing kubernetes.io/tls Secret used by the secure metrics server.
+    # When empty, controller-runtime generates a development certificate.
+    certificateSecret: ""
+  readerRole:
+    create: true
+    binding:
+      # The chart cannot safely infer the Prometheus service account.
+      create: false
+      serviceAccount:
+        name: ""
+        namespace: ""
   serviceMonitor:
     enabled: false
+    namespace: ""
     interval: 30s
     scrapeTimeout: 10s
+    honorLabels: false
     labels: {}
+    annotations: {}
+    # The projected token of the Prometheus pod. Set to an empty string when
+    # providing another authorization mechanism in endpointAdditionalProperties.
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      # controller-runtime's generated certificate is intended for development
+      # and cannot be verified through the metrics Service DNS name.
+      insecureSkipVerify: true
+    relabelings: []
+    metricRelabelings: []
+    endpointAdditionalProperties: {}
 
 resources:
   requests:

@@ -31,17 +31,73 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "secure": { "type": "boolean" },
-        "bindAddress": { "type": "string" },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "certificateSecret": { "type": "string" }
+          }
+        },
+        "readerRole": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": { "type": "boolean" },
+            "binding": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "create": { "type": "boolean" },
+                "serviceAccount": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": { "type": "string" },
+                    "namespace": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
         "serviceMonitor": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "enabled": { "type": "boolean" },
+            "namespace": { "type": "string" },
             "interval": { "type": "string" },
             "scrapeTimeout": { "type": "string" },
+            "honorLabels": { "type": "boolean" },
             "labels": {
               "type": "object",
               "additionalProperties": { "type": "string" }
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "bearerTokenFile": { "type": "string" },
+            "tlsConfig": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "relabelings": {
+              "type": "array",
+              "items": { "type": "object" }
+            },
+            "metricRelabelings": {
+              "type": "array",
+              "items": { "type": "object" }
+            },
+            "endpointAdditionalProperties": {
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }
