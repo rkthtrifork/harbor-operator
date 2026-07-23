@@ -59,7 +59,7 @@ jobs:
           RELEASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_branch || github.event_name == 'push' && github.ref_name || '' }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash hack/release-branch-patch-train.sh
+        run: python3 hack/release_branch_patch_train.py
 
   publish-operator:
     needs: prepare

@@ -69,9 +69,10 @@
       enabled: false,
     },
     {
-      description: "Group Kubernetes ecosystem updates in Go modules.",
+      description: "Group Kubernetes ecosystem updates and derived configuration.",
       matchManagers: [
         "gomod",
+        "custom.regex",
       ],
       matchPackageNames: [
         "k8s.io/**",
@@ -146,6 +147,20 @@
         "(?<depName>squidfunk\\/mkdocs-material):(?<currentValue>[^\\s\"']+)",
       ],
       datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Update marked Kubernetes minor versions derived from Go modules.",
+      managerFilePatterns: [
+        "/^hack\\/.*\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "(?<prefix>^|\\n)(?<indentation>[ \\t]*)# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)[ \\t]*\\n[ \\t]*kubernetesVersion:\\s*\"1\\.(?<minor>\\d+)\"",
+      ],
+      currentValueTemplate: "0.{{{minor}}}",
+      extractVersionTemplate: "^v?(?<version>0\\.\\d+)\\.",
+      versioningTemplate: "semver-coerced",
+      autoReplaceStringTemplate: "{{{prefix}}}{{{indentation}}}# renovate: datasource={{{datasource}}} depName={{{depName}}}\n{{{indentation}}}kubernetesVersion: \"1.{{{replace '^0\\.' '' newValue}}}\"",
     },
   ],
 }

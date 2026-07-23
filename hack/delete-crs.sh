@@ -5,11 +5,8 @@ GROUP="${HARBOR_API_GROUP:-harbor.harbor-operator.io}"
 
 echo "Cleaning custom resources in API group: ${GROUP}"
 
-# Get resource kinds (plural) in the group and strip the group suffix so we get:
-#   harborconnections.harbor.harbor-operator.io -> harborconnections
-#   projects.harbor.harbor-operator.io          -> projects
-RESOURCES="$(kubectl api-resources --api-group="${GROUP}" -o name 2>/dev/null \
-  | sed 's/\..*$//' || true)"
+RESOURCES="$(kubectl api-resources --api-group="${GROUP}" -o name \
+  | sed 's/\..*$//')"
 
 if [[ -z "${RESOURCES}" ]]; then
   echo "No API resources found for group ${GROUP}, nothing to delete."
@@ -19,57 +16,77 @@ fi
 echo "Found resources in group ${GROUP}:"
 echo "${RESOURCES}"
 
-ordered=(
+leaf_resources=(
   members
-  robots
+  immutabletagrules
+  labels
+  quotas
   retentionpolicies
-  users
-  projects
-  registries
+  robots
+  webhookpolicies
+  replicationpolicies
   configurations
   gcschedules
   purgeauditschedules
+  scanallschedules
+  scannerregistrations
 )
+referenced_resources=(users usergroups projects)
+registry_resources=(registries)
+connection_resources=(harborconnections clusterharborconnections)
 
 declare -A seen
 for r in ${RESOURCES}; do
   seen["$r"]=1
 done
 
-delete_and_wait() {
-  local r="$1"
-  echo "Deleting all ${r}.${GROUP} in all namespaces..."
-  kubectl delete "${r}.${GROUP}" \
+declare -A known
+for r in \
+  "${leaf_resources[@]}" \
+  "${referenced_resources[@]}" \
+  "${registry_resources[@]}" \
+  "${connection_resources[@]}"; do
+  known["$r"]=1
+done
+
+delete_phase() {
+  local r
+  local joined
+  local -a targets=()
+
+  for r in "$@"; do
+    if [[ -n "${seen[$r]:-}" ]]; then
+      targets+=("${r}.${GROUP}")
+      unset "seen[$r]"
+    fi
+  done
+
+  if [[ "${#targets[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  printf -v joined '%s,' "${targets[@]}"
+  joined="${joined%,}"
+
+  echo "Deleting resource phase: ${joined}"
+  kubectl delete "${joined}" \
     --all \
     --all-namespaces \
-    --ignore-not-found=true || true
-  kubectl wait --for=delete "${r}.${GROUP}" \
-    --all \
-    --all-namespaces \
-    --timeout=120s || true
+    --ignore-not-found=true \
+    --timeout=120s
 }
 
-# First delete ordered resources (except harborconnections).
-for r in "${ordered[@]}"; do
-  if [[ -n "${seen[$r]:-}" ]]; then
-    delete_and_wait "$r"
-    unset "seen[$r]"
-  fi
-done
-
-# Then delete any remaining resource kinds except harborconnections.
+unknown_resources=()
 for r in "${!seen[@]}"; do
-  if [[ "${r}" == "harborconnections" ]]; then
-    continue
+  if [[ -z "${known[$r]:-}" ]]; then
+    unknown_resources+=("$r")
   fi
-  delete_and_wait "$r"
 done
 
-# Then delete harborconnections last (if it exists)
-if grep -qx "harborconnections" <<< "${RESOURCES}"; then
-  delete_and_wait "harborconnections"
-else
-  echo "Resource type 'harborconnections' not found in group ${GROUP}, skipping."
-fi
+# Each phase waits before removing resources needed by the next phase.
+delete_phase "${leaf_resources[@]}" "${unknown_resources[@]}"
+delete_phase "${referenced_resources[@]}"
+delete_phase "${registry_resources[@]}"
+delete_phase "${connection_resources[@]}"
 
 echo "Done cleaning custom resources for group ${GROUP}."
