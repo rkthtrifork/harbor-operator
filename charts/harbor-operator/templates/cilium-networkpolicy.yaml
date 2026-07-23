@@ -19,7 +19,7 @@ spec:
 {{- end }}
       toPorts:
         - ports:
-            - port: "8443"
+            - port: {{ .Values.metrics.port | quote }}
               protocol: TCP
   {{- end }}
   egress:

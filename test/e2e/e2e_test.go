@@ -21,11 +21,17 @@ package e2e
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +54,8 @@ const metricsServiceName = "harbor-operator-metrics"
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "harbor-operator-metrics-binding"
 const metricsRoleName = "harbor-operator-metrics-reader"
+const metricsCertificateSecretName = "harbor-operator-metrics-certificate"
+const metricsCAConfigMapName = "harbor-operator-metrics-ca"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -72,12 +80,32 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
 
+		By("creating a trusted certificate for the metrics service")
+		certificateFile, keyFile, caFile := generateMetricsCertificate()
+		defer os.Remove(certificateFile)
+		defer os.Remove(keyFile)
+		defer os.Remove(caFile)
+
+		cmd = exec.Command("kubectl", "create", "secret", "tls", metricsCertificateSecretName,
+			"--namespace", namespace,
+			fmt.Sprintf("--cert=%s", certificateFile),
+			fmt.Sprintf("--key=%s", keyFile))
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Failed to create the metrics certificate Secret")
+
+		cmd = exec.Command("kubectl", "create", "configmap", metricsCAConfigMapName,
+			"--namespace", namespace,
+			fmt.Sprintf("--from-file=ca.crt=%s", caFile))
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Failed to create the metrics CA ConfigMap")
+
 		By("enabling metrics for the Helm deployment")
 		cmd = exec.Command("helm", "upgrade", "--install", "harbor-operator", "./charts/harbor-operator",
 			"--namespace", namespace,
 			"--set", fmt.Sprintf("image.repository=%s", strings.Split(projectImage, ":")[0]),
 			"--set", fmt.Sprintf("image.tag=%s", strings.Split(projectImage, ":")[1]),
 			"--set", "metrics.enabled=true",
+			"--set", fmt.Sprintf("metrics.tls.certificateSecret=%s", metricsCertificateSecretName),
 			"--wait",
 		)
 		_, err = utils.Run(cmd)
@@ -91,8 +119,6 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", metricsRoleBindingName)
-		_, _ = utils.Run(cmd)
-		cmd = exec.Command("kubectl", "delete", "clusterrole", metricsRoleName)
 		_, _ = utils.Run(cmd)
 
 		By("undeploying the controller-manager")
@@ -195,16 +221,6 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should ensure the metrics endpoint is serving metrics", func() {
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
 			roleFile := writeTempFile(fmt.Sprintf(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: %s
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: %s
@@ -216,7 +232,7 @@ subjects:
 - kind: ServiceAccount
   name: %s
   namespace: %s
-`, metricsRoleName, metricsRoleBindingName, metricsRoleName, serviceAccountName, namespace))
+`, metricsRoleBindingName, metricsRoleName, serviceAccountName, namespace))
 			defer os.Remove(roleFile)
 			cmd := exec.Command("kubectl", "apply", "-f", roleFile)
 			_, err := utils.Run(cmd)
@@ -226,11 +242,6 @@ subjects:
 			cmd = exec.Command("kubectl", "get", "service", metricsServiceName, "-n", namespace)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Metrics service should exist")
-
-			By("getting the service account token")
-			token, err := serviceAccountToken()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(token).NotTo(BeEmpty())
 
 			By("waiting for the metrics endpoint to be ready")
 			verifyMetricsEndpointReady := func(g Gomega) {
@@ -262,7 +273,12 @@ subjects:
 							"name": "curl",
 							"image": "curlimages/curl:latest",
 							"command": ["/bin/sh", "-c"],
-							"args": ["curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics"],
+							"args": ["curl -v --cacert /etc/metrics-ca/ca.crt -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" https://%s.%s.svc.cluster.local:8443/metrics"],
+							"volumeMounts": [{
+								"name": "metrics-ca",
+								"mountPath": "/etc/metrics-ca",
+								"readOnly": true
+							}],
 							"securityContext": {
 								"allowPrivilegeEscalation": false,
 								"capabilities": {
@@ -275,9 +291,15 @@ subjects:
 								}
 							}
 						}],
-						"serviceAccount": "%s"
+						"serviceAccountName": "%s",
+						"volumes": [{
+							"name": "metrics-ca",
+							"configMap": {
+								"name": "%s"
+							}
+						}]
 					}
-				}`, token, metricsServiceName, namespace, serviceAccountName))
+				}`, metricsServiceName, namespace, serviceAccountName, metricsCAConfigMapName))
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to create curl-metrics pod")
 
@@ -818,47 +840,6 @@ spec:
 	})
 })
 
-// serviceAccountToken returns a token for the specified service account in the given namespace.
-// It uses the Kubernetes TokenRequest API to generate a token by directly sending a request
-// and parsing the resulting token from the API response.
-func serviceAccountToken() (string, error) {
-	const tokenRequestRawString = `{
-		"apiVersion": "authentication.k8s.io/v1",
-		"kind": "TokenRequest"
-	}`
-
-	// Temporary file to store the token request
-	secretName := fmt.Sprintf("%s-token-request", serviceAccountName)
-	tokenRequestFile := filepath.Join("/tmp", secretName)
-	err := os.WriteFile(tokenRequestFile, []byte(tokenRequestRawString), os.FileMode(0o644))
-	if err != nil {
-		return "", err
-	}
-
-	var out string
-	verifyTokenCreation := func(g Gomega) {
-		// Execute kubectl command to create the token
-		cmd := exec.Command("kubectl", "create", "--raw", fmt.Sprintf(
-			"/api/v1/namespaces/%s/serviceaccounts/%s/token",
-			namespace,
-			serviceAccountName,
-		), "-f", tokenRequestFile)
-
-		output, err := cmd.CombinedOutput()
-		g.Expect(err).NotTo(HaveOccurred())
-
-		// Parse the JSON output to extract the token
-		var token tokenRequest
-		err = json.Unmarshal(output, &token)
-		g.Expect(err).NotTo(HaveOccurred())
-
-		out = token.Status.Token
-	}
-	Eventually(verifyTokenCreation).Should(Succeed())
-
-	return out, err
-}
-
 // getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
 func getMetricsOutput() string {
 	By("getting the curl-metrics logs")
@@ -874,6 +855,60 @@ func writeTempFile(contents string) string {
 	Expect(err).NotTo(HaveOccurred())
 	_, err = file.WriteString(contents)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(file.Close()).To(Succeed())
+	return file.Name()
+}
+
+func generateMetricsCertificate() (certificateFile, keyFile, caFile string) {
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	Expect(err).NotTo(HaveOccurred())
+
+	now := time.Now()
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "harbor-operator metrics E2E CA"},
+		NotBefore:             now.Add(-time.Minute),
+		NotAfter:              now.Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+	}
+	caDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	Expect(err).NotTo(HaveOccurred())
+
+	serverKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	Expect(err).NotTo(HaveOccurred())
+	serviceDNSName := fmt.Sprintf("%s.%s.svc", metricsServiceName, namespace)
+	serverTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: serviceDNSName},
+		NotBefore:    now.Add(-time.Minute),
+		NotAfter:     now.Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames: []string{
+			metricsServiceName,
+			fmt.Sprintf("%s.%s", metricsServiceName, namespace),
+			serviceDNSName,
+			serviceDNSName + ".cluster.local",
+		},
+	}
+	serverDER, err := x509.CreateCertificate(rand.Reader, serverTemplate, caTemplate, &serverKey.PublicKey, caKey)
+	Expect(err).NotTo(HaveOccurred())
+
+	serverKeyDER, err := x509.MarshalECPrivateKey(serverKey)
+	Expect(err).NotTo(HaveOccurred())
+
+	certificateFile = writeTempPEM("CERTIFICATE", serverDER)
+	keyFile = writeTempPEM("EC PRIVATE KEY", serverKeyDER)
+	caFile = writeTempPEM("CERTIFICATE", caDER)
+	return certificateFile, keyFile, caFile
+}
+
+func writeTempPEM(blockType string, contents []byte) string {
+	file, err := os.CreateTemp("", "harbor-e2e-*.pem")
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pem.Encode(file, &pem.Block{Type: blockType, Bytes: contents})).To(Succeed())
 	Expect(file.Close()).To(Succeed())
 	return file.Name()
 }
@@ -991,12 +1026,4 @@ func deleteHarborProjectByName(baseURL, user, pass, projectName string) {
 		cmd = exec.Command("curl", "-sk", "-u", fmt.Sprintf("%s:%s", user, pass), "-X", "DELETE", baseURL+"/api/v2.0/projects/"+strconv.Itoa(project.ProjectID))
 		_, _ = utils.Run(cmd)
 	}
-}
-
-// tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,
-// containing only the token field that we need to extract.
-type tokenRequest struct {
-	Status struct {
-		Token string `json:"token"`
-	} `json:"status"`
 }

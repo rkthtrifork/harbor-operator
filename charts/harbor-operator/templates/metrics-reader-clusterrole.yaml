@@ -1,0 +1,13 @@
+{{- if and .Values.metrics.enabled .Values.metrics.secure .Values.metrics.readerRole.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}-metrics-reader
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+rules:
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+{{- end }}

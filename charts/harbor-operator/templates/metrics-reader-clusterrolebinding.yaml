@@ -1,0 +1,22 @@
+{{- if and .Values.metrics.enabled .Values.metrics.secure .Values.metrics.readerRole.binding.create -}}
+{{- if not .Values.metrics.readerRole.create -}}
+{{- fail "metrics.readerRole.create must be true when metrics.readerRole.binding.create is true" -}}
+{{- end -}}
+{{- if or (not .Values.metrics.readerRole.binding.serviceAccount.name) (not .Values.metrics.readerRole.binding.serviceAccount.namespace) -}}
+{{- fail "metrics.readerRole.binding.serviceAccount.name and namespace are required when metrics.readerRole.binding.create is true" -}}
+{{- end -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "harbor-operator.fullname" . }}-metrics-reader
+  labels:
+{{ include "harbor-operator.labels" . | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "harbor-operator.fullname" . }}-metrics-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.metrics.readerRole.binding.serviceAccount.name }}
+    namespace: {{ .Values.metrics.readerRole.binding.serviceAccount.namespace }}
+{{- end }}

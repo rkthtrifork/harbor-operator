@@ -77,3 +77,23 @@ func TestListProjectsFetchesAllPages(t *testing.T) {
 		t.Fatalf("requested pages %s, want %s", got, want)
 	}
 }
+
+func TestNormalizeEndpointBoundsMetricLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]string{
+		"/api/v2.0/projects/team-a/members/42?page=1":       "/api/v2.0/projects/:project/members/:id",
+		"/api/v2.0/projects/team-a/immutabletagrules":       "/api/v2.0/projects/:project/immutabletagrules",
+		"/api/v2.0/projects/team-a/webhook/policies/7":      "/api/v2.0/projects/:project/webhook/policies/:id",
+		"/api/v2.0/scanners/4f44c89c-87f8-11ee-b9d1-acde48": "/api/v2.0/scanners/:scanner",
+		"/api/v2.0/projects/17":                             "/api/v2.0/projects/:id",
+		"/api/v2.0/example/17/42":                           "/api/v2.0/example/:id/:id",
+		"/api/v2.0/users/current":                           "/api/v2.0/users/current",
+	}
+
+	for endpoint, want := range tests {
+		if got := normalizeEndpoint(endpoint); got != want {
+			t.Errorf("normalizeEndpoint(%q) = %q, want %q", endpoint, got, want)
+		}
+	}
+}
