@@ -7,11 +7,6 @@ on:
         description: Release branch to publish from, e.g. release/v0.7.
         required: true
         type: string
-      skip_ci_check:
-        description: Allow tagging even if required branch checks are not green.
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -49,7 +44,6 @@ jobs:
         id: prepare
         env:
           RELEASE_BRANCH: ${{ inputs.release_branch }}
-          SKIP_CI_CHECK: ${{ inputs.skip_ci_check && 'true' || 'false' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ ! "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+$ ]]; then
@@ -82,9 +76,7 @@ jobs:
           head_sha="$(git rev-parse "origin/${RELEASE_BRANCH}")"
           tag="v${version}"
 
-          if [ "$SKIP_CI_CHECK" != "true" ]; then
-            python3 hack/required_checks.py "$head_sha"
-          fi
+          python3 hack/required_checks.py "$head_sha"
 
           existing_sha="$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')"
           if [ -z "$existing_sha" ]; then
