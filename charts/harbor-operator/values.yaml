@@ -116,6 +116,10 @@ networkPolicy:
       - 443
     # Egress to kube-dns (UDP/TCP 53).
     allowDNS: true
+    # Exact Harbor DNS names allowed by the Cilium policy (TCP 80/443).
+    # This option requires networkPolicy.type=cilium.
+    harborFQDNs: []
+    # - harbor.example.com
     harborSelectors: []
     # - namespaceSelector:
     #     matchLabels:
