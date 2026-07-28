@@ -1,3 +1,6 @@
+{{- if and .Values.networkPolicy.enabled (ne .Values.networkPolicy.type "cilium") (gt (len .Values.networkPolicy.egress.harborFQDNs) 0) -}}
+{{- fail "networkPolicy.egress.harborFQDNs requires networkPolicy.type=cilium" -}}
+{{- end -}}
 {{- if and .Values.networkPolicy.enabled (eq .Values.networkPolicy.type "cilium") -}}
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -42,6 +45,18 @@ spec:
             - port: "53"
               protocol: UDP
             - port: "53"
+              protocol: TCP
+  {{- end }}
+  {{- with .Values.networkPolicy.egress.harborFQDNs }}
+    - toFQDNs:
+  {{- range . }}
+        - matchName: {{ . | quote }}
+  {{- end }}
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
               protocol: TCP
   {{- end }}
   {{- range .Values.networkPolicy.egress.harborSelectors }}
