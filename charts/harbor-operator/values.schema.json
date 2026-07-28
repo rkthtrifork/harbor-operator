@@ -232,6 +232,14 @@
               }
             },
             "allowDNS": { "type": "boolean" },
+            "harborFQDNs": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "harborSelectors": {
               "type": "array",
               "items": {

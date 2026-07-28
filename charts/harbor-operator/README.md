@@ -126,6 +126,19 @@ networkPolicy:
             app.kubernetes.io/instance: harbor
 ```
 
+For a Harbor endpoint reached through DNS, the Cilium policy supports exact FQDNs:
+
+```yaml
+networkPolicy:
+  enabled: true
+  type: cilium
+  egress:
+    harborFQDNs:
+      - harbor.example.com
+```
+
+`harborFQDNs` allows TCP ports 80 and 443 and requires `networkPolicy.type=cilium`. Kubernetes NetworkPolicy does not support DNS-based destinations.
+
 ## CRDs
 
 CRDs are packaged in the chart under `crds/`. These are synced from `config/crd/bases`.
