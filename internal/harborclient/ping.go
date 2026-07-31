@@ -17,14 +17,9 @@ func (c *Client) Ping(ctx context.Context) error {
 	return err
 }
 
-type CurrentUser struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
-}
-
-// GetCurrentUser does a basic-auth GET /users/current.
-func (c *Client) GetCurrentUser(ctx context.Context) (*CurrentUser, error) {
-	var u CurrentUser
-	err := c.get(ctx, "/api/v2.0/users/current", &u)
-	return &u, err
+// CheckAuthentication verifies credentials against an endpoint supported by
+// both user and robot security contexts.
+func (c *Client) CheckAuthentication(ctx context.Context) error {
+	var permissions []struct{}
+	return c.get(ctx, "/api/v2.0/users/current/permissions", &permissions)
 }

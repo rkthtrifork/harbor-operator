@@ -75,7 +75,7 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
-	if _, err := hc.GetCurrentUser(ctx); err != nil {
+	if err := hc.CheckAuthentication(ctx); err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &conn, &conn.Status.HarborStatusBase, conn.Generation, err)
 	}
 
