@@ -47,8 +47,10 @@ var _ = Describe("Member Controller", func() {
 			Namespace: "default",
 		}
 		var server *httptest.Server
+		var memberDeleted bool
 
 		BeforeEach(func() {
+			memberDeleted = false
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
 				if !ok || user != testAdminUser || pass != testPassword {
@@ -63,6 +65,11 @@ var _ = Describe("Member Controller", func() {
 				if r.Method == http.MethodPost && r.URL.Path == projectMembersPath {
 					w.Header().Set("Location", projectMembersPath+"/11")
 					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				if r.Method == http.MethodDelete && r.URL.Path == projectMembersPath+"/11" {
+					memberDeleted = true
+					w.WriteHeader(http.StatusOK)
 					return
 				}
 				http.NotFound(w, r)
@@ -114,12 +121,13 @@ var _ = Describe("Member Controller", func() {
 		})
 
 		AfterEach(func() {
-			server.Close()
 			resource := &harborv1alpha1.Member{}
-			_ = k8sClient.Get(ctx, typeNamespacedName, resource)
-
-			By("Cleanup the specific resource instance Member")
-			_ = k8sClient.Delete(ctx, resource)
+			if err := k8sClient.Get(ctx, typeNamespacedName, resource); err == nil {
+				By("Cleanup the specific resource instance Member")
+				_ = k8sClient.Delete(ctx, resource)
+				controllerReconciler := &MemberReconciler{Client: k8sClient, Scheme: k8sClient.Scheme()}
+				_, _ = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			}
 			project := &harborv1alpha1.Project{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)
 			_ = k8sClient.Delete(ctx, project)
@@ -133,6 +141,7 @@ var _ = Describe("Member Controller", func() {
 			secret := &corev1.Secret{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: adminSecretName, Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
+			server.Close()
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -150,7 +159,33 @@ var _ = Describe("Member Controller", func() {
 			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
 			Expect(cond).NotTo(BeNil())
 			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			Expect(out.Status.HarborProjectID).To(Equal(42))
+			Expect(out.Status.HarborMemberID).To(Equal(11))
+		})
+
+		It("finalizes after its referenced objects are deleted", func() {
+			controllerReconciler := &MemberReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+
+			project := &harborv1alpha1.Project{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, project)).To(Succeed())
+			user := &harborv1alpha1.User{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: "alice", Namespace: "default"}, user)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, user)).To(Succeed())
+
+			member := &harborv1alpha1.Member{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, member)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, member)).To(Succeed())
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(memberDeleted).To(BeTrue())
+			Expect(k8sClient.Get(ctx, typeNamespacedName, &harborv1alpha1.Member{})).ToNot(Succeed())
 		})
 	})
 
