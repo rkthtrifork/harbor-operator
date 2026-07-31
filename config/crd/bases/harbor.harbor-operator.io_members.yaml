@@ -257,6 +257,14 @@ spec:
                   - type
                   type: object
                 type: array
+              harborMemberID:
+                description: HarborMemberID is the ID of the project membership in
+                  Harbor.
+                type: integer
+              harborProjectID:
+                description: HarborProjectID is the ID of the project containing the
+                  membership in Harbor.
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   by the controller.
