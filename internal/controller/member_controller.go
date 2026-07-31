@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -23,6 +24,11 @@ type MemberReconciler struct {
 	Scheme  *runtime.Scheme
 	Options OperatorOptions
 	logger  logr.Logger
+}
+
+type observedMember struct {
+	projectID int
+	memberID  int
 }
 
 // RBAC permissions.
@@ -79,15 +85,27 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Ensure desired member state in Harbor (create/update as needed).
-	if err := r.ensureMemberPresent(ctx, hc, &member, roleID); err != nil {
+	observed, err := r.ensureMemberPresent(ctx, hc, &member, roleID)
+	if err != nil {
 		r.logger.Error(err, "Failed to ensure member in Harbor",
 			"ProjectRef", member.Spec.ProjectRef,
 			"RoleID", roleID)
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
 	}
+	if observed.projectID == 0 || observed.memberID == 0 {
+		err := fmt.Errorf("member reconciliation completed without resolved Harbor IDs")
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, err)
+	}
 
-	if err := setReadyStatus(ctx, r.Client, &member, &member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled"); err != nil {
-		return ctrl.Result{}, err
+	statusChanged := member.Status.HarborProjectID != observed.projectID || member.Status.HarborMemberID != observed.memberID
+	member.Status.HarborProjectID = observed.projectID
+	member.Status.HarborMemberID = observed.memberID
+	conditionChanged := markReady(&member.Status.HarborStatusBase, member.Generation, "Reconciled", "Member reconciled")
+	if statusChanged || conditionChanged {
+		sanitizeOptionalHarborConnectionRef(&member)
+		if err := r.Status().Update(ctx, &member); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return returnWithDriftDetection(r.Options, &member.Spec.HarborSpecBase)
@@ -100,22 +118,22 @@ func (r *MemberReconciler) ensureMemberPresent(
 	hc *harborclient.Client,
 	member *harborv1alpha1.Member,
 	roleID int,
-) error {
-	projectKey, _, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
+) (observedMember, error) {
+	projectKey, projectID, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
 	if err != nil {
-		return err
+		return observedMember{}, err
 	}
 
 	// Determine desired identity (entity type + name) from spec.
 	entityType, entityName, reqBody, err := r.desiredEntityFromSpec(ctx, member, roleID)
 	if err != nil {
-		return err
+		return observedMember{}, err
 	}
 
 	// List members for this project.
 	members, err := hc.ListProjectMembers(ctx, projectKey)
 	if err != nil {
-		return err
+		return observedMember{}, err
 	}
 
 	// Find existing membership for this identity.
@@ -131,27 +149,35 @@ func (r *MemberReconciler) ensureMemberPresent(
 
 	if existing == nil {
 		if err := requireCreationAllowed(r.Options, member.Spec.CreationPolicy); err != nil {
-			return err
+			return observedMember{}, err
 		}
 		newID, err := hc.CreateProjectMember(ctx, projectKey, reqBody)
 		if err != nil {
-			return err
+			return observedMember{}, err
 		}
-		if newID != 0 {
-			r.logger.Info("Created Harbor project member",
-				"ProjectRef", projectKey,
-				"EntityType", entityType,
-				"EntityName", entityName,
-				"RoleID", roleID,
-				"MemberID", newID)
-		} else {
-			r.logger.Info("Created Harbor project member (no member ID returned)",
-				"ProjectRef", projectKey,
-				"EntityType", entityType,
-				"EntityName", entityName,
-				"RoleID", roleID)
+		if newID == 0 {
+			members, err = hc.ListProjectMembers(ctx, projectKey)
+			if err != nil {
+				return observedMember{}, err
+			}
+			for i := range members {
+				candidate := &members[i]
+				if strings.EqualFold(candidate.EntityType, entityType) && strings.EqualFold(candidate.EntityName, entityName) {
+					newID = candidate.ID
+					break
+				}
+			}
+			if newID == 0 {
+				return observedMember{}, fmt.Errorf("created Harbor project member but could not discover its ID")
+			}
 		}
-		return nil
+		r.logger.Info("Created Harbor project member",
+			"ProjectRef", projectKey,
+			"EntityType", entityType,
+			"EntityName", entityName,
+			"RoleID", roleID,
+			"MemberID", newID)
+		return observedMember{projectID: projectID, memberID: newID}, nil
 	}
 
 	// A ready Member already manages this identity. Otherwise, an existing
@@ -159,14 +185,14 @@ func (r *MemberReconciler) ensureMemberPresent(
 	if !allowsAdoption(r.Options, member.Spec.CreationPolicy) {
 		cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
 		if cond == nil || cond.Status != metav1.ConditionTrue {
-			return fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", r.Options.effectiveCreationPolicy(member.Spec.CreationPolicy))
+			return observedMember{}, fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", r.Options.effectiveCreationPolicy(member.Spec.CreationPolicy))
 		}
 	}
 
 	// Member exists → check if role matches; update if needed.
 	if existing.RoleID != roleID {
 		if err := hc.UpdateProjectMemberRole(ctx, projectKey, existing.ID, roleID); err != nil {
-			return err
+			return observedMember{}, err
 		}
 		r.logger.Info("Updated Harbor project member role",
 			"ProjectRef", projectKey,
@@ -184,7 +210,7 @@ func (r *MemberReconciler) ensureMemberPresent(
 			"MemberID", existing.ID)
 	}
 
-	return nil
+	return observedMember{projectID: projectID, memberID: existing.ID}, nil
 }
 
 // ensureMemberAbsent ensures that the Harbor project member is removed when the CR is deleted.
@@ -193,6 +219,13 @@ func (r *MemberReconciler) ensureMemberAbsent(
 	hc *harborclient.Client,
 	member *harborv1alpha1.Member,
 ) error {
+	if member.Status.HarborProjectID != 0 && member.Status.HarborMemberID != 0 {
+		return hc.DeleteProjectMember(ctx, strconv.Itoa(member.Status.HarborProjectID), member.Status.HarborMemberID)
+	}
+	if member.Status.HarborProjectID != 0 || member.Status.HarborMemberID != 0 {
+		return fmt.Errorf("member status contains incomplete Harbor identity")
+	}
+
 	projectKey, _, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
 	if err != nil {
 		return nil

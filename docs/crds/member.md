@@ -102,7 +102,8 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 - **Delete**
 
-  - On CR deletion, the operator attempts to remove the corresponding member from Harbor.
+  - The operator records the resolved Harbor project and membership IDs in status.
+  - On CR deletion, it uses those IDs to remove the corresponding member without depending on referenced `Project`, `User`, or `UserGroup` resources still existing.
 
 - **Error handling**
 

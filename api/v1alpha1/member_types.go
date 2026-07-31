@@ -50,6 +50,12 @@ type MemberSpec struct {
 // MemberStatus defines the observed state of Member.
 type MemberStatus struct {
 	HarborStatusBase `json:",inline"`
+
+	// HarborProjectID is the ID of the project containing the membership in Harbor.
+	HarborProjectID int `json:"harborProjectID,omitempty"`
+
+	// HarborMemberID is the ID of the project membership in Harbor.
+	HarborMemberID int `json:"harborMemberID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
