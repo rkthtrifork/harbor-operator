@@ -29,6 +29,30 @@ func TestDoAllowsEmptyJSONBody(t *testing.T) {
 	}
 }
 
+func TestCheckAuthenticationSupportsRobotAccounts(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || username != "robot$tenant-operator" || password != "secret" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2.0/users/current/permissions" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("[]"))
+	}))
+	defer server.Close()
+
+	client := New(server.URL, "robot$tenant-operator", "secret")
+	if err := client.CheckAuthentication(context.Background()); err != nil {
+		t.Fatalf("CheckAuthentication returned error: %v", err)
+	}
+}
+
 func TestListProjectsFetchesAllPages(t *testing.T) {
 	t.Parallel()
 
