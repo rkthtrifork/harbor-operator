@@ -9,4 +9,5 @@ spec:
   harborConnectionRef:
     name: harborconnection-sample
     kind: HarborConnection
+  groupName: developers@example.com
   groupType: 2

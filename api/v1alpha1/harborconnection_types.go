@@ -25,6 +25,7 @@ type HarborConnectionSpec struct {
 }
 
 // Credentials holds default authentication details.
+// +kubebuilder:validation:XValidation:rule="has(self.username) != has(self.usernameSecretRef)",message="exactly one of username or usernameSecretRef must be set"
 type Credentials struct {
 	// Type selects the credential type. Defaults to basic.
 	// +kubebuilder:default=basic
@@ -34,7 +35,14 @@ type Credentials struct {
 
 	// Username for authentication.
 	// +kubebuilder:validation:MinLength=1
-	Username string `json:"username"`
+	// +optional
+	Username string `json:"username,omitempty"`
+
+	// UsernameSecretRef points to the Kubernetes Secret that stores the username.
+	// Use this when another controller, such as the Robot controller, produces the
+	// canonical Harbor username.
+	// +optional
+	UsernameSecretRef *SecretReference `json:"usernameSecretRef,omitempty"`
 
 	// PasswordSecretRef points to the Kubernetes Secret that stores the password / token.
 	PasswordSecretRef SecretReference `json:"passwordSecretRef"`

@@ -250,6 +250,14 @@ func getHarborAuth(ctx context.Context, options OperatorOptions, c client.Client
 	if conn.credentials == nil {
 		return "", "", fmt.Errorf("%s has no credentials configured", conn.displayName)
 	}
+	username := conn.credentials.Username
+	if conn.credentials.UsernameSecretRef != nil {
+		var err error
+		username, err = readSecretValue(ctx, options, c, *conn.credentials.UsernameSecretRef, conn.namespace, "username")
+		if err != nil {
+			return "", "", err
+		}
+	}
 	pass, err := readSecretValue(ctx, options, c, harborv1alpha1.SecretReference{
 		Name:      conn.credentials.PasswordSecretRef.Name,
 		Key:       conn.credentials.PasswordSecretRef.Key,
@@ -258,7 +266,7 @@ func getHarborAuth(ctx context.Context, options OperatorOptions, c client.Client
 	if err != nil {
 		return "", "", err
 	}
-	return conn.credentials.Username, pass, nil
+	return username, pass, nil
 }
 
 func getHarborClient(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
@@ -539,7 +547,7 @@ func resolveUserGroup(ctx context.Context, c client.Client, namespace string, re
 		return nil, err
 	}
 	return &harborclient.MemberGroup{
-		GroupName:   group.Name,
+		GroupName:   group.Spec.GroupName,
 		GroupType:   group.Spec.GroupType,
 		LDAPGroupDN: group.Spec.LDAPGroupDN,
 	}, nil

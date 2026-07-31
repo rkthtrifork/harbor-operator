@@ -6,6 +6,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type UserGroupSpec struct {
 	HarborSpecBase `json:",inline"`
 
+	// GroupName is the exact user group name stored in Harbor. For OIDC groups,
+	// this is commonly the identity provider's group ID.
+	// +kubebuilder:validation:MinLength=1
+	GroupName string `json:"groupName"`
+
 	// CreationPolicy controls whether the operator creates or adopts the Harbor user group.
 	// When omitted, the operator's default creation policy is used.
 	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
@@ -32,6 +37,7 @@ type UserGroupStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:categories=harbor
+// +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.groupName`
 // +kubebuilder:printcolumn:name="Type",type=integer,JSONPath=`.spec.groupType`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

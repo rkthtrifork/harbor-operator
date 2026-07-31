@@ -7,19 +7,32 @@ spec:
     name: my-harbor
     kind: HarborConnection
   settings:
-    auth_mode: "oidc_auth"
-    oidc_name: "ExampleOIDC"
-    oidc_endpoint: "https://oidc.example.com"
-    oidc_client_id: "harbor"
-    oidc_groups_claim: "groups"
-    oidc_admin_group: "harbor-admins"
-    oidc_scope: "openid,profile,email,groups"
-    oidc_user_claim: "preferred_username"
-    oidc_auto_onboard: true
-    oidc_verify_cert: false
-    robot_token_duration: 30
-    robot_name_prefix: "robot$"
-  secretSettings:
+    auth_mode:
+      value: "oidc_auth"
+    oidc_name:
+      value: "ExampleOIDC"
+    oidc_endpoint:
+      value: "https://oidc.example.com"
+    oidc_client_id:
+      value: "harbor"
+    oidc_groups_claim:
+      value: "groups"
+    oidc_admin_group:
+      value: "harbor-admins"
+    oidc_scope:
+      value: "openid,profile,email,groups"
+    oidc_user_claim:
+      value: "preferred_username"
+    oidc_auto_onboard:
+      value: true
+    oidc_verify_cert:
+      value: false
+    robot_token_duration:
+      value: 30
+    robot_name_prefix:
+      value: "robot$"
     oidc_client_secret:
-      name: harbor-oidc-client
-      key: clientSecret
+      valueFrom:
+        secretKeyRef:
+          name: harbor-oidc-client
+          key: clientSecret

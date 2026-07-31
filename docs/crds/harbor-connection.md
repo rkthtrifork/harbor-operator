@@ -44,7 +44,8 @@ spec:
 - **spec.credentials** (object, optional)
 
   - **type** (string, optional) – currently `basic` is supported and is the default.
-  - **username** (string) – username for Harbor.
+  - Exactly one of **username** (string) or **usernameSecretRef** (object) – a
+    literal Harbor username or a Secret reference containing it.
   - **passwordSecretRef** (object) – Secret reference with `name`, optional
     `namespace`, and `key`.
 

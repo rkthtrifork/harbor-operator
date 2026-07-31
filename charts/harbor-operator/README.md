@@ -100,7 +100,8 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
 
 Egress defaults:
 - kube‑api server (`networkPolicy.egress.kubeAPIPorts`, default `443`)
-- kube‑dns (UDP/TCP 53)
+- DNS (UDP/TCP 53), restricted by `networkPolicy.egress.dns.namespace` and
+  `networkPolicy.egress.dns.podSelector`
 
 For kind, the kube‑api server listens on `6443` by default:
 

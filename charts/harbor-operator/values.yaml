@@ -114,8 +114,13 @@ networkPolicy:
     # kube-apiserver ports to allow when allowKubeAPI is true.
     kubeAPIPorts:
       - 443
-    # Egress to kube-dns (UDP/TCP 53).
-    allowDNS: true
+    # DNS server selected for UDP/TCP 53 egress.
+    dns:
+      enabled: true
+      namespace: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
     # Exact Harbor DNS names allowed by the Cilium policy (TCP 80/443).
     # This option requires networkPolicy.type=cilium.
     harborFQDNs: []

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,6 +15,42 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestGetHarborAuthReadsUsernameAndPasswordFromSecret(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("add core scheme: %v", err)
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "robot-credentials", Namespace: "connections"},
+		Data: map[string][]byte{
+			"username": []byte("robot$tenant-operator"),
+			"secret":   []byte("token"),
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+	conn := &connectionConfig{
+		namespace:   "connections",
+		displayName: "test connection",
+		credentials: &harborv1alpha1.Credentials{
+			UsernameSecretRef: &harborv1alpha1.SecretReference{Name: "robot-credentials"},
+			PasswordSecretRef: harborv1alpha1.SecretReference{Name: "robot-credentials", Key: "secret"},
+		},
+	}
+
+	username, password, err := getHarborAuth(context.Background(), OperatorOptions{}, c, conn)
+	if err != nil {
+		t.Fatalf("getHarborAuth returned error: %v", err)
+	}
+	if username != "robot$tenant-operator" {
+		t.Fatalf("username = %q, want %q", username, "robot$tenant-operator")
+	}
+	if password != "token" {
+		t.Fatalf("password = %q, want %q", password, "token")
+	}
+}
 
 func TestFinalizeWithoutHarborConnection(t *testing.T) {
 	t.Parallel()

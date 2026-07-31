@@ -16,22 +16,35 @@ spec:
     name: my-harbor
     kind: HarborConnection
   settings:
-    auth_mode: "oidc_auth"
-    oidc_name: "ExampleOIDC"
-    oidc_endpoint: "https://oidc.example.com"
-    oidc_client_id: "harbor"
-    oidc_groups_claim: "groups"
-    oidc_admin_group: "harbor-admins"
-    oidc_scope: "openid,profile,email,groups"
-    oidc_user_claim: "preferred_username"
-    oidc_auto_onboard: true
-    oidc_verify_cert: false
-    robot_token_duration: 30
-    robot_name_prefix: "robot$"
-  secretSettings:
+    auth_mode:
+      value: "oidc_auth"
+    oidc_name:
+      value: "ExampleOIDC"
+    oidc_endpoint:
+      value: "https://oidc.example.com"
+    oidc_client_id:
+      value: "harbor"
+    oidc_groups_claim:
+      value: "groups"
+    oidc_admin_group:
+      value: "harbor-admins"
+    oidc_scope:
+      value: "openid,profile,email,groups"
+    oidc_user_claim:
+      value: "preferred_username"
+    oidc_auto_onboard:
+      value: true
+    oidc_verify_cert:
+      value: false
+    robot_token_duration:
+      value: 30
+    robot_name_prefix:
+      value: "robot$"
     oidc_client_secret:
-      name: harbor-oidc-client
-      key: clientSecret
+      valueFrom:
+        secretKeyRef:
+          name: harbor-oidc-client
+          key: clientSecret
 ```
 
 ## Key Fields
@@ -40,14 +53,11 @@ spec:
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.settings** (map, optional)
-  Map of Harbor configuration keys to values. Keys must match the
-  `/configurations` schema in `swagger.yaml`. Values may be strings, numbers,
-  booleans, or JSON objects.
-
-- **spec.secretSettings** (map, optional)
-  Map of Harbor configuration keys to secret references. The secret values are
-  read and injected into the update payload. If `key` is omitted, the operator
-  defaults to `value`.
+  Map of Harbor configuration keys to value sources. Keys must match the
+  `/configurations` schema in `swagger.yaml`. Each entry sets exactly one of a
+  literal `value` or `valueFrom.secretKeyRef`. Literal values may be strings,
+  numbers, booleans, or JSON objects. If the Secret key is omitted, the operator
+  defaults it to `value`.
 
 ## Common Fields
 
