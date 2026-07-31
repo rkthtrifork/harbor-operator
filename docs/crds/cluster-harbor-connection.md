@@ -28,9 +28,10 @@ spec:
   Harbor API base URL. Must include a scheme such as `https://`.
 
 - **spec.credentials** (object, optional)
-  Username plus a Secret reference containing the password or token. For a
-  cluster-scoped connection, set `passwordSecretRef.namespace` explicitly.
-  The credential `type` defaults to `basic`.
+  Exactly one of `username` or `usernameSecretRef`, plus a Secret reference
+  containing the password or token. Secret references on a cluster-scoped
+  connection must set `namespace` explicitly. The credential `type` defaults
+  to `basic`.
 
 - **spec.caBundle** / **spec.caBundleSecretRef** (optional)
   PEM-encoded CA material for validating Harbor TLS certificates. When omitted,

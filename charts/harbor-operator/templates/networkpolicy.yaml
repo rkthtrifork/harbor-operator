@@ -36,11 +36,13 @@ spec:
           port: {{ . }}
 {{- end }}
   {{- end }}
-  {{- if .Values.networkPolicy.egress.allowDNS }}
+  {{- if .Values.networkPolicy.egress.dns.enabled }}
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: kube-system
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.egress.dns.namespace | quote }}
+          podSelector:
+{{ toYaml .Values.networkPolicy.egress.dns.podSelector | nindent 12 }}
       ports:
         - protocol: UDP
           port: 53

@@ -126,10 +126,36 @@ spec:
                     description: Username for authentication.
                     minLength: 1
                     type: string
+                  usernameSecretRef:
+                    description: |-
+                      UsernameSecretRef points to the Kubernetes Secret that stores the username.
+                      Use this when another controller, such as the Robot controller, produces the
+                      canonical Harbor username.
+                    properties:
+                      key:
+                        description: |-
+                          Key inside the Secret data. When omitted, the controller using this
+                          reference will apply a sensible default.
+                        type: string
+                      name:
+                        description: Name of the Secret.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace of the Secret. When omitted, the controller uses the namespace of
+                          the referencing namespaced resource. References from cluster-scoped resources
+                          must set this field explicitly because they have no namespace.
+                        type: string
+                    required:
+                    - name
+                    type: object
                 required:
                 - passwordSecretRef
-                - username
                 type: object
+                x-kubernetes-validations:
+                - message: exactly one of username or usernameSecretRef must be set
+                  rule: has(self.username) != has(self.usernameSecretRef)
             required:
             - baseURL
             type: object

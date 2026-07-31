@@ -121,8 +121,44 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place.<br />Defaults to Delete. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift.<br />When omitted, the operator's default drift detection interval is used.<br />An explicit value of 0 disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `settings` _object (keys:string, values:[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#json-v1-apiextensions-k8s-io))_ | Settings contains Harbor configuration keys and their desired values.<br />Values can be strings, numbers, booleans, or JSON objects. |  | Optional: \{\} <br /> |
-| `secretSettings` _object (keys:string, values:[SecretReference](#secretreference))_ | SecretSettings references secret-backed configuration values such as<br />oidc_client_secret. The secret data is read and injected into Settings<br />during reconciliation. |  | Optional: \{\} <br /> |
+| `settings` _object (keys:string, values:[ConfigurationValue](#configurationvalue))_ | Settings contains Harbor configuration keys and their desired value sources. |  | Optional: \{\} <br /> |
+
+
+#### ConfigurationValue
+
+
+
+ConfigurationValue selects a literal or Secret-backed Harbor configuration
+value.
+
+_Validation:_
+- MaxProperties: 1
+- MinProperties: 1
+
+_Appears in:_
+- [ConfigurationSpec](#configurationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `value` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#json-v1-apiextensions-k8s-io)_ | Value is the literal configuration value. |  | Optional: \{\} <br /> |
+| `valueFrom` _[ConfigurationValueSource](#configurationvaluesource)_ | ValueFrom selects an external source for the configuration value. |  | Optional: \{\} <br /> |
+
+
+#### ConfigurationValueSource
+
+
+
+ConfigurationValueSource selects an external source for a Harbor
+configuration value.
+
+
+
+_Appears in:_
+- [ConfigurationValue](#configurationvalue)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `secretKeyRef` _[SecretReference](#secretreference)_ | SecretKeyRef references the Secret key containing the configuration value. |  |  |
 
 
 #### CreationPolicy
@@ -168,7 +204,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `type` _string_ | Type selects the credential type. Defaults to basic. | basic | Enum: [basic] <br />Optional: \{\} <br /> |
-| `username` _string_ | Username for authentication. |  | MinLength: 1 <br /> |
+| `username` _string_ | Username for authentication. |  | MinLength: 1 <br />Optional: \{\} <br /> |
+| `usernameSecretRef` _[SecretReference](#secretreference)_ | UsernameSecretRef points to the Kubernetes Secret that stores the username.<br />Use this when another controller, such as the Robot controller, produces the<br />canonical Harbor username. |  | Optional: \{\} <br /> |
 | `passwordSecretRef` _[SecretReference](#secretreference)_ | PasswordSecretRef points to the Kubernetes Secret that stores the password / token. |  |  |
 
 
@@ -1315,7 +1352,7 @@ cross-namespace references when enabled in the operator RBAC.
 
 
 _Appears in:_
-- [ConfigurationSpec](#configurationspec)
+- [ConfigurationValueSource](#configurationvaluesource)
 - [Credentials](#credentials)
 - [HarborConnectionSpec](#harborconnectionspec)
 - [RegistryCredentialSpec](#registrycredentialspec)
@@ -1401,6 +1438,7 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place.<br />Defaults to Delete. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift.<br />When omitted, the operator's default drift detection interval is used.<br />An explicit value of 0 disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
+| `groupName` _string_ | GroupName is the exact user group name stored in Harbor. For OIDC groups,<br />this is commonly the identity provider's group ID. |  | MinLength: 1 <br /> |
 | `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user group.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
 | `groupType` _integer_ | GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC). |  | Enum: [1 2 3] <br /> |
 | `ldapGroupDN` _string_ | LDAPGroupDN is the DN of the LDAP group when GroupType is LDAP. |  | Optional: \{\} <br /> |

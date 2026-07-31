@@ -36,10 +36,24 @@ spec:
               protocol: TCP
 {{- end }}
   {{- end }}
-  {{- if .Values.networkPolicy.egress.allowDNS }}
+  {{- if .Values.networkPolicy.egress.dns.enabled }}
     - toEndpoints:
         - matchLabels:
-            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:io.kubernetes.pod.namespace: {{ .Values.networkPolicy.egress.dns.namespace | quote }}
+{{- range $k, $v := .Values.networkPolicy.egress.dns.podSelector.matchLabels }}
+            k8s:{{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- with .Values.networkPolicy.egress.dns.podSelector.matchExpressions }}
+          matchExpressions:
+{{- range . }}
+            - key: k8s:{{ .key }}
+              operator: {{ .operator }}
+{{- with .values }}
+              values:
+{{ toYaml . | nindent 16 }}
+{{- end }}
+{{- end }}
+{{- end }}
       toPorts:
         - ports:
             - port: "53"

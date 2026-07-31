@@ -97,41 +97,49 @@ spec:
               reconcileNonce:
                 description: ReconcileNonce forces an immediate reconcile when updated.
                 type: string
-              secretSettings:
-                additionalProperties:
-                  description: |-
-                    SecretReference is similar to a corev1.SecretKeySelector but allows
-                    cross-namespace references when enabled in the operator RBAC.
-                  properties:
-                    key:
-                      description: |-
-                        Key inside the Secret data. When omitted, the controller using this
-                        reference will apply a sensible default.
-                      type: string
-                    name:
-                      description: Name of the Secret.
-                      minLength: 1
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the Secret. When omitted, the controller uses the namespace of
-                        the referencing namespaced resource. References from cluster-scoped resources
-                        must set this field explicitly because they have no namespace.
-                      type: string
-                  required:
-                  - name
-                  type: object
-                description: |-
-                  SecretSettings references secret-backed configuration values such as
-                  oidc_client_secret. The secret data is read and injected into Settings
-                  during reconciliation.
-                type: object
               settings:
                 additionalProperties:
-                  x-kubernetes-preserve-unknown-fields: true
-                description: |-
-                  Settings contains Harbor configuration keys and their desired values.
-                  Values can be strings, numbers, booleans, or JSON objects.
+                  description: |-
+                    ConfigurationValue selects a literal or Secret-backed Harbor configuration
+                    value.
+                  maxProperties: 1
+                  minProperties: 1
+                  properties:
+                    value:
+                      description: Value is the literal configuration value.
+                      x-kubernetes-preserve-unknown-fields: true
+                    valueFrom:
+                      description: ValueFrom selects an external source for the configuration
+                        value.
+                      properties:
+                        secretKeyRef:
+                          description: SecretKeyRef references the Secret key containing
+                            the configuration value.
+                          properties:
+                            key:
+                              description: |-
+                                Key inside the Secret data. When omitted, the controller using this
+                                reference will apply a sensible default.
+                              type: string
+                            name:
+                              description: Name of the Secret.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace of the Secret. When omitted, the controller uses the namespace of
+                                the referencing namespaced resource. References from cluster-scoped resources
+                                must set this field explicitly because they have no namespace.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                      required:
+                      - secretKeyRef
+                      type: object
+                  type: object
+                description: Settings contains Harbor configuration keys and their
+                  desired value sources.
                 type: object
             type: object
           status:

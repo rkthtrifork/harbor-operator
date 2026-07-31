@@ -5,20 +5,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ConfigurationValue selects a literal or Secret-backed Harbor configuration
+// value.
+// +kubebuilder:validation:MinProperties=1
+// +kubebuilder:validation:MaxProperties=1
+type ConfigurationValue struct {
+	// Value is the literal configuration value.
+	// +optional
+	Value *apiextensionsv1.JSON `json:"value,omitempty"`
+
+	// ValueFrom selects an external source for the configuration value.
+	// +optional
+	ValueFrom *ConfigurationValueSource `json:"valueFrom,omitempty"`
+}
+
+// ConfigurationValueSource selects an external source for a Harbor
+// configuration value.
+type ConfigurationValueSource struct {
+	// SecretKeyRef references the Secret key containing the configuration value.
+	SecretKeyRef SecretReference `json:"secretKeyRef"`
+}
+
 // ConfigurationSpec defines the desired state of Harbor system configuration.
 type ConfigurationSpec struct {
 	HarborSpecBase `json:",inline"`
 
-	// Settings contains Harbor configuration keys and their desired values.
-	// Values can be strings, numbers, booleans, or JSON objects.
+	// Settings contains Harbor configuration keys and their desired value sources.
 	// +optional
-	Settings map[string]apiextensionsv1.JSON `json:"settings,omitempty"`
-
-	// SecretSettings references secret-backed configuration values such as
-	// oidc_client_secret. The secret data is read and injected into Settings
-	// during reconciliation.
-	// +optional
-	SecretSettings map[string]SecretReference `json:"secretSettings,omitempty"`
+	Settings map[string]ConfigurationValue `json:"settings,omitempty"`
 }
 
 // ConfigurationStatus defines the observed state of Configuration.

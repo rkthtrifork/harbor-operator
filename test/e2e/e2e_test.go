@@ -709,7 +709,8 @@ spec:
     name: %s
     kind: HarborConnection
   settings:
-    robot_token_duration: 44
+    robot_token_duration:
+      value: 44
 ---
 apiVersion: harbor.harbor-operator.io/v1alpha1
 kind: Configuration
@@ -721,7 +722,8 @@ spec:
     name: %s
     kind: HarborConnection
   settings:
-    robot_token_duration: 66
+    robot_token_duration:
+      value: 66
 `, secretName, namespace, adminPass,
 					connA, namespace, inClusterBaseURL, adminUser, secretName,
 					connB, namespace, inClusterBaseURL, adminUser, secretName,

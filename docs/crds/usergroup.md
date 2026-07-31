@@ -9,18 +9,23 @@ A **UserGroup** custom resource manages Harbor user groups via
 apiVersion: harbor.harbor-operator.io/v1alpha1
 kind: UserGroup
 metadata:
-  name: developers
+  name: platform-engineers
 spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  groupType: 2
+  groupName: 56d1d2cb-0ab3-4c5f-b743-34a811d36abf
+  groupType: 3
 ```
 
 ## Key Fields
 
 - **metadata.name** (string, required)
-  The Harbor user group name managed by this CR.
+  The Kubernetes identity used by references to this CR.
+
+- **spec.groupName** (string, required)
+  The exact user group name stored in Harbor. For OIDC groups, this is commonly
+  the identity provider's group ID.
 
 - **spec.groupType** (int, required)
   Group type: 1 = LDAP, 2 = HTTP, 3 = OIDC.

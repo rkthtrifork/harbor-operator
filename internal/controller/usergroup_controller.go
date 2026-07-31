@@ -65,7 +65,7 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	desired := harborclient.UserGroup{
-		GroupName:   cr.Name,
+		GroupName:   cr.Spec.GroupName,
 		GroupType:   cr.Spec.GroupType,
 		LDAPGroupDN: cr.Spec.LDAPGroupDN,
 	}
@@ -120,12 +120,12 @@ func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *UserGroupReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.UserGroup) (bool, error) {
-	groups, err := hc.SearchUserGroups(ctx, cr.Name)
+	groups, err := hc.SearchUserGroups(ctx, cr.Spec.GroupName)
 	if err != nil {
 		return false, err
 	}
 	for _, g := range groups {
-		if strings.EqualFold(g.GroupName, cr.Name) {
+		if strings.EqualFold(g.GroupName, cr.Spec.GroupName) {
 			cr.Status.HarborGroupID = g.ID
 			return true, r.Status().Update(ctx, cr)
 		}

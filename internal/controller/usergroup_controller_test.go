@@ -35,6 +35,7 @@ import (
 var _ = Describe("UserGroup Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "user-group"
+		const harborGroupName = "external-user-group"
 		const adminSecretName = "harbor-admin-group"
 		const connName = "harbor-conn-group"
 
@@ -64,6 +65,7 @@ var _ = Describe("UserGroup Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: resourceName, Namespace: "default"},
 				Spec: harborv1alpha1.UserGroupSpec{
 					HarborSpecBase: harborv1alpha1.HarborSpecBase{HarborConnectionRef: &harborv1alpha1.HarborConnectionReference{Name: connName}},
+					GroupName:      harborGroupName,
 					GroupType:      2,
 				},
 			}

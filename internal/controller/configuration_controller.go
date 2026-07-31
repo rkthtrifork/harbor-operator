@@ -99,31 +99,45 @@ func (r *ConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *ConfigurationReconciler) buildDesiredSettings(ctx context.Context, cr *harborv1alpha1.Configuration) (map[string]any, error) {
 	desired := map[string]any{}
 
-	for key, raw := range cr.Spec.Settings {
-		if len(raw.Raw) == 0 {
-			continue
-		}
-		var val any
-		if err := json.Unmarshal(raw.Raw, &val); err != nil {
-			return nil, fmt.Errorf("invalid settings value for %q: %w", key, err)
-		}
-		desired[key] = val
-	}
-
-	for key, ref := range cr.Spec.SecretSettings {
-		secretValue, err := readSecretValue(ctx, r.Options, r.Client, ref, cr.Namespace, "value")
+	for key, setting := range cr.Spec.Settings {
+		value, err := r.resolveConfigurationValue(ctx, cr.Namespace, key, setting)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read secret for %q: %w", key, err)
+			return nil, err
 		}
-		var parsed any
-		if err := json.Unmarshal([]byte(secretValue), &parsed); err == nil {
-			desired[key] = parsed
-		} else {
-			desired[key] = secretValue
-		}
+		desired[key] = value
 	}
 
 	return desired, nil
+}
+
+func (r *ConfigurationReconciler) resolveConfigurationValue(
+	ctx context.Context,
+	namespace string,
+	key string,
+	setting harborv1alpha1.ConfigurationValue,
+) (any, error) {
+	if setting.Value != nil {
+		var value any
+		if err := json.Unmarshal(setting.Value.Raw, &value); err != nil {
+			return nil, fmt.Errorf("invalid settings value for %q: %w", key, err)
+		}
+		return value, nil
+	}
+
+	if setting.ValueFrom == nil {
+		return nil, fmt.Errorf("setting %q must define value or valueFrom", key)
+	}
+
+	secretValue, err := readSecretValue(ctx, r.Options, r.Client, setting.ValueFrom.SecretKeyRef, namespace, "value")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read secret for %q: %w", key, err)
+	}
+
+	var value any
+	if err := json.Unmarshal([]byte(secretValue), &value); err == nil {
+		return value, nil
+	}
+	return secretValue, nil
 }
 
 func ensureEditableSettings(desired map[string]any, current map[string]harborclient.ConfigurationItem) error {
