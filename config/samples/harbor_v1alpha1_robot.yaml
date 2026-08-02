@@ -9,7 +9,8 @@ spec:
   level: project
   permissions:
   - kind: project
-    namespace: "library"
+    projectRef:
+      name: project-sample
     access:
     - resource: repository
       action: pull

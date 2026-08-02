@@ -12,14 +12,15 @@ type MemberUser struct {
 
 // MemberGroup defines a group-based member.
 type MemberGroup struct {
-	// GroupRef references the UserGroup to grant membership to.
-	GroupRef UserGroupReference `json:"groupRef"`
+	// GroupClaimRef references the external group claim to grant membership to.
+	GroupClaimRef UserGroupClaimReference `json:"groupClaimRef"`
 }
 
 // MemberSpec defines the desired state of Member.
 // +kubebuilder:validation:XValidation:rule="has(self.memberUser) != has(self.memberGroup)",message="exactly one of memberUser or memberGroup must be set"
 // +kubebuilder:validation:XValidation:rule="!has(self.memberUser) || size(self.memberUser.userRef.name) > 0",message="memberUser.userRef.name must be set when memberUser is provided"
-// +kubebuilder:validation:XValidation:rule="!has(self.memberGroup) || size(self.memberGroup.groupRef.name) > 0",message="memberGroup.groupRef.name must be set when memberGroup is provided"
+// +kubebuilder:validation:XValidation:rule="!has(self.memberGroup) || size(self.memberGroup.groupClaimRef.name) > 0",message="memberGroup.groupClaimRef.name must be set when memberGroup is provided"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.projectRef) || (self.projectRef == oldSelf.projectRef && has(self.memberUser) == has(oldSelf.memberUser) && (!has(self.memberUser) || self.memberUser == oldSelf.memberUser) && has(self.memberGroup) == has(oldSelf.memberGroup) && (!has(self.memberGroup) || self.memberGroup == oldSelf.memberGroup))",message="project and member identity references are immutable; delete and recreate the Member"
 type MemberSpec struct {
 	HarborSpecBase `json:",inline"`
 
@@ -63,7 +64,7 @@ type MemberStatus struct {
 // +kubebuilder:resource:categories=harbor
 // +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectRef.name`
 // +kubebuilder:printcolumn:name="User",type=string,JSONPath=`.spec.memberUser.userRef.name`
-// +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.memberGroup.groupRef.name`
+// +kubebuilder:printcolumn:name="Group",type=string,JSONPath=`.spec.memberGroup.groupClaimRef.name`
 // +kubebuilder:printcolumn:name="Role",type=string,JSONPath=`.spec.role`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`

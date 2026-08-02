@@ -9,6 +9,20 @@ const (
 	HarborConnectionReferenceKindCluster    HarborConnectionReferenceKind = "ClusterHarborConnection"
 )
 
+// HarborConnectionBinding records the exact Kubernetes connection object used
+// for a Harbor-backed resource.
+type HarborConnectionBinding struct {
+	// Kind is either HarborConnection or ClusterHarborConnection.
+	Kind HarborConnectionReferenceKind `json:"kind"`
+	// Name is the name of the connection object.
+	Name string `json:"name"`
+	// Namespace is set for a namespaced HarborConnection.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+	// UID is the Kubernetes UID of the connection object.
+	UID string `json:"uid"`
+}
+
 type DeletionPolicy string
 
 const (
@@ -90,6 +104,24 @@ type HarborSpecBase struct {
 	ReconcileNonce string `json:"reconcileNonce,omitempty"`
 }
 
+// HarborClaimSpecBase is the common spec for non-owning claims of Harbor
+// global identities. Claims select a connection and drift interval, but never
+// delete the global Harbor object when the claim is deleted.
+type HarborClaimSpecBase struct {
+	// HarborConnectionRef references the Harbor connection object to use.
+	// When the operator is started with --harbor-connection, this field may be omitted.
+	// +optional
+	HarborConnectionRef *HarborConnectionReference `json:"harborConnectionRef,omitempty"`
+
+	// DriftDetectionInterval is the interval at which the operator checks for drift.
+	// +optional
+	DriftDetectionInterval *metav1.Duration `json:"driftDetectionInterval,omitempty"`
+
+	// ReconcileNonce forces an immediate reconcile when updated.
+	// +optional
+	ReconcileNonce string `json:"reconcileNonce,omitempty"`
+}
+
 // SecretReference is similar to a corev1.SecretKeySelector but allows
 // cross-namespace references when enabled in the operator RBAC.
 type SecretReference struct {
@@ -137,12 +169,12 @@ type UserReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
-// UserGroupReference identifies a UserGroup custom resource.
-type UserGroupReference struct {
-	// Name of the UserGroup resource.
+// UserGroupClaimReference identifies a UserGroupClaim custom resource.
+type UserGroupClaimReference struct {
+	// Name of the UserGroupClaim resource.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// Namespace of the UserGroup resource. Defaults to the referencing resource namespace.
+	// Namespace of the UserGroupClaim resource. Defaults to the referencing resource namespace.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }
@@ -156,10 +188,20 @@ type HarborStatusBase struct {
 	// Conditions represent the latest available observations of the resource's state.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// ResolvedHarborConnection is the exact connection identity used for Harbor
+	// operations. Once set, changing the effective connection is refused.
+	// +optional
+	ResolvedHarborConnection *HarborConnectionBinding `json:"resolvedHarborConnection,omitempty"`
 }
 
 // GetDriftDetectionInterval returns the drift detection interval.
 func (base *HarborSpecBase) GetDriftDetectionInterval() *metav1.Duration {
+	return base.DriftDetectionInterval
+}
+
+// GetDriftDetectionInterval returns the claim drift detection interval.
+func (base *HarborClaimSpecBase) GetDriftDetectionInterval() *metav1.Duration {
 	return base.DriftDetectionInterval
 }
 

@@ -38,6 +38,13 @@ helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-o
 
 When `metrics.enabled=true` and `metrics.secure=true`, the endpoint uses HTTPS and Kubernetes token authentication and authorization. The chart binds the operator to the narrowly scoped token and subject-access review permissions it needs. It also creates a `*-metrics-reader` ClusterRole for `GET /metrics`, but does not bind that role because the chart cannot safely infer the Prometheus service account.
 
+### Namespace reference boundaries
+
+The chart defaults `allowCrossNamespaceReferences` to `true`, so namespaced Harbor
+resources can reference Projects, Registries, Users, UserGroupClaims, and Secrets
+in another namespace. Set it to `false` for a tenant-scoped operator deployment;
+references then resolve only within the resource's namespace.
+
 Note: set only one of `pdb.minAvailable` or `pdb.maxUnavailable`. If both are set, the chart will prefer `maxUnavailable`.
 
 ### Prometheus ServiceMonitor

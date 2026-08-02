@@ -82,6 +82,9 @@ harborConnection: ""
 # Used when a Harbor resource omits spec.creationPolicy.
 defaultCreationPolicy: Create
 
+# Allow namespaced Harbor resources to reference objects in other namespaces.
+allowCrossNamespaceReferences: true
+
 # Used when a Harbor resource omits spec.driftDetectionInterval. Set to 0s to disable periodic drift detection by default.
 defaultDriftDetectionInterval: 0s
 

@@ -42,7 +42,7 @@ func (r *ScanAllScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), false, err); done {
 			return ctrl.Result{}, finalErr

@@ -37,6 +37,7 @@ Useful overrides include:
 - `watchNamespaces` to scope the operator to specific namespaces
 - `harborConnection` to force a single `ClusterHarborConnection` for all Harbor-backed resources
 - `defaultCreationPolicy` to select the creation behavior of resources that omit `spec.creationPolicy` (defaults to `Create`)
+- `allowCrossNamespaceReferences` to control whether namespaced resources may reference Projects, Registries, Users, UserGroupClaims, or Secrets in another namespace (defaults to `true`)
 - `defaultDriftDetectionInterval` to configure periodic reconciliation for resources that omit `spec.driftDetectionInterval` (defaults to `0s`, disabled)
 - `harborRequestTimeout` to bound individual Harbor API requests (defaults to `30s`)
 

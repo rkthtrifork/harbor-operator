@@ -58,6 +58,93 @@ The custom resource spec is desired state. Status records observations needed to
 
 Finalizers keep a custom resource present while Harbor-side deletion is required. `deletionPolicy: Orphan` removes that obligation. Singleton Harbor APIs have explicit ownership arbitration because several Kubernetes objects must not overwrite the same Harbor configuration silently.
 
+## Custom resource relationships
+
+Every Harbor-managed resource uses either a namespaced `HarborConnection` or a
+cluster-scoped `ClusterHarborConnection`. The diagram omits those repeated
+connection edges from each individual resource so the domain relationships stay
+readable.
+
+Solid arrows are custom-resource references. Dashed arrows show Secret inputs or
+operator-managed Secret outputs rather than references to another Harbor CR.
+
+```mermaid
+flowchart LR
+  subgraph connections[Connection selection]
+    HC[HarborConnection<br/>namespaced]
+    CHC[ClusterHarborConnection<br/>cluster-scoped]
+    SESSION[Harbor API session]
+    HC --> SESSION
+    CHC --> SESSION
+  end
+
+  subgraph resources[Namespaced Harbor resources]
+    Registry[Registry]
+    Project[Project]
+    User[User]
+    UserGroupClaim[UserGroupClaim]
+    Member[Member]
+    Robot[Robot]
+    Label[Label]
+    Quota[Quota]
+    Immutable[ImmutableTagRule]
+    Webhook[WebhookPolicy]
+    Retention[RetentionPolicy]
+    Replication[ReplicationPolicy]
+    Scanner[ScannerRegistration]
+
+    Project -->|registryRef| Registry
+    Member -->|projectRef| Project
+    Member -->|userRef| User
+    Member -->|groupClaimRef| UserGroupClaim
+    Robot -->|projectRef when set| Project
+    Label -->|projectRef when scope is p| Project
+    Quota -->|projectRef| Project
+    Immutable -->|projectRef| Project
+    Webhook -->|projectRef| Project
+    Retention -->|projectRef when set| Project
+    Replication -->|sourceRegistryRef| Registry
+    Replication -->|destinationRegistryRef| Registry
+  end
+
+  subgraph singletons[Harbor-instance singleton APIs]
+    Configuration[Configuration]
+    GC[GCSchedule]
+    Purge[PurgeAuditSchedule]
+    ScanAll[ScanAllSchedule]
+  end
+
+  Secrets[(Kubernetes Secrets)]
+  HC -. credentials and CA .-> Secrets
+  CHC -. credentials and CA .-> Secrets
+  Registry -. credentials and CA .-> Secrets
+  User -. password .-> Secrets
+  Scanner -. access credential .-> Secrets
+  Configuration -. selected values .-> Secrets
+  Webhook -. auth header .-> Secrets
+  Robot -. writes credential .-> Secrets
+
+  SESSION -->|used by every resource reconciler| resources
+  SESSION -->|used by singleton reconcilers| singletons
+```
+
+The graph reflects Harbor's own scopes:
+
+- `Project` contains project-bound relationships and policy objects.
+- `Member` is the binding between a project and a Harbor user or user group.
+- `Robot` uses Harbor's robot endpoint for both project robots (with
+  `projectRef`) and system robots.
+- `Registry` is a Harbor-global endpoint reused by proxy-cache projects and
+  replication policies.
+- `User`, `UserGroupClaim` (claiming a global Harbor UserGroup), system robots, global labels, scanner registrations, and
+  replication policies are Harbor-global even though their CRs are namespaced.
+- configuration and the three schedules map to one API per Harbor instance and
+  therefore use explicit singleton ownership arbitration.
+
+Kubernetes namespace scope does not by itself make the corresponding Harbor
+object tenant-local. See [Multi-Tenancy](reference/multi-tenancy.md) for the
+trust-boundary implications.
+
 ## Source and generated boundaries
 
 ```text

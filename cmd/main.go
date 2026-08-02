@@ -69,6 +69,7 @@ func main() {
 	var watchNamespaces string
 	var harborConnection string
 	var defaultCreationPolicy string
+	var allowCrossNamespaceReferences bool
 	var defaultDriftDetectionInterval time.Duration
 	var harborRequestTimeout time.Duration
 	var tlsOpts []func(*tls.Config)
@@ -96,6 +97,9 @@ func main() {
 			"Leave empty to use each resource's spec.harborConnectionRef.")
 	flag.StringVar(&defaultCreationPolicy, "default-creation-policy", string(harborv1alpha1.CreationPolicyCreate),
 		"Creation policy to use when a resource omits spec.creationPolicy. One of Create, Adopt, or CreateOrAdopt.")
+	flag.BoolVar(&allowCrossNamespaceReferences, "allow-cross-namespace-references", true,
+		"Allow namespaced Harbor resources to reference Projects, Registries, Users, UserGroupClaims, and "+
+			"Secrets in other namespaces.")
 	flag.DurationVar(&defaultDriftDetectionInterval, "default-drift-detection-interval", 0,
 		"Drift detection interval to use when a resource omits spec.driftDetectionInterval. "+
 			"Leave at 0 to disable it by default.")
@@ -111,6 +115,7 @@ func main() {
 	operatorOptions, err := controller.NewOperatorOptions(controller.OperatorConfig{
 		ForcedHarborConnection:        harborConnection,
 		DefaultCreationPolicy:         harborv1alpha1.CreationPolicy(defaultCreationPolicy),
+		AllowCrossNamespaceReferences: &allowCrossNamespaceReferences,
 		DefaultDriftDetectionInterval: defaultDriftDetectionInterval,
 		HarborRequestTimeout:          harborRequestTimeout,
 	})
@@ -341,12 +346,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Label")
 		os.Exit(1)
 	}
-	if err = (&controller.UserGroupReconciler{
+	if err = (&controller.UserGroupClaimReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Options: operatorOptions,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "UserGroup")
+		setupLog.Error(err, "unable to create controller", "controller", "UserGroupClaim")
 		os.Exit(1)
 	}
 	if err = (&controller.ScannerRegistrationReconciler{

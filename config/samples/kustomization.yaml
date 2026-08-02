@@ -13,7 +13,7 @@ resources:
   - harbor_v1alpha1_webhookpolicy.yaml
   - harbor_v1alpha1_immutabletagrule.yaml
   - harbor_v1alpha1_label.yaml
-  - harbor_v1alpha1_usergroup.yaml
+  - harbor_v1alpha1_usergroupclaim.yaml
   - harbor_v1alpha1_scannerregistration.yaml
   - harbor_v1alpha1_scanallschedule.yaml
   - harbor_v1alpha1_quota.yaml

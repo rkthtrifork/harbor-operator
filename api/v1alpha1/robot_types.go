@@ -87,9 +87,10 @@ type RobotPermission struct {
 	// +kubebuilder:validation:MinLength=1
 	Kind string `json:"kind"`
 
-	// Namespace is the Harbor project name for project-scoped permissions.
+	// ProjectRef references the Project CR for project-scoped permissions.
+	// When omitted for kind=project, Harbor's native all-projects scope is used.
 	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	ProjectRef *ProjectReference `json:"projectRef,omitempty"`
 
 	// Access lists the access rules for this permission.
 	// +kubebuilder:validation:MinItems=1

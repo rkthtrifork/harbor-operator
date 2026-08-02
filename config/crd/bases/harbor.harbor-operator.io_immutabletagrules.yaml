@@ -189,6 +189,9 @@ spec:
             x-kubernetes-validations:
             - message: projectRef is required
               rule: has(self.projectRef)
+            - message: projectRef is immutable; delete and recreate the ImmutableTagRule
+              rule: '!has(oldSelf.projectRef) || (has(self.projectRef) && self.projectRef
+                == oldSelf.projectRef)'
           status:
             description: ImmutableTagRuleStatus defines the observed state of ImmutableTagRule.
             properties:
@@ -258,6 +261,28 @@ spec:
                   by the controller.
                 format: int64
                 type: integer
+              resolvedHarborConnection:
+                description: |-
+                  ResolvedHarborConnection is the exact connection identity used for Harbor
+                  operations. Once set, changing the effective connection is refused.
+                properties:
+                  kind:
+                    description: Kind is either HarborConnection or ClusterHarborConnection.
+                    type: string
+                  name:
+                    description: Name is the name of the connection object.
+                    type: string
+                  namespace:
+                    description: Namespace is set for a namespaced HarborConnection.
+                    type: string
+                  uid:
+                    description: UID is the Kubernetes UID of the connection object.
+                    type: string
+                required:
+                - kind
+                - name
+                - uid
+                type: object
             type: object
         type: object
     served: true

@@ -47,7 +47,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -80,7 +80,7 @@ func (r *RetentionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	scope, err := resolveRetentionScope(ctx, r.Client, &cr)
+	scope, err := resolveRetentionScope(ctx, r.Options, r.Client, &cr)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
@@ -335,7 +335,7 @@ func (r *RetentionPolicyReconciler) findExistingRetentionID(ctx context.Context,
 	return id, nil
 }
 
-func resolveRetentionScope(ctx context.Context, c client.Client, cr *harborv1alpha1.RetentionPolicy) (*harborv1alpha1.RetentionScope, error) {
+func resolveRetentionScope(ctx context.Context, options OperatorOptions, c client.Client, cr *harborv1alpha1.RetentionPolicy) (*harborv1alpha1.RetentionScope, error) {
 	if cr.Spec.ProjectRef == nil {
 		return cr.Spec.Scope, nil
 	}
@@ -354,6 +354,9 @@ func resolveRetentionScope(ctx context.Context, c client.Client, cr *harborv1alp
 	namespace := cr.Spec.ProjectRef.Namespace
 	if namespace == "" {
 		namespace = cr.Namespace
+	}
+	if err := validateReferenceNamespace(options, cr.Namespace, namespace, "Project"); err != nil {
+		return nil, err
 	}
 	var project harborv1alpha1.Project
 	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cr.Spec.ProjectRef.Name}, &project); err != nil {

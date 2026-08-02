@@ -71,6 +71,10 @@ var _ = Describe("Robot Controller", func() {
 
 			Expect(createPasswordSecret(ctx, k8sClient, "harbor-admin", testPassword)).To(Succeed())
 			Expect(createHarborConnection(ctx, k8sClient, "harbor-conn", server.URL, "harbor-admin")).To(Succeed())
+			project := &harborv1alpha1.Project{ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"}}
+			Expect(k8sClient.Create(ctx, project)).To(Succeed())
+			project.Status.HarborProjectID = 7
+			Expect(k8sClient.Status().Update(ctx, project)).To(Succeed())
 
 			By("creating the custom resource for the Kind Robot")
 			resource := &harborv1alpha1.Robot{
@@ -86,8 +90,8 @@ var _ = Describe("Robot Controller", func() {
 					Duration: -1,
 					Permissions: []harborv1alpha1.RobotPermission{
 						{
-							Kind:      "project",
-							Namespace: "demo",
+							Kind:       "project",
+							ProjectRef: &harborv1alpha1.ProjectReference{Name: "demo"},
 							Access: []harborv1alpha1.RobotAccess{
 								{Resource: "repository", Action: "pull", Effect: "allow"},
 							},
@@ -120,6 +124,9 @@ var _ = Describe("Robot Controller", func() {
 			secret = &corev1.Secret{}
 			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "existing-secret", Namespace: "default"}, secret)
 			_ = k8sClient.Delete(ctx, secret)
+			project := &harborv1alpha1.Project{}
+			_ = k8sClient.Get(ctx, types.NamespacedName{Name: "demo", Namespace: "default"}, project)
+			_ = k8sClient.Delete(ctx, project)
 		})
 
 		It("should successfully reconcile the resource", func() {

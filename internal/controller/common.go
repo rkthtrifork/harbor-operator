@@ -40,11 +40,23 @@ const (
 
 type connectionConfig struct {
 	baseURL           string
+	kind              harborv1alpha1.HarborConnectionReferenceKind
+	name              string
 	namespace         string
+	uid               string
 	credentials       *harborv1alpha1.Credentials
 	caBundle          string
 	caBundleSecretRef *harborv1alpha1.SecretReference
 	displayName       string
+}
+
+type harborConnectionChangedError struct {
+	previous harborv1alpha1.HarborConnectionBinding
+	current  harborv1alpha1.HarborConnectionBinding
+}
+
+func (e *harborConnectionChangedError) Error() string {
+	return fmt.Sprintf("resolved Harbor connection changed from %s %s/%s (uid %s) to %s %s/%s (uid %s); refusing to modify Harbor", e.previous.Kind, e.previous.Namespace, e.previous.Name, e.previous.UID, e.current.Kind, e.current.Namespace, e.current.Name, e.current.UID)
 }
 
 func requireCreationAllowed(options OperatorOptions, policy harborv1alpha1.CreationPolicy) error {
@@ -221,7 +233,10 @@ func resolveHarborConnection(ctx context.Context, options OperatorOptions, c cli
 		}
 		return &connectionConfig{
 			baseURL:           harborConn.Spec.BaseURL,
+			kind:              harborv1alpha1.HarborConnectionReferenceKindNamespaced,
+			name:              harborConn.Name,
 			namespace:         harborConn.Namespace,
+			uid:               string(harborConn.UID),
 			credentials:       harborConn.Spec.Credentials,
 			caBundle:          harborConn.Spec.CABundle,
 			caBundleSecretRef: harborConn.Spec.CABundleSecretRef,
@@ -235,7 +250,10 @@ func resolveHarborConnection(ctx context.Context, options OperatorOptions, c cli
 		}
 		return &connectionConfig{
 			baseURL:           harborConn.Spec.BaseURL,
+			kind:              harborv1alpha1.HarborConnectionReferenceKindCluster,
+			name:              harborConn.Name,
 			namespace:         "",
+			uid:               string(harborConn.UID),
 			credentials:       harborConn.Spec.Credentials,
 			caBundle:          harborConn.Spec.CABundle,
 			caBundleSecretRef: harborConn.Spec.CABundleSecretRef,
@@ -269,12 +287,44 @@ func getHarborAuth(ctx context.Context, options OperatorOptions, c client.Client
 	return username, pass, nil
 }
 
-func getHarborClient(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.HarborConnectionReference) (*harborclient.Client, error) {
+// getHarborClientForObject resolves and binds the connection before building a
+// client. The binding is persisted before the client is returned, so a Harbor
+// API mutation can never happen before the object has recorded its identity.
+func getHarborClientForObject(
+	ctx context.Context,
+	options OperatorOptions,
+	c client.Client,
+	obj client.Object,
+	base *harborv1alpha1.HarborStatusBase,
+	namespace string,
+	ref *harborv1alpha1.HarborConnectionReference,
+) (*harborclient.Client, error) {
 	conn, err := resolveHarborConnection(ctx, options, c, namespace, ref)
 	if err != nil {
 		return nil, err
 	}
-	return buildHarborClient(ctx, options, c, conn, true)
+	current := harborv1alpha1.HarborConnectionBinding{
+		Kind:      conn.kind,
+		Name:      conn.name,
+		Namespace: conn.namespace,
+		UID:       conn.uid,
+	}
+	if previous := base.ResolvedHarborConnection; previous != nil {
+		if *previous != current {
+			return nil, &harborConnectionChangedError{previous: *previous, current: current}
+		}
+	} else {
+		base.ResolvedHarborConnection = &current
+		if err := c.Status().Update(ctx, obj); err != nil {
+			return nil, err
+		}
+	}
+
+	hc, err := buildHarborClient(ctx, options, c, conn, true)
+	if err != nil {
+		return nil, err
+	}
+	return hc, nil
 }
 
 func buildHarborClient(ctx context.Context, options OperatorOptions, c client.Client, conn *connectionConfig, requireCredentials bool) (*harborclient.Client, error) {
@@ -483,7 +533,7 @@ func finalizeWithoutHarborConnection(ctx context.Context, c client.Client, obj c
 	return false, nil
 }
 
-func resolveRegistryID(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference) (int, error) {
+func resolveRegistryID(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.RegistryReference) (int, error) {
 	if ref == nil {
 		return 0, fmt.Errorf("registryRef is required")
 	}
@@ -493,6 +543,9 @@ func resolveRegistryID(ctx context.Context, c client.Client, namespace string, r
 	ns := ref.Namespace
 	if ns == "" {
 		ns = namespace
+	}
+	if err := validateReferenceNamespace(options, namespace, ns, "Registry"); err != nil {
+		return 0, err
 	}
 	var registry harborv1alpha1.Registry
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &registry); err != nil {
@@ -504,7 +557,7 @@ func resolveRegistryID(ctx context.Context, c client.Client, namespace string, r
 	return registry.Status.HarborRegistryID, nil
 }
 
-func resolveProject(ctx context.Context, c client.Client, namespace string, ref *harborv1alpha1.ProjectReference) (string, int, error) {
+func resolveProject(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.ProjectReference) (string, int, error) {
 	if ref == nil {
 		return "", 0, fmt.Errorf("projectRef is required")
 	}
@@ -514,6 +567,9 @@ func resolveProject(ctx context.Context, c client.Client, namespace string, ref 
 	ns := ref.Namespace
 	if ns == "" {
 		ns = namespace
+	}
+	if err := validateReferenceNamespace(options, namespace, ns, "Project"); err != nil {
+		return "", 0, err
 	}
 	var project harborv1alpha1.Project
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &project); err != nil {
@@ -525,10 +581,34 @@ func resolveProject(ctx context.Context, c client.Client, namespace string, ref 
 	return strconv.Itoa(project.Status.HarborProjectID), project.Status.HarborProjectID, nil
 }
 
-func resolveUserName(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.UserReference) (string, error) {
+func resolveProjectName(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref *harborv1alpha1.ProjectReference) (string, error) {
+	if ref == nil || ref.Name == "" {
+		return "", fmt.Errorf("projectRef.name must not be empty")
+	}
 	ns := ref.Namespace
 	if ns == "" {
 		ns = namespace
+	}
+	if err := validateReferenceNamespace(options, namespace, ns, "Project"); err != nil {
+		return "", err
+	}
+	var project harborv1alpha1.Project
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &project); err != nil {
+		return "", err
+	}
+	if project.Status.HarborProjectID == 0 {
+		return "", fmt.Errorf("referenced Project %s/%s does not have harborProjectID yet", ns, ref.Name)
+	}
+	return project.Name, nil
+}
+
+func resolveUserName(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref harborv1alpha1.UserReference) (string, error) {
+	ns := ref.Namespace
+	if ns == "" {
+		ns = namespace
+	}
+	if err := validateReferenceNamespace(options, namespace, ns, "User"); err != nil {
+		return "", err
 	}
 	var user harborv1alpha1.User
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &user); err != nil {
@@ -537,18 +617,37 @@ func resolveUserName(ctx context.Context, c client.Client, namespace string, ref
 	return user.Name, nil
 }
 
-func resolveUserGroup(ctx context.Context, c client.Client, namespace string, ref harborv1alpha1.UserGroupReference) (*harborclient.MemberGroup, error) {
+func resolveUserGroup(ctx context.Context, options OperatorOptions, c client.Client, namespace string, ref harborv1alpha1.UserGroupClaimReference, expectedConnection *harborv1alpha1.HarborConnectionBinding) (*harborclient.MemberGroup, error) {
 	ns := ref.Namespace
 	if ns == "" {
 		ns = namespace
 	}
-	var group harborv1alpha1.UserGroup
+	if err := validateReferenceNamespace(options, namespace, ns, "UserGroupClaim"); err != nil {
+		return nil, err
+	}
+	var group harborv1alpha1.UserGroupClaim
 	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &group); err != nil {
 		return nil, err
+	}
+	if group.Status.HarborGroupID == 0 || !apimeta.IsStatusConditionTrue(group.Status.Conditions, ConditionReady) {
+		return nil, fmt.Errorf("referenced UserGroupClaim %s/%s is not ready", ns, ref.Name)
+	}
+	if expectedConnection != nil {
+		actual := group.Status.ResolvedHarborConnection
+		if actual == nil || *actual != *expectedConnection {
+			return nil, fmt.Errorf("referenced UserGroupClaim %s/%s resolves a different Harbor connection", ns, ref.Name)
+		}
 	}
 	return &harborclient.MemberGroup{
 		GroupName:   group.Spec.GroupName,
 		GroupType:   group.Spec.GroupType,
 		LDAPGroupDN: group.Spec.LDAPGroupDN,
 	}, nil
+}
+
+func validateReferenceNamespace(options OperatorOptions, sourceNamespace, targetNamespace, kind string) error {
+	if options.allowsCrossNamespaceReferences() || sourceNamespace == "" || sourceNamespace == targetNamespace {
+		return nil
+	}
+	return fmt.Errorf("cross-namespace %s reference from namespace %q to namespace %q is disabled by --allow-cross-namespace-references=false", kind, sourceNamespace, targetNamespace)
 }

@@ -16,7 +16,8 @@ spec:
   level: project
   permissions:
     - kind: project
-      namespace: library
+      projectRef:
+        name: library
       access:
         - resource: repository
           action: pull

@@ -48,9 +48,13 @@ var _ = Describe("Member Controller", func() {
 		}
 		var server *httptest.Server
 		var memberDeleted bool
+		var memberExists bool
+		var memberProjectGone bool
 
 		BeforeEach(func() {
 			memberDeleted = false
+			memberExists = false
+			memberProjectGone = false
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				user, pass, ok := r.BasicAuth()
 				if !ok || user != testAdminUser || pass != testPassword {
@@ -59,7 +63,11 @@ var _ = Describe("Member Controller", func() {
 				}
 				if r.Method == http.MethodGet && r.URL.Path == projectMembersPath {
 					w.Header().Set("Content-Type", "application/json")
-					_, _ = w.Write([]byte("[]"))
+					if memberExists {
+						_, _ = w.Write([]byte(`[{"id":11,"entity_name":"alice","entity_type":"u","role_id":2}]`))
+					} else {
+						_, _ = w.Write([]byte("[]"))
+					}
 					return
 				}
 				if r.Method == http.MethodPost && r.URL.Path == projectMembersPath {
@@ -68,6 +76,10 @@ var _ = Describe("Member Controller", func() {
 					return
 				}
 				if r.Method == http.MethodDelete && r.URL.Path == projectMembersPath+"/11" {
+					if memberProjectGone {
+						w.WriteHeader(http.StatusNotFound)
+						return
+					}
 					memberDeleted = true
 					w.WriteHeader(http.StatusOK)
 					return
@@ -163,6 +175,36 @@ var _ = Describe("Member Controller", func() {
 			Expect(out.Status.HarborMemberID).To(Equal(11))
 		})
 
+		It("recovers an owned member after a transient failure with Create policy", func() {
+			controllerReconciler := &MemberReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+			memberExists = true
+
+			out := &harborv1alpha1.Member{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
+			meta.SetStatusCondition(&out.Status.Conditions, metav1.Condition{
+				Type:               ConditionReady,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: out.Generation,
+				Reason:             "TransientFailure",
+				Message:            "Harbor was temporarily unavailable",
+			})
+			Expect(k8sClient.Status().Update(ctx, out)).To(Succeed())
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Get(ctx, typeNamespacedName, out)).To(Succeed())
+			cond := meta.FindStatusCondition(out.Status.Conditions, ConditionReady)
+			Expect(cond).NotTo(BeNil())
+			Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+			Expect(out.Status.HarborMemberID).To(Equal(11))
+		})
+
 		It("finalizes after its referenced objects are deleted", func() {
 			controllerReconciler := &MemberReconciler{
 				Client: k8sClient,
@@ -185,6 +227,24 @@ var _ = Describe("Member Controller", func() {
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(memberDeleted).To(BeTrue())
+			Expect(k8sClient.Get(ctx, typeNamespacedName, &harborv1alpha1.Member{})).ToNot(Succeed())
+		})
+
+		It("finalizes when Harbor already deleted the project", func() {
+			controllerReconciler := &MemberReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+			memberProjectGone = true
+
+			member := &harborv1alpha1.Member{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, member)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, member)).To(Succeed())
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sClient.Get(ctx, typeNamespacedName, &harborv1alpha1.Member{})).ToNot(Succeed())
 		})
 	})

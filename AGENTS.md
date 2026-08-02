@@ -17,6 +17,8 @@ Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/b
 
 ### Direction
 
+- Start with Harbor's native resource model, scopes, identities, relationships, and API behavior. Add operator-specific abstractions only when they solve a concrete Kubernetes reconciliation or safety problem.
+- Treat multi-tenancy as a first-class design concern. For every resource change, consider Harbor-global identity and lifecycle, namespace and Secret boundaries, cross-namespace references, deletion blast radius, and the operator's privileged access to Harbor.
 - When changing public contracts or persisted Kubernetes resource shape, flag backwards-compatibility implications before implementing so they can be weighed.
 - When a task outgrows a simple existing design, a refactor is welcome: do it if it is clearly right and in the just-do-it category; propose it otherwise.
 
@@ -32,7 +34,7 @@ Generated outputs include `api/v1alpha1/zz_generated.deepcopy.go`, `config/crd/b
 
 ## Operator contracts
 
-- Specs and statuses embed `HarborSpecBase` and `HarborStatusBase`. Named Harbor identities use `metadata.name`; do not duplicate the identity in `spec`.
+- Specs and statuses embed `HarborSpecBase` and `HarborStatusBase`. Named Harbor identities normally use `metadata.name`; use a spec field only when Harbor's identity cannot safely or clearly be the Kubernetes object name, as with `UserGroupClaim.spec.groupName`.
 - Resources that can uniquely discover an existing Harbor identity expose `CreationPolicy`. Prefer Kubernetes references and referenced status over raw Harbor IDs or `nameOrID` unions.
 - Root CRDs include the root and status-subresource markers plus `Ready`, `Reason`, `Message`, and `Age` print columns.
 - Reconciliation handles generation changes, client construction, deletion and finalization, adoption/defaulting, create/update, status, and drift detection in a legible order. Surface operational failures through `setErrorStatus`.

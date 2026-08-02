@@ -19,10 +19,16 @@ That means:
 - Harbor-side drift is corrected on reconcile
 - connection changes also trigger reconcile of dependent resources
 - `metadata.name` is the Harbor identity for named resources such as `Project`,
-  `Registry`, `User`, `UserGroup`, `Label`, `Robot`, `ReplicationPolicy`, and
+  `Registry`, `User`, `Label`, `Robot`, `ReplicationPolicy`, and
   `ScannerRegistration`
+- `UserGroupClaim` uses `metadata.name` as its Kubernetes reference identity and
+  `spec.groupName` as the exact group identity stored in Harbor. Claims are
+  non-owning and reusable across namespaces.
 - inter-resource relationships should use Kubernetes object references and the
   referenced object status rather than free-form Harbor identifiers
+
+See [Technical Architecture](../technical-architecture.md#custom-resource-relationships)
+for a diagram of the complete custom-resource graph.
 
 ## Resource Ownership
 

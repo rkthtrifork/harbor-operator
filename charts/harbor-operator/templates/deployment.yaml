@@ -55,6 +55,7 @@ spec:
             - --harbor-connection={{ .Values.harborConnection }}
             {{- end }}
             - --default-creation-policy={{ .Values.defaultCreationPolicy }}
+            - --allow-cross-namespace-references={{ .Values.allowCrossNamespaceReferences }}
             - --default-drift-detection-interval={{ .Values.defaultDriftDetectionInterval }}
             - --harbor-request-timeout={{ .Values.harborRequestTimeout }}
             {{- if .Values.metrics.enabled }}

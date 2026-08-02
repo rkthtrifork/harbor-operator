@@ -46,7 +46,7 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -67,11 +67,11 @@ func (r *ReplicationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	srcID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.SourceRegistryRef)
+	srcID, err := resolveRegistryID(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.SourceRegistryRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
-	destID, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.DestinationRegistryRef)
+	destID, err := resolveRegistryID(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.DestinationRegistryRef)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}

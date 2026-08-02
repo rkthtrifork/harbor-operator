@@ -8,6 +8,8 @@ Changes should preserve the operator's Kubernetes API, Harbor semantics, generat
 - Use `hack/harbor-openapi.yaml` as the checked-in reference for Harbor API semantics.
 - Refresh that reference with `make update-harbor-openapi` when a change depends on newer upstream Harbor API details.
 - Do not hand-edit generated DeepCopy code, CRDs, RBAC, chart copies of generated assets, or `docs/reference/api.md`.
+- Start with Harbor's native scopes, identities, relationships, and API behavior before adding an operator-specific abstraction.
+- Treat multi-tenancy as a first-class concern, including global Harbor lifecycle, namespace and Secret boundaries, cross-namespace references, and deletion blast radius.
 - Treat CRD schema, compatibility, ownership, deletion, architecture, and release behavior as wide-impact changes that require deliberate review.
 
 ## Harbor-backed resources
@@ -15,7 +17,9 @@ Changes should preserve the operator's Kubernetes API, Harbor semantics, generat
 Keep resource implementations consistent across their API type, Harbor client behavior, reconciliation, tests, documentation, samples, and generated outputs.
 
 - Embed `HarborSpecBase` and `HarborStatusBase` in specs and statuses.
-- Use `metadata.name` as the Harbor identity for named resources.
+- Normally use `metadata.name` as the Harbor identity for named resources. Use
+  an explicit spec identity only when Harbor's model requires it, as with
+  `UserGroupClaim.spec.groupName`.
 - Add `CreationPolicy` only when an existing Harbor resource can be discovered uniquely.
 - Prefer Kubernetes references and referenced status over raw Harbor IDs.
 - Include the status subresource and the standard `Ready`, `Reason`, `Message`, and `Age` print columns.

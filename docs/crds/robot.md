@@ -18,7 +18,8 @@ spec:
   level: project
   permissions:
   - kind: project
-    namespace: "library"
+    projectRef:
+      name: library
     access:
     - resource: repository
       action: pull
@@ -40,9 +41,12 @@ spec:
   Robot scope. Must be `system` or `project`.
 
 - **spec.permissions** (array, required)
-  Permissions granted to the robot. Each permission includes a `kind`, optional
-  `namespace`, and one or more access rules. The `namespace` is the Harbor
-  project name for `kind: project`. Each access rule's `effect` defaults to `allow`.
+  Permissions granted to the robot. Each permission includes a `kind`, an
+  optional `projectRef`, and one or more access rules. For `kind: project`, a
+  `projectRef` resolves the Harbor project name through the Project CR. If it is
+  omitted, the operator uses Harbor's native all-projects scope (`*`). For
+  `kind: system`, the operator uses Harbor's system scope (`/`). Each access
+  rule's `effect` defaults to `allow`.
 
 - **spec.disable** (bool, optional)
   Controls whether the robot is disabled. When omitted, the operator leaves the

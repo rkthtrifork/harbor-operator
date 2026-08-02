@@ -40,7 +40,7 @@ but not both.
 
 ## Update Behavior
 
-When a `HarborConnection` or `ClusterHarborConnection` changes, dependent Harbor-backed resources are reconciled again.
+When a `HarborConnection` or `ClusterHarborConnection` changes, dependent Harbor-backed resources are reconciled again. The connection `baseURL` is immutable; credential and CA material may change.
 
 That includes changes such as:
 
@@ -63,11 +63,12 @@ resource uses that `ClusterHarborConnection`. In that mode, per-resource
 
 ## Multi-Tenant Naming Policy
 
-If you need tenant-specific naming prefixes, enforce them at admission time with
-cluster policy such as Kyverno rather than encoding prefix logic into the
-operator. The operator treats `metadata.name` as the Harbor-side identity for
-named resources and Kubernetes object refs as the way Harbor resources relate
-to each other.
+If you need tenant-specific naming prefixes, reference boundaries, or Secret
+boundaries, enforce them at admission time with cluster policy such as Kyverno
+rather than encoding deployment-specific tenant policy into the operator. The
+operator normally treats `metadata.name` as the Harbor-side identity for named
+resources; `UserGroupClaim.spec.groupName` is the explicit exception. Kubernetes
+object refs are the way Harbor resources relate to each other.
 
 See [Multi-Tenancy](multi-tenancy.md) for a recommended deployment model and
 example Kyverno policies.

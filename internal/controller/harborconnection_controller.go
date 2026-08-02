@@ -54,7 +54,10 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if conn.Spec.Credentials == nil {
 		hc, err := buildHarborClient(ctx, r.Options, r.Client, &connectionConfig{
 			baseURL:           conn.Spec.BaseURL,
+			kind:              harborv1alpha1.HarborConnectionReferenceKindNamespaced,
+			name:              conn.Name,
 			namespace:         conn.Namespace,
+			uid:               string(conn.UID),
 			credentials:       conn.Spec.Credentials,
 			caBundle:          conn.Spec.CABundle,
 			caBundleSecretRef: conn.Spec.CABundleSecretRef,
@@ -77,7 +80,10 @@ func (r *HarborConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Otherwise, perform an authenticated check.
 	hc, err := buildHarborClient(ctx, r.Options, r.Client, &connectionConfig{
 		baseURL:           conn.Spec.BaseURL,
+		kind:              harborv1alpha1.HarborConnectionReferenceKindNamespaced,
+		name:              conn.Name,
 		namespace:         conn.Namespace,
+		uid:               string(conn.UID),
 		credentials:       conn.Spec.Credentials,
 		caBundle:          conn.Spec.CABundle,
 		caBundleSecretRef: conn.Spec.CABundleSecretRef,

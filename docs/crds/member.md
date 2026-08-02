@@ -47,7 +47,7 @@ spec:
   role: "maintainer"
 
   memberGroup:
-    groupRef:
+    groupClaimRef:
       name: dev-team
 ```
 
@@ -74,7 +74,7 @@ spec:
   References the `User` custom resource to grant membership to.
 
 - **spec.memberGroup** (object, optional)
-  References the `UserGroup` custom resource to grant membership to.
+  References the `UserGroupClaim` custom resource to grant membership to.
 
 Exactly one of `memberUser` or `memberGroup` should be set.
 
@@ -97,15 +97,17 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 - **Update**
 
-  - Changing `role` will update the member’s role in Harbor (if supported by your client).
-  - Changing member identity is typically treated as a delete+create scenario.
+  - Changing `role` updates the member's role in Harbor.
+  - Project and member identity references are immutable. To change either one,
+    delete the existing `Member` and create a new one.
 
 - **Delete**
 
   - The operator records the resolved Harbor project and membership IDs in status.
-  - On CR deletion, it uses those IDs to remove the corresponding member without depending on referenced `Project`, `User`, or `UserGroup` resources still existing.
+  - On CR deletion, it uses those IDs to remove the corresponding member without depending on referenced `Project`, `User`, or `UserGroupClaim` resources still existing.
 
 - **Error handling**
 
   - If Harbor returns an error (e.g. unknown user, unknown project), the operator
-    logs the details so you can diagnose configuration issues.
+    records the failure in status and logs the details so you can diagnose
+    configuration issues.
