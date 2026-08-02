@@ -3,163 +3,174 @@ package controller
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
 	"github.com/rkthtrifork/harbor-operator/internal/harborclient"
 )
 
-type UserGroupReconciler struct {
+// UserGroupClaimReconciler ensures that an external group is registered in
+// Harbor. Claims are non-owning and therefore never delete a Harbor group.
+type UserGroupClaimReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
 	Options OperatorOptions
 	logger  logr.Logger
 }
 
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroups,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroups/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroups/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroupclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroupclaims/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=usergroupclaims/finalizers,verbs=update
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members,verbs=get;list;watch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
-func (r *UserGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[UserGroup:%s]", req.NamespacedName))
+func (r *UserGroupClaimReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.logger = log.FromContext(ctx).WithName(fmt.Sprintf("[UserGroupClaim:%s]", req.NamespacedName))
 
-	var cr harborv1alpha1.UserGroup
-	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &cr, r.logger); err != nil {
+	var claim harborv1alpha1.UserGroupClaim
+	if found, err := loadResource(ctx, r.Client, req.NamespacedName, &claim, r.logger); err != nil {
 		return ctrl.Result{}, err
 	} else if !found {
 		return ctrl.Result{}, nil
 	}
 
-	if err := markReconcilingIfNeeded(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation); err != nil {
+	if err := markReconcilingIfNeeded(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	if !claim.DeletionTimestamp.IsZero() {
+		if referenced, err := r.hasActiveMembers(ctx, &claim); err != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, err)
+		} else if referenced {
+			err := fmt.Errorf("UserGroupClaim %s/%s is still referenced by an active Member", claim.Namespace, claim.Name)
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, err)
+		}
+		return ctrl.Result{}, removeFinalizer(ctx, r.Client, &claim)
+	}
+
+	if err := ensureFinalizer(ctx, r.Client, &claim); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Namespace, claim.Spec.HarborConnectionRef)
 	if err != nil {
-		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
-			return ctrl.Result{}, finalErr
-		}
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-	}
-
-	if done, err := finalizeIfDeleting(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), func() error {
-		if cr.Status.HarborGroupID == 0 {
-			return nil
-		}
-		return hc.DeleteUserGroup(ctx, cr.Status.HarborGroupID)
-	}); done {
-		return ctrl.Result{}, err
-	}
-
-	if err := ensureFinalizer(ctx, r.Client, &cr); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, err)
 	}
 
 	desired := harborclient.UserGroup{
-		GroupName:   cr.Spec.GroupName,
-		GroupType:   cr.Spec.GroupType,
-		LDAPGroupDN: cr.Spec.LDAPGroupDN,
+		GroupName:   claim.Spec.GroupName,
+		GroupType:   claim.Spec.GroupType,
+		LDAPGroupDN: claim.Spec.LDAPGroupDN,
 	}
-
-	if cr.Status.HarborGroupID == 0 && allowsAdoption(r.Options, cr.Spec.CreationPolicy) {
-		adopted, err := r.adoptExisting(ctx, hc, &cr)
-		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-		}
-		if adopted {
-			r.logger.Info("Adopted existing user group", "ID", cr.Status.HarborGroupID)
-			return ctrl.Result{Requeue: true}, nil
-		}
-	}
-
-	if cr.Status.HarborGroupID == 0 {
-		if err := requireCreationAllowed(r.Options, cr.Spec.CreationPolicy); err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-		}
-		id, err := hc.CreateUserGroup(ctx, desired)
-		if err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-		}
-		cr.Status.HarborGroupID = id
-		if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Created", "User group created"); err != nil {
-			return ctrl.Result{}, err
-		}
-		return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
-	}
-
-	current, err := hc.GetUserGroup(ctx, cr.Status.HarborGroupID)
+	current, found, err := findUserGroup(ctx, hc, desired)
 	if err != nil {
-		if harborclient.IsNotFound(err) {
-			return requeueOnRemoteNotFound(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, func() {
-				cr.Status.HarborGroupID = 0
-			}, "User group not found in Harbor")
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, err)
+	}
+	if !found {
+		id, createErr := hc.CreateUserGroup(ctx, desired)
+		if createErr != nil && harborclient.IsConflict(createErr) {
+			current, found, err = findUserGroup(ctx, hc, desired)
+			if err != nil {
+				return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, err)
+			}
+			if !found {
+				createErr = fmt.Errorf("harbor reported a conflicting UserGroup for %q, but no compatible group could be found", desired.GroupName)
+			} else {
+				createErr = nil
+			}
 		}
-		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+		if createErr != nil {
+			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, createErr)
+		}
+		if !found {
+			current = &harborclient.UserGroup{ID: id}
+		}
 	}
 
-	if userGroupNeedsUpdate(desired, current) {
-		if err := hc.UpdateUserGroup(ctx, cr.Status.HarborGroupID, desired); err != nil {
-			return ctrl.Result{}, setErrorStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, err)
-		}
-		r.logger.Info("Updated user group", "ID", cr.Status.HarborGroupID)
+	if current == nil || current.ID == 0 {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, fmt.Errorf("harbor returned no UserGroup ID for %q", desired.GroupName))
 	}
-
-	if err := setReadyStatus(ctx, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Generation, "Reconciled", "User group reconciled"); err != nil {
+	claim.Status.HarborGroupID = current.ID
+	if err := setReadyStatus(ctx, r.Client, &claim, &claim.Status.HarborStatusBase, claim.Generation, "Reconciled", "External group claim reconciled"); err != nil {
 		return ctrl.Result{}, err
 	}
-	return returnWithDriftDetection(r.Options, &cr.Spec.HarborSpecBase)
+	return returnWithDriftDetection(r.Options, &claim.Spec.HarborClaimSpecBase)
 }
 
-func (r *UserGroupReconciler) adoptExisting(ctx context.Context, hc *harborclient.Client, cr *harborv1alpha1.UserGroup) (bool, error) {
-	groups, err := hc.SearchUserGroups(ctx, cr.Spec.GroupName)
+func findUserGroup(ctx context.Context, hc *harborclient.Client, desired harborclient.UserGroup) (*harborclient.UserGroup, bool, error) {
+	groups, err := hc.ListUserGroups(ctx)
 	if err != nil {
+		return nil, false, err
+	}
+	for i := range groups {
+		group := &groups[i]
+		if !strings.EqualFold(group.GroupName, desired.GroupName) {
+			continue
+		}
+		if group.GroupType != desired.GroupType || !strings.EqualFold(group.LDAPGroupDN, desired.LDAPGroupDN) {
+			return nil, false, fmt.Errorf("harbor UserGroup %q exists with incompatible type or LDAP group DN", desired.GroupName)
+		}
+		return group, true, nil
+	}
+	return nil, false, nil
+}
+
+func (r *UserGroupClaimReconciler) hasActiveMembers(ctx context.Context, claim *harborv1alpha1.UserGroupClaim) (bool, error) {
+	var members harborv1alpha1.MemberList
+	if err := r.List(ctx, &members); err != nil {
 		return false, err
 	}
-	for _, g := range groups {
-		if strings.EqualFold(g.GroupName, cr.Spec.GroupName) {
-			cr.Status.HarborGroupID = g.ID
-			return true, r.Status().Update(ctx, cr)
+	for i := range members.Items {
+		member := &members.Items[i]
+		if member.Spec.MemberGroup == nil {
+			continue
+		}
+		ref := member.Spec.MemberGroup.GroupClaimRef
+		namespace := ref.Namespace
+		if namespace == "" {
+			namespace = member.Namespace
+		}
+		if namespace == claim.Namespace && ref.Name == claim.Name {
+			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func (r *UserGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *UserGroupClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder, err := setupHarborBackedController(
 		mgr,
 		r.Options,
-		&harborv1alpha1.UserGroup{},
-		func() client.ObjectList { return &harborv1alpha1.UserGroupList{} },
+		&harborv1alpha1.UserGroupClaim{},
+		func() client.ObjectList { return &harborv1alpha1.UserGroupClaimList{} },
 		func(obj client.Object) *harborv1alpha1.HarborConnectionReference {
-			return obj.(*harborv1alpha1.UserGroup).Spec.HarborConnectionRef
+			return obj.(*harborv1alpha1.UserGroupClaim).Spec.HarborConnectionRef
 		},
-		"usergroup",
+		"usergroupclaim",
 	)
 	if err != nil {
 		return err
 	}
+	builder.Watches(&harborv1alpha1.Member{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+		member := object.(*harborv1alpha1.Member)
+		if member.Spec.MemberGroup == nil {
+			return nil
+		}
+		ref := member.Spec.MemberGroup.GroupClaimRef
+		namespace := ref.Namespace
+		if namespace == "" {
+			namespace = member.Namespace
+		}
+		return []reconcile.Request{{NamespacedName: client.ObjectKey{Namespace: namespace, Name: ref.Name}}}
+	}))
 	return builder.Complete(r)
-}
-
-func userGroupNeedsUpdate(desired harborclient.UserGroup, current *harborclient.UserGroup) bool {
-	if current == nil {
-		return true
-	}
-	nd := normalizeUserGroup(desired)
-	nc := normalizeUserGroup(*current)
-	return !reflect.DeepEqual(nd, nc)
-}
-
-func normalizeUserGroup(in harborclient.UserGroup) harborclient.UserGroup {
-	in.ID = 0
-	return in
 }

@@ -5,6 +5,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // LabelSpec defines the desired state of Label.
 // +kubebuilder:validation:XValidation:rule="!has(self.projectRef) || self.scope == 'p'",message="scope must be 'p' when projectRef is set"
 // +kubebuilder:validation:XValidation:rule="self.scope != 'p' || has(self.projectRef)",message="projectRef is required when scope is 'p'"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.projectRef) || (has(self.projectRef) && self.projectRef == oldSelf.projectRef)",message="projectRef is immutable; delete and recreate the Label"
 type LabelSpec struct {
 	HarborSpecBase `json:",inline"`
 

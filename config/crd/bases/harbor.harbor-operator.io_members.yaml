@@ -23,7 +23,7 @@ spec:
     - jsonPath: .spec.memberUser.userRef.name
       name: User
       type: string
-    - jsonPath: .spec.memberGroup.groupRef.name
+    - jsonPath: .spec.memberGroup.groupClaimRef.name
       name: Group
       type: string
     - jsonPath: .spec.role
@@ -117,23 +117,23 @@ spec:
               memberGroup:
                 description: MemberGroup defines the member if it is a group.
                 properties:
-                  groupRef:
-                    description: GroupRef references the UserGroup to grant membership
-                      to.
+                  groupClaimRef:
+                    description: GroupClaimRef references the external group claim
+                      to grant membership to.
                     properties:
                       name:
-                        description: Name of the UserGroup resource.
+                        description: Name of the UserGroupClaim resource.
                         minLength: 1
                         type: string
                       namespace:
-                        description: Namespace of the UserGroup resource. Defaults
+                        description: Namespace of the UserGroupClaim resource. Defaults
                           to the referencing resource namespace.
                         type: string
                     required:
                     - name
                     type: object
                 required:
-                - groupRef
+                - groupClaimRef
                 type: object
               memberUser:
                 description: MemberUser defines the member if it is a user.
@@ -193,9 +193,17 @@ spec:
             - message: memberUser.userRef.name must be set when memberUser is provided
               rule: '!has(self.memberUser) || size(self.memberUser.userRef.name) >
                 0'
-            - message: memberGroup.groupRef.name must be set when memberGroup is provided
-              rule: '!has(self.memberGroup) || size(self.memberGroup.groupRef.name)
+            - message: memberGroup.groupClaimRef.name must be set when memberGroup
+                is provided
+              rule: '!has(self.memberGroup) || size(self.memberGroup.groupClaimRef.name)
                 > 0'
+            - message: project and member identity references are immutable; delete
+                and recreate the Member
+              rule: '!has(oldSelf.projectRef) || (self.projectRef == oldSelf.projectRef
+                && has(self.memberUser) == has(oldSelf.memberUser) && (!has(self.memberUser)
+                || self.memberUser == oldSelf.memberUser) && has(self.memberGroup)
+                == has(oldSelf.memberGroup) && (!has(self.memberGroup) || self.memberGroup
+                == oldSelf.memberGroup))'
           status:
             description: MemberStatus defines the observed state of Member.
             properties:
@@ -270,6 +278,28 @@ spec:
                   by the controller.
                 format: int64
                 type: integer
+              resolvedHarborConnection:
+                description: |-
+                  ResolvedHarborConnection is the exact connection identity used for Harbor
+                  operations. Once set, changing the effective connection is refused.
+                properties:
+                  kind:
+                    description: Kind is either HarborConnection or ClusterHarborConnection.
+                    type: string
+                  name:
+                    description: Name is the name of the connection object.
+                    type: string
+                  namespace:
+                    description: Namespace is set for a namespaced HarborConnection.
+                    type: string
+                  uid:
+                    description: UID is the Kubernetes UID of the connection object.
+                    type: string
+                required:
+                - kind
+                - name
+                - uid
+                type: object
             type: object
         type: object
     served: true

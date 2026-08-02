@@ -43,6 +43,7 @@ type ReplicationFilterSpec struct {
 // +kubebuilder:validation:XValidation:rule="has(self.sourceRegistryRef)",message="sourceRegistryRef is required"
 // +kubebuilder:validation:XValidation:rule="has(self.destinationRegistryRef)",message="destinationRegistryRef is required"
 // +kubebuilder:validation:XValidation:rule="!has(self.trigger) || self.trigger.type != 'scheduled' || (has(self.trigger.settings) && has(self.trigger.settings.cron))",message="trigger.settings.cron must be set when trigger.type is scheduled"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.sourceRegistryRef) || (has(self.sourceRegistryRef) && self.sourceRegistryRef == oldSelf.sourceRegistryRef && has(self.destinationRegistryRef) && self.destinationRegistryRef == oldSelf.destinationRegistryRef)",message="registry references are immutable; delete and recreate the ReplicationPolicy"
 type ReplicationPolicySpec struct {
 	HarborSpecBase `json:",inline"`
 

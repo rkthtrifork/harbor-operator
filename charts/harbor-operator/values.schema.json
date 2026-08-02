@@ -145,6 +145,11 @@
       "default": "Create",
       "description": "Creation policy used when a resource omits spec.creationPolicy."
     },
+    "allowCrossNamespaceReferences": {
+      "type": "boolean",
+      "default": true,
+      "description": "Allow namespaced Harbor resources to reference Projects, Registries, Users, UserGroupClaims, and Secrets in other namespaces."
+    },
     "defaultDriftDetectionInterval": {
       "type": "string",
       "default": "0s",

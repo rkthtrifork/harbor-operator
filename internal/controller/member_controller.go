@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	harborv1alpha1 "github.com/rkthtrifork/harbor-operator/api/v1alpha1"
@@ -36,7 +37,7 @@ type observedMember struct {
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=members/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects;users;usergroups,verbs=get;list;watch
+// +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=projects;users;usergroupclaims,verbs=get;list;watch
 // +kubebuilder:rbac:groups=harbor.harbor-operator.io,resources=harborconnections;clusterharborconnections,verbs=get;list;watch
 
 func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -56,7 +57,7 @@ func (r *MemberReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Resolve Harbor connection + typed client
-	hc, err := getHarborClient(ctx, r.Options, r.Client, member.Namespace, member.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &member, &member.Status.HarborStatusBase, member.Namespace, member.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &member, member.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -119,7 +120,7 @@ func (r *MemberReconciler) ensureMemberPresent(
 	member *harborv1alpha1.Member,
 	roleID int,
 ) (observedMember, error) {
-	projectKey, projectID, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
+	projectKey, projectID, err := resolveProject(ctx, r.Options, r.Client, member.Namespace, &member.Spec.ProjectRef)
 	if err != nil {
 		return observedMember{}, err
 	}
@@ -180,12 +181,18 @@ func (r *MemberReconciler) ensureMemberPresent(
 		return observedMember{projectID: projectID, memberID: newID}, nil
 	}
 
-	// A ready Member already manages this identity. Otherwise, an existing
-	// membership can only be acquired by a policy that permits adoption.
+	// A Member that has already recorded the exact Harbor identity is owned by
+	// this CR, even if a transient reconciliation failure currently marks it
+	// not ready. Do not require a Ready condition to recover from an outage;
+	// the persisted project/member IDs are the ownership evidence. A different
+	// or previously unknown membership still requires an adoption policy.
 	if !allowsAdoption(r.Options, member.Spec.CreationPolicy) {
-		cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
-		if cond == nil || cond.Status != metav1.ConditionTrue {
-			return observedMember{}, fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", r.Options.effectiveCreationPolicy(member.Spec.CreationPolicy))
+		owned := member.Status.HarborProjectID == projectID && member.Status.HarborMemberID == existing.ID
+		if !owned {
+			cond := meta.FindStatusCondition(member.Status.Conditions, ConditionReady)
+			if cond == nil || cond.Status != metav1.ConditionTrue {
+				return observedMember{}, fmt.Errorf("member already exists in Harbor and creationPolicy %q does not allow adoption", r.Options.effectiveCreationPolicy(member.Spec.CreationPolicy))
+			}
 		}
 	}
 
@@ -220,13 +227,19 @@ func (r *MemberReconciler) ensureMemberAbsent(
 	member *harborv1alpha1.Member,
 ) error {
 	if member.Status.HarborProjectID != 0 && member.Status.HarborMemberID != 0 {
-		return hc.DeleteProjectMember(ctx, strconv.Itoa(member.Status.HarborProjectID), member.Status.HarborMemberID)
+		err := hc.DeleteProjectMember(ctx, strconv.Itoa(member.Status.HarborProjectID), member.Status.HarborMemberID)
+		if harborclient.IsNotFound(err) {
+			// Harbor may delete the project before this finalizer runs. The
+			// membership is then already gone and deletion is complete.
+			return nil
+		}
+		return err
 	}
 	if member.Status.HarborProjectID != 0 || member.Status.HarborMemberID != 0 {
 		return fmt.Errorf("member status contains incomplete Harbor identity")
 	}
 
-	projectKey, _, err := resolveProject(ctx, r.Client, member.Namespace, &member.Spec.ProjectRef)
+	projectKey, _, err := resolveProject(ctx, r.Options, r.Client, member.Namespace, &member.Spec.ProjectRef)
 	if err != nil {
 		return nil
 	}
@@ -294,7 +307,7 @@ func (r *MemberReconciler) desiredEntityFromSpec(
 	}
 
 	if u != nil {
-		username, err := resolveUserName(ctx, r.Client, member.Namespace, u.UserRef)
+		username, err := resolveUserName(ctx, r.Options, r.Client, member.Namespace, u.UserRef)
 		if err != nil {
 			return "", "", harborclient.CreateMemberRequest{}, err
 		}
@@ -306,7 +319,7 @@ func (r *MemberReconciler) desiredEntityFromSpec(
 		}, nil
 	}
 
-	group, err := resolveUserGroup(ctx, r.Client, member.Namespace, g.GroupRef)
+	group, err := resolveUserGroup(ctx, r.Options, r.Client, member.Namespace, g.GroupClaimRef, member.Status.ResolvedHarborConnection)
 	if err != nil {
 		return "", "", harborclient.CreateMemberRequest{}, err
 	}
@@ -315,7 +328,7 @@ func (r *MemberReconciler) desiredEntityFromSpec(
 		entityName = group.LDAPGroupDN
 	}
 	if entityName == "" {
-		return "", "", harborclient.CreateMemberRequest{}, fmt.Errorf("resolved UserGroup %q has no Harbor identity", g.GroupRef.Name)
+		return "", "", harborclient.CreateMemberRequest{}, fmt.Errorf("resolved UserGroupClaim %q has no Harbor identity", g.GroupClaimRef.Name)
 	}
 	return "g", entityName, harborclient.CreateMemberRequest{
 		RoleID:      roleID,
@@ -355,5 +368,30 @@ func (r *MemberReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
-	return builder.Complete(r)
+	return builder.Watches(
+		&harborv1alpha1.UserGroupClaim{},
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []ctrl.Request {
+			claim := object.(*harborv1alpha1.UserGroupClaim)
+			var members harborv1alpha1.MemberList
+			if err := mgr.GetClient().List(ctx, &members); err != nil {
+				return nil
+			}
+			requests := make([]ctrl.Request, 0)
+			for i := range members.Items {
+				member := &members.Items[i]
+				if member.Spec.MemberGroup == nil {
+					continue
+				}
+				ref := member.Spec.MemberGroup.GroupClaimRef
+				namespace := ref.Namespace
+				if namespace == "" {
+					namespace = member.Namespace
+				}
+				if namespace == claim.Namespace && ref.Name == claim.Name {
+					requests = append(requests, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(member)})
+				}
+			}
+			return requests
+		}),
+	).Complete(r)
 }

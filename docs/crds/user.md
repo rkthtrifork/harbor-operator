@@ -6,6 +6,11 @@ A **User** custom resource represents a Harbor user. The operator can:
 - Optionally manage its lifecycle (updates / deletion)
 - Use it in combination with Member CRs for project roles
 
+This resource manages a Harbor-local user account and is intended for Harbor's
+database authentication mode. With OIDC authentication, users are managed by the
+identity provider and onboarded by Harbor when they log in; Harbor does not
+support creating or deleting those users through this account-management flow.
+
 ## Quick Start
 
 ```yaml
@@ -77,3 +82,9 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 - **Interaction with Member**
 
   - User CRs are typically referenced by `Member.spec.memberUser.userRef`.
+
+!!! warning
+
+    Harbor users are global to a Harbor instance. Deleting a user also removes
+    that user's project memberships. A namespaced `User` CR should therefore
+    have one unambiguous lifecycle owner in multi-tenant installations.

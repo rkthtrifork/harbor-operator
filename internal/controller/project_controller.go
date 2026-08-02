@@ -45,7 +45,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Resolve Harbor connection + typed client
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -196,7 +196,7 @@ func (r *ProjectReconciler) buildCreateReq(ctx context.Context, cr *harborv1alph
 
 	var registryID *int
 	if cr.Spec.RegistryRef != nil {
-		id, err := resolveRegistryID(ctx, r.Client, cr.Namespace, cr.Spec.RegistryRef)
+		id, err := resolveRegistryID(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.RegistryRef)
 		if err != nil {
 			return harborclient.CreateProjectRequest{}, err
 		}

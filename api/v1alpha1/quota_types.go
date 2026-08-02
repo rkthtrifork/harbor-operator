@@ -3,6 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // +kubebuilder:validation:XValidation:rule="has(self.projectRef)",message="projectRef is required"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.projectRef) || (has(self.projectRef) && self.projectRef == oldSelf.projectRef)",message="projectRef is immutable; delete and recreate the Quota"
 // QuotaSpec defines the desired state of Quota.
 type QuotaSpec struct {
 	HarborSpecBase `json:",inline"`

@@ -1,9 +1,9 @@
 # Common Spec Fields
 
-All Harbor-managed custom resources embed `HarborSpecBase`. That gives every CR
-the same baseline controls for selecting a Harbor instance, handling deletion,
-and forcing or scheduling reconciliation. Resource guides focus on
-resource-specific behavior and link back here for the shared fields.
+Most Harbor-managed custom resources embed `HarborSpecBase`. Non-owning claims
+such as `UserGroupClaim` embed `HarborClaimSpecBase`, which intentionally omits
+Harbor-side deletion policy. Both bases provide the same connection, drift, and
+reconcile controls; resource guides focus on resource-specific behavior.
 
 For the exact generated schema, defaults, and validation markers, see
 [HarborSpecBase](api.md#harborspecbase) in the API reference.
@@ -49,3 +49,9 @@ value always takes precedence.
 After creation or adoption, the operator fully reconciles the Harbor resource.
 `spec.deletionPolicy` independently controls whether deleting the Kubernetes object
 also deletes the managed Harbor resource.
+
+The status of every Harbor-backed resource records `resolvedHarborConnection` once
+the first connection is selected. The binding contains the connection kind,
+name, namespace, and Kubernetes UID. A later change to the effective connection
+is reported as `HarborConnectionChanged` and does not mutate or delete Harbor
+state.

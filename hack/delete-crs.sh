@@ -31,7 +31,7 @@ leaf_resources=(
   scanallschedules
   scannerregistrations
 )
-referenced_resources=(users usergroups projects)
+referenced_resources=(users usergroupclaims projects)
 registry_resources=(registries)
 connection_resources=(harborconnections clusterharborconnections)
 

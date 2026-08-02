@@ -755,7 +755,7 @@ spec:
 				_, _ = utils.Run(cmd)
 			})
 
-			It("should reconcile dependents when the backing HarborConnection changes", func() {
+			It("should reject changes to a bound HarborConnection", func() {
 				baseURL := os.Getenv("HARBOR_BASE_URL")
 				inClusterBaseURL := os.Getenv("HARBOR_IN_CLUSTER_BASE_URL")
 				adminUser := os.Getenv("HARBOR_ADMIN_USER")
@@ -819,16 +819,9 @@ spec:
 
 				cmd = exec.Command("kubectl", "patch", "harborconnection.harbor.harbor-operator.io/"+connName,
 					"-n", namespace, "--type=merge", "-p", `{"spec":{"baseURL":"http://does-not-resolve.invalid"}}`)
-				_, err = utils.Run(cmd)
-				Expect(err).NotTo(HaveOccurred())
-
-				waitConditionReason("project", projectName, "Ready", "ReconcileError")
-
-				cmd = exec.Command("kubectl", "patch", "harborconnection.harbor.harbor-operator.io/"+connName,
-					"-n", namespace, "--type=merge", "-p", fmt.Sprintf(`{"spec":{"baseURL":%q}}`, inClusterBaseURL))
-				_, err = utils.Run(cmd)
-				Expect(err).NotTo(HaveOccurred())
-
+				output, err := utils.Run(cmd)
+				Expect(err).To(HaveOccurred())
+				Expect(output).To(ContainSubstring("baseURL is immutable"))
 				waitReady("project", projectName)
 
 				deleteCR("project", projectName)

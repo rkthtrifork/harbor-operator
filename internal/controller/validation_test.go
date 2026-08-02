@@ -289,7 +289,7 @@ var _ = Describe("CRD validation and defaulting", func() {
 				ProjectRef:  harborv1alpha1.ProjectReference{Name: "library"},
 				Role:        "developer",
 				MemberUser:  &harborv1alpha1.MemberUser{UserRef: harborv1alpha1.UserReference{Name: "alice"}},
-				MemberGroup: &harborv1alpha1.MemberGroup{GroupRef: harborv1alpha1.UserGroupReference{Name: "devs"}},
+				MemberGroup: &harborv1alpha1.MemberGroup{GroupClaimRef: harborv1alpha1.UserGroupClaimReference{Name: "devs"}},
 			},
 		})
 	})

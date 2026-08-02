@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: usergroups.harbor.harbor-operator.io
+  name: usergroupclaims.harbor.harbor-operator.io
 spec:
   group: harbor.harbor-operator.io
   names:
     categories:
     - harbor
-    kind: UserGroup
-    listKind: UserGroupList
-    plural: usergroups
-    singular: usergroup
+    kind: UserGroupClaim
+    listKind: UserGroupClaimList
+    plural: usergroupclaims
+    singular: usergroupclaim
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -39,7 +39,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: UserGroup is the Schema for the usergroups API.
+        description: UserGroupClaim is the Schema for the usergroupclaims API.
         properties:
           apiVersion:
             description: |-
@@ -59,39 +59,20 @@ spec:
           metadata:
             type: object
           spec:
-            description: UserGroupSpec defines the desired state of UserGroup.
+            description: |-
+              UserGroupClaimSpec describes an external identity that must be registered
+              in Harbor. The claim is intentionally non-owning: deleting it never deletes
+              the global Harbor UserGroup because that would remove memberships belonging
+              to other claims.
             properties:
-              creationPolicy:
-                description: |-
-                  CreationPolicy controls whether the operator creates or adopts the Harbor user group.
-                  When omitted, the operator's default creation policy is used.
-                enum:
-                - Create
-                - Adopt
-                - CreateOrAdopt
-                type: string
-              deletionPolicy:
-                default: Delete
-                description: |-
-                  DeletionPolicy controls what happens when the Kubernetes object is deleted.
-                  Delete removes the corresponding Harbor resource before removing the finalizer.
-                  Orphan skips Harbor-side deletion and removes the finalizer so the
-                  Kubernetes object can be deleted while leaving the Harbor resource in place.
-                  Defaults to Delete.
-                enum:
-                - Delete
-                - Orphan
-                type: string
               driftDetectionInterval:
-                description: |-
-                  DriftDetectionInterval is the interval at which the operator checks for drift.
-                  When omitted, the operator's default drift detection interval is used.
-                  An explicit value of 0 disables periodic drift detection.
+                description: DriftDetectionInterval is the interval at which the operator
+                  checks for drift.
                 type: string
               groupName:
                 description: |-
-                  GroupName is the exact user group name stored in Harbor. For OIDC groups,
-                  this is commonly the identity provider's group ID.
+                  GroupName is the exact external group name stored in Harbor. For OIDC
+                  groups, this is commonly the identity provider's group ID.
                 minLength: 1
                 type: string
               groupType:
@@ -132,8 +113,14 @@ spec:
             - groupName
             - groupType
             type: object
+            x-kubernetes-validations:
+            - message: group identity fields are immutable
+              rule: '!has(oldSelf.groupName) || (self.groupName == oldSelf.groupName
+                && self.groupType == oldSelf.groupType && has(self.ldapGroupDN) ==
+                has(oldSelf.ldapGroupDN) && (!has(self.ldapGroupDN) || self.ldapGroupDN
+                == oldSelf.ldapGroupDN))'
           status:
-            description: UserGroupStatus defines the observed state of UserGroup.
+            description: UserGroupClaimStatus defines the observed state of UserGroupClaim.
             properties:
               conditions:
                 description: Conditions represent the latest available observations
@@ -194,13 +181,35 @@ spec:
                   type: object
                 type: array
               harborGroupID:
-                description: HarborGroupID is the ID of the user group in Harbor.
+                description: HarborGroupID is the shared global UserGroup ID in Harbor.
                 type: integer
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   by the controller.
                 format: int64
                 type: integer
+              resolvedHarborConnection:
+                description: |-
+                  ResolvedHarborConnection is the exact connection identity used for Harbor
+                  operations. Once set, changing the effective connection is refused.
+                properties:
+                  kind:
+                    description: Kind is either HarborConnection or ClusterHarborConnection.
+                    type: string
+                  name:
+                    description: Name is the name of the connection object.
+                    type: string
+                  namespace:
+                    description: Namespace is set for a namespaced HarborConnection.
+                    type: string
+                  uid:
+                    description: UID is the Kubernetes UID of the connection object.
+                    type: string
+                required:
+                - kind
+                - name
+                - uid
+                type: object
             type: object
         type: object
     served: true

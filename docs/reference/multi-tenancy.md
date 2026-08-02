@@ -5,9 +5,92 @@ This page describes the recommended multi-tenant operating model for
 
 The short version is:
 
+- remember that Kubernetes namespaces do not create namespaces inside Harbor
 - use operator settings for runtime scope
 - use Kubernetes object references between Harbor resources
-- use admission policy such as Kyverno for tenant-specific naming rules
+- expose only the resource kinds tenants are intended to control
+- use admission policy such as Kyverno for naming, reference, Secret, and scope rules
+
+## Tenant Resource Boundaries
+
+The operator acts on Harbor with the credentials from the selected connection.
+Kubernetes RBAC controls who can submit desired state, but the operator performs
+the resulting Harbor API call with its own privileges. Admission policy must
+therefore prevent a tenant CR from making the operator act on another tenant's
+Harbor objects or read another namespace's Secrets.
+
+```mermaid
+flowchart TB
+  subgraph Cluster[Kubernetes cluster]
+    Operator[harbor-operator]
+    Connection[ClusterHarborConnection]
+
+    subgraph TenantA[Tenant A namespace]
+      ARegistry[Registry]
+      AProject[Project]
+      AIdentity[User / UserGroupClaim]
+      AMember[Member]
+      ARobot[Robot]
+
+      AProject -->|registryRef| ARegistry
+      AMember -->|projectRef| AProject
+      AMember -->|userRef or groupClaimRef| AIdentity
+      ARobot -. project permissions .-> AProject
+    end
+
+    subgraph TenantB[Tenant B namespace]
+      BRegistry[Registry]
+      BProject[Project]
+      BIdentity[User / UserGroupClaim]
+      BMember[Member]
+      BRobot[Robot]
+
+      BProject -->|registryRef| BRegistry
+      BMember -->|projectRef| BProject
+      BMember -->|userRef or groupClaimRef| BIdentity
+      BRobot -. project permissions .-> BProject
+    end
+
+    Connection --> Operator
+  end
+
+  Harbor[(Shared Harbor instance)]
+  Operator -->|privileged Harbor API calls| Harbor
+```
+
+The Harbor box is outside the Kubernetes boundary to show the API boundary; the
+Harbor instance may run in the same cluster or elsewhere. The two tenant boxes
+show the same pattern: a `UserGroupClaim` in each namespace may refer to the
+same global Harbor group, while each `Member` still grants access only to its
+own tenant's projects.
+
+The policy boundary should enforce at least:
+
+- tenant-specific names for Harbor-global objects such as projects, registries,
+  robots, and local users
+- same-namespace references for tenant-owned projects, registries, users, user
+  groups, and related policy objects
+- same-namespace Secret references so the operator cannot become a credential-reading
+  confused deputy
+- project-only robot permissions constrained to the tenant's projects
+- an allowlist of tenant-manageable CR kinds; Harbor-instance configuration,
+  global schedules, scanners, and other administrative resources should remain
+  platform-owned unless separately constrained
+- deletion behavior whose Harbor-side blast radius is acceptable for tenant use
+
+### Harbor-global identity lifecycle
+
+`User` and `UserGroupClaim` CRs are namespaced Kubernetes objects, but Harbor
+users and user groups are global to a Harbor instance. A `UserGroupClaim` is
+non-owning because deleting a global Harbor UserGroup also removes every project
+membership for that group. Multiple tenants may safely claim the same external
+OIDC group and grant it roles only in their own projects.
+
+OIDC needs particular care: `UserGroupClaim.spec.groupName` is commonly the
+identity provider's group ID, so a tenant prefix on `metadata.name` does not
+make the underlying Harbor group identity tenant-local. The claim name is only a
+Kubernetes reference identity; the operator never deletes or changes the shared
+Harbor group and blocks claim deletion while active Members still reference it.
 
 ## Recommended Model
 
@@ -15,7 +98,8 @@ For a shared cluster, the cleanest setup is usually:
 
 1. Scope the operator to the namespaces it should manage with `--watch-namespaces`.
 2. Point that operator instance at a single shared Harbor instance with `--harbor-connection`.
-3. Use `metadata.name` as the Harbor-side identity for named resources.
+3. Use `metadata.name` as the Harbor-side identity for named resources where it
+   matches Harbor's model; `UserGroupClaim.spec.groupName` is the notable exception.
 4. Use Kubernetes object references for relationships between Harbor resources.
 5. Enforce tenant-specific naming conventions with admission policy such as Kyverno.
 
@@ -56,15 +140,40 @@ In this mode:
 This is useful when one operator instance is intended to manage exactly one
 Harbor installation.
 
+### `--allow-cross-namespace-references`
+
+This flag defaults to `true` so a normal installation can compose resources
+across namespaces. Set it to `false` for a tenant-scoped operator. In that mode,
+namespaced resources may reference only Projects, Registries, Users,
+UserGroupClaims, and Secrets in their own namespace. Cluster-scoped connection
+objects may still reference their explicitly named Secrets.
+
+This is a generic trust-boundary control. Tenant-specific naming, allowed CR
+kinds, robot scopes, and project permissions remain admission-policy concerns.
+
+### Resolved connection binding
+
+After a Harbor-backed resource first selects a connection, its status records the
+connection kind, name, namespace, and Kubernetes UID. If a later reconcile would
+resolve a different connection, the operator reports `HarborConnectionChanged`
+and performs no Harbor mutation or deletion. This prevents a changed reference,
+forced connection, or deleted-and-recreated connection with the same name from
+being interpreted as ownership of an existing Harbor object.
+
 ## API Shape for Tenant Safety
 
 The operator API now leans toward a simpler, safer model:
 
 - `metadata.name` is the Harbor identity for named resources such as `Project`,
-  `Registry`, `User`, `UserGroup`, `Label`, `Robot`, `ReplicationPolicy`,
+  `Registry`, `User`, `Label`, `Robot`, `ReplicationPolicy`,
   `ScannerRegistration`, and `WebhookPolicy`
+- `UserGroupClaim.metadata.name` is the Kubernetes reference identity, while
+  `UserGroupClaim.spec.groupName` is the exact Harbor group name or external identity
+  provider group ID
+- `UserGroupClaim` is a non-owning, reusable claim. It ensures the global Harbor
+  UserGroup exists, but never deletes or updates the shared group identity.
 - relationships use Kubernetes object references such as `projectRef`,
-  `registryRef`, `memberUser.userRef`, and `memberGroup.groupRef`
+  `registryRef`, `memberUser.userRef`, and `memberGroup.groupClaimRef`
 - CRDs do not expose raw Harbor ID selectors or `nameOrID` union fields
 
 This improves tenant isolation because references resolve through Kubernetes
@@ -74,11 +183,13 @@ objects and their status rather than through free-form Harbor identifiers.
 
 Tenant-specific naming rules usually belong outside the operator.
 
-Examples:
+Examples include:
 
 - requiring project names to start with a tenant prefix
 - requiring user names to start with a tenant prefix
-- requiring referenced object names to use the same prefix
+- requiring referenced objects and Secrets to stay in the tenant namespace
+- restricting robots to project-scoped permissions for tenant-owned projects
+- restricting which CR kinds tenants may create at all
 
 Those are cluster governance concerns, not Harbor reconciliation concerns.
 
@@ -264,9 +375,10 @@ spec:
                 value: false
 ```
 
-Extend the same pattern for `memberGroup.groupRef.name`, robot project-scoped
-permission namespaces, or any other Harbor object names that are globally shared
-within your Harbor deployment.
+Extend the same pattern for `memberGroup.groupClaimRef.name`, robot project-scoped
+`projectRef` fields, Secret references, and every project reference exposed by
+the CR kinds made available to tenants. Prefix checks alone are not a complete
+tenant boundary: namespace, scope, and allowed-kind checks remain necessary.
 
 ## Suggested Deployment Patterns
 

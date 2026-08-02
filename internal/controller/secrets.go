@@ -28,6 +28,9 @@ func readSecretValue(ctx context.Context, options OperatorOptions, c client.Clie
 	if namespace == "" {
 		namespace = defaultNamespace
 	}
+	if err := validateReferenceNamespace(options, defaultNamespace, namespace, "Secret"); err != nil {
+		return "", err
+	}
 	key := ref.Key
 	if key == "" {
 		key = defaultKey

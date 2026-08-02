@@ -10,7 +10,7 @@ This page links directly into the generated API reference for each resource.
 ## Identity and Access
 
 - [User](api.md#user)
-- [UserGroup](api.md#usergroup)
+- [UserGroupClaim](api.md#usergroupclaim)
 - [Member](api.md#member)
 - [Robot](api.md#robot)
 

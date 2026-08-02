@@ -2,20 +2,18 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// UserGroupSpec defines the desired state of UserGroup.
-type UserGroupSpec struct {
-	HarborSpecBase `json:",inline"`
+// UserGroupClaimSpec describes an external identity that must be registered
+// in Harbor. The claim is intentionally non-owning: deleting it never deletes
+// the global Harbor UserGroup because that would remove memberships belonging
+// to other claims.
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.groupName) || (self.groupName == oldSelf.groupName && self.groupType == oldSelf.groupType && has(self.ldapGroupDN) == has(oldSelf.ldapGroupDN) && (!has(self.ldapGroupDN) || self.ldapGroupDN == oldSelf.ldapGroupDN))",message="group identity fields are immutable"
+type UserGroupClaimSpec struct {
+	HarborClaimSpecBase `json:",inline"`
 
-	// GroupName is the exact user group name stored in Harbor. For OIDC groups,
-	// this is commonly the identity provider's group ID.
+	// GroupName is the exact external group name stored in Harbor. For OIDC
+	// groups, this is commonly the identity provider's group ID.
 	// +kubebuilder:validation:MinLength=1
 	GroupName string `json:"groupName"`
-
-	// CreationPolicy controls whether the operator creates or adopts the Harbor user group.
-	// When omitted, the operator's default creation policy is used.
-	// +kubebuilder:validation:Enum=Create;Adopt;CreateOrAdopt
-	// +optional
-	CreationPolicy CreationPolicy `json:"creationPolicy,omitempty"`
 
 	// GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC).
 	// +kubebuilder:validation:Enum=1;2;3
@@ -26,11 +24,11 @@ type UserGroupSpec struct {
 	LDAPGroupDN string `json:"ldapGroupDN,omitempty"`
 }
 
-// UserGroupStatus defines the observed state of UserGroup.
-type UserGroupStatus struct {
+// UserGroupClaimStatus defines the observed state of UserGroupClaim.
+type UserGroupClaimStatus struct {
 	HarborStatusBase `json:",inline"`
 
-	// HarborGroupID is the ID of the user group in Harbor.
+	// HarborGroupID is the shared global UserGroup ID in Harbor.
 	HarborGroupID int `json:"harborGroupID,omitempty"`
 }
 
@@ -44,24 +42,24 @@ type UserGroupStatus struct {
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].message`,priority=1
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// UserGroup is the Schema for the usergroups API.
-type UserGroup struct {
+// UserGroupClaim is the Schema for the usergroupclaims API.
+type UserGroupClaim struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   UserGroupSpec   `json:"spec,omitempty"`
-	Status UserGroupStatus `json:"status,omitempty"`
+	Spec   UserGroupClaimSpec   `json:"spec,omitempty"`
+	Status UserGroupClaimStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// UserGroupList contains a list of UserGroup.
-type UserGroupList struct {
+// UserGroupClaimList contains a list of UserGroupClaim.
+type UserGroupClaimList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []UserGroup `json:"items"`
+	Items           []UserGroupClaim `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&UserGroup{}, &UserGroupList{})
+	SchemeBuilder.Register(&UserGroupClaim{}, &UserGroupClaimList{})
 }

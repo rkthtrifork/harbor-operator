@@ -35,7 +35,7 @@ rules:
   - robots
   - scanallschedules
   - scannerregistrations
-  - usergroups
+  - usergroupclaims
   - users
   - webhookpolicies
   verbs:
@@ -65,7 +65,7 @@ rules:
   - robots/finalizers
   - scanallschedules/finalizers
   - scannerregistrations/finalizers
-  - usergroups/finalizers
+  - usergroupclaims/finalizers
   - users/finalizers
   - webhookpolicies/finalizers
   verbs:
@@ -89,7 +89,7 @@ rules:
   - robots/status
   - scanallschedules/status
   - scannerregistrations/status
-  - usergroups/status
+  - usergroupclaims/status
   - users/status
   - webhookpolicies/status
   verbs:

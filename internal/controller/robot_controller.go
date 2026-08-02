@@ -48,7 +48,7 @@ func (r *RobotReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	hc, err := getHarborClient(ctx, r.Options, r.Client, cr.Namespace, cr.Spec.HarborConnectionRef)
+	hc, err := getHarborClientForObject(ctx, r.Options, r.Client, &cr, &cr.Status.HarborStatusBase, cr.Namespace, cr.Spec.HarborConnectionRef)
 	if err != nil {
 		if done, finalErr := finalizeWithoutHarborConnection(ctx, r.Client, &cr, cr.Spec.GetDeletionPolicy(), true, err); done {
 			return ctrl.Result{}, finalErr
@@ -99,7 +99,10 @@ func (r *RobotReconciler) createRobot(
 	cr *harborv1alpha1.Robot,
 	secretRef harborv1alpha1.SecretReference,
 ) (ctrl.Result, error) {
-	createReq := buildRobotCreateRequest(cr)
+	createReq, err := r.buildRobotCreateRequest(ctx, cr)
+	if err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
 	created, err := hc.CreateRobot(ctx, createReq)
 	if err != nil {
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -152,7 +155,10 @@ func (r *RobotReconciler) reconcileExisting(
 		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
 	}
 
-	desired := buildRobotUpdateRequest(cr, current)
+	desired, err := r.buildRobotUpdateRequest(ctx, cr, current)
+	if err != nil {
+		return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
+	}
 	if robotNeedsUpdate(desired, current) {
 		if err := hc.UpdateRobot(ctx, current.ID, desired); err != nil {
 			return ctrl.Result{}, setErrorStatus(ctx, r.Client, cr, &cr.Status.HarborStatusBase, cr.Generation, err)
@@ -293,7 +299,11 @@ func resolveRobotSecretRef(cr *harborv1alpha1.Robot) (harborv1alpha1.SecretRefer
 	return ref, nil
 }
 
-func buildRobotCreateRequest(cr *harborv1alpha1.Robot) harborclient.RobotCreateRequest {
+func (r *RobotReconciler) buildRobotCreateRequest(ctx context.Context, cr *harborv1alpha1.Robot) (harborclient.RobotCreateRequest, error) {
+	permissions, err := r.buildRobotPermissions(ctx, cr)
+	if err != nil {
+		return harborclient.RobotCreateRequest{}, err
+	}
 	return harborclient.RobotCreateRequest{
 		Name:        cr.Name,
 		Description: cr.Spec.Description,
@@ -301,11 +311,15 @@ func buildRobotCreateRequest(cr *harborv1alpha1.Robot) harborclient.RobotCreateR
 		Level:       cr.Spec.Level,
 		Disable:     cr.Spec.Disable,
 		Duration:    &cr.Spec.Duration,
-		Permissions: buildRobotPermissions(cr),
-	}
+		Permissions: permissions,
+	}, nil
 }
 
-func buildRobotUpdateRequest(cr *harborv1alpha1.Robot, current *harborclient.Robot) harborclient.Robot {
+func (r *RobotReconciler) buildRobotUpdateRequest(ctx context.Context, cr *harborv1alpha1.Robot, current *harborclient.Robot) (harborclient.Robot, error) {
+	permissions, err := r.buildRobotPermissions(ctx, cr)
+	if err != nil {
+		return harborclient.Robot{}, err
+	}
 	duration := cr.Spec.Duration
 	if duration == 0 {
 		duration = -1
@@ -317,13 +331,13 @@ func buildRobotUpdateRequest(cr *harborv1alpha1.Robot, current *harborclient.Rob
 		Level:       current.Level,
 		Disable:     current.Disable,
 		Duration:    current.Duration,
-		Permissions: buildRobotPermissions(cr),
+		Permissions: permissions,
 	}
 	if cr.Spec.Disable != nil {
 		desired.Disable = *cr.Spec.Disable
 	}
 	desired.Duration = &duration
-	return desired
+	return desired, nil
 }
 
 func robotNeedsUpdate(desired harborclient.Robot, current *harborclient.Robot) bool {
@@ -390,7 +404,7 @@ func normalizeRobotPermissions(perms []harborclient.RobotPermission) []harborcli
 	return out
 }
 
-func buildRobotPermissions(cr *harborv1alpha1.Robot) []harborclient.RobotPermission {
+func (r *RobotReconciler) buildRobotPermissions(ctx context.Context, cr *harborv1alpha1.Robot) ([]harborclient.RobotPermission, error) {
 	perms := make([]harborclient.RobotPermission, 0, len(cr.Spec.Permissions))
 	for _, perm := range cr.Spec.Permissions {
 		access := make([]harborclient.Access, 0, len(perm.Access))
@@ -405,13 +419,32 @@ func buildRobotPermissions(cr *harborv1alpha1.Robot) []harborclient.RobotPermiss
 				Effect:   effect,
 			})
 		}
+		namespace := ""
+		if strings.EqualFold(perm.Kind, "project") {
+			if perm.ProjectRef == nil {
+				namespace = "*"
+			} else {
+				var err error
+				namespace, err = resolveProjectName(ctx, r.Options, r.Client, cr.Namespace, perm.ProjectRef)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if strings.EqualFold(perm.Kind, "system") {
+			if perm.ProjectRef != nil {
+				return nil, fmt.Errorf("projectRef is only valid for project-scoped robot permissions")
+			}
+			namespace = "/"
+		} else if perm.ProjectRef != nil {
+			return nil, fmt.Errorf("projectRef is only valid for project-scoped robot permissions")
+		}
 		perms = append(perms, harborclient.RobotPermission{
 			Kind:      perm.Kind,
-			Namespace: perm.Namespace,
+			Namespace: namespace,
 			Access:    access,
 		})
 	}
-	return perms
+	return perms, nil
 }
 
 func robotLevelMatches(desired, current string) bool {

@@ -167,7 +167,7 @@ resources:
   controller: true
   domain: harbor-operator.io
   group: harbor
-  kind: UserGroup
+  kind: UserGroupClaim
   path: github.com/rkthtrifork/harbor-operator/api/v1alpha1
   version: v1alpha1
 - api:

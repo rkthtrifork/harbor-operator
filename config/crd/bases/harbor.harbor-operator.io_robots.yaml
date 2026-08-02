@@ -221,10 +221,22 @@ spec:
                         or "system".
                       minLength: 1
                       type: string
-                    namespace:
-                      description: Namespace is the Harbor project name for project-scoped
-                        permissions.
-                      type: string
+                    projectRef:
+                      description: |-
+                        ProjectRef references the Project CR for project-scoped permissions.
+                        When omitted for kind=project, Harbor's native all-projects scope is used.
+                      properties:
+                        name:
+                          description: Name of the Project resource.
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: Namespace of the Project resource. Defaults
+                            to the referencing resource namespace.
+                          type: string
+                      required:
+                      - name
+                      type: object
                   required:
                   - access
                   - kind
@@ -347,6 +359,28 @@ spec:
                   by the controller.
                 format: int64
                 type: integer
+              resolvedHarborConnection:
+                description: |-
+                  ResolvedHarborConnection is the exact connection identity used for Harbor
+                  operations. Once set, changing the effective connection is refused.
+                properties:
+                  kind:
+                    description: Kind is either HarborConnection or ClusterHarborConnection.
+                    type: string
+                  name:
+                    description: Name is the name of the connection object.
+                    type: string
+                  namespace:
+                    description: Namespace is set for a namespaced HarborConnection.
+                    type: string
+                  uid:
+                    description: UID is the Kubernetes UID of the connection object.
+                    type: string
+                required:
+                - kind
+                - name
+                - uid
+                type: object
               username:
                 description: Username is the canonical robot username reported by
                   Harbor.

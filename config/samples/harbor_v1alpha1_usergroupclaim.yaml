@@ -1,10 +1,10 @@
 apiVersion: harbor.harbor-operator.io/v1alpha1
-kind: UserGroup
+kind: UserGroupClaim
 metadata:
   labels:
     app.kubernetes.io/name: harbor-operator
     app.kubernetes.io/managed-by: kustomize
-  name: usergroup-sample
+  name: usergroupclaim-sample
 spec:
   harborConnectionRef:
     name: harborconnection-sample

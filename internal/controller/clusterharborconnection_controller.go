@@ -49,7 +49,10 @@ func (r *ClusterHarborConnectionReconciler) Reconcile(ctx context.Context, req c
 
 	cfg := &connectionConfig{
 		baseURL:           conn.Spec.BaseURL,
+		kind:              harborv1alpha1.HarborConnectionReferenceKindCluster,
+		name:              conn.Name,
 		namespace:         "",
+		uid:               string(conn.UID),
 		credentials:       conn.Spec.Credentials,
 		caBundle:          conn.Spec.CABundle,
 		caBundleSecretRef: conn.Spec.CABundleSecretRef,

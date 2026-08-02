@@ -16,6 +16,7 @@ const defaultHarborRequestTimeout = 30 * time.Second
 type OperatorOptions struct {
 	forcedHarborConnection        string
 	defaultCreationPolicy         harborv1alpha1.CreationPolicy
+	allowCrossNamespaceReferences *bool
 	defaultDriftDetectionInterval time.Duration
 	harborRequestTimeout          time.Duration
 	secretReader                  client.Reader
@@ -26,6 +27,7 @@ type OperatorOptions struct {
 type OperatorConfig struct {
 	ForcedHarborConnection        string
 	DefaultCreationPolicy         harborv1alpha1.CreationPolicy
+	AllowCrossNamespaceReferences *bool
 	DefaultDriftDetectionInterval time.Duration
 	HarborRequestTimeout          time.Duration
 }
@@ -44,9 +46,17 @@ func NewOperatorOptions(config OperatorConfig) (OperatorOptions, error) {
 	return OperatorOptions{
 		forcedHarborConnection:        strings.TrimSpace(config.ForcedHarborConnection),
 		defaultCreationPolicy:         config.DefaultCreationPolicy,
+		allowCrossNamespaceReferences: config.AllowCrossNamespaceReferences,
 		defaultDriftDetectionInterval: config.DefaultDriftDetectionInterval,
 		harborRequestTimeout:          config.HarborRequestTimeout,
 	}, nil
+}
+
+func (o OperatorOptions) allowsCrossNamespaceReferences() bool {
+	if o.allowCrossNamespaceReferences == nil {
+		return true
+	}
+	return *o.allowCrossNamespaceReferences
 }
 
 func validateDefaultCreationPolicy(policy harborv1alpha1.CreationPolicy) error {

@@ -26,7 +26,7 @@ Package v1alpha1 contains API Schema definitions for the harbor v1alpha1 API gro
 - [ScanAllSchedule](#scanallschedule)
 - [ScannerRegistration](#scannerregistration)
 - [User](#user)
-- [UserGroup](#usergroup)
+- [UserGroupClaim](#usergroupclaim)
 - [WebhookPolicy](#webhookpolicy)
 
 
@@ -179,7 +179,6 @@ _Appears in:_
 - [ReplicationPolicySpec](#replicationpolicyspec)
 - [RobotSpec](#robotspec)
 - [ScannerRegistrationSpec](#scannerregistrationspec)
-- [UserGroupSpec](#usergroupspec)
 - [UserSpec](#userspec)
 - [WebhookPolicySpec](#webhookpolicyspec)
 
@@ -233,7 +232,6 @@ _Appears in:_
 - [RobotSpec](#robotspec)
 - [ScanAllScheduleSpec](#scanallschedulespec)
 - [ScannerRegistrationSpec](#scannerregistrationspec)
-- [UserGroupSpec](#usergroupspec)
 - [UserSpec](#userspec)
 - [WebhookPolicySpec](#webhookpolicyspec)
 
@@ -282,6 +280,26 @@ _Appears in:_
 | `parameters` _object (keys:string, values:[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#json-v1-apiextensions-k8s-io))_ | Parameters define GC settings passed to Harbor. |  | Optional: \{\} <br /> |
 
 
+#### HarborClaimSpecBase
+
+
+
+HarborClaimSpecBase is the common spec for non-owning claims of Harbor
+global identities. Claims select a connection and drift interval, but never
+delete the global Harbor object when the claim is deleted.
+
+
+
+_Appears in:_
+- [UserGroupClaimSpec](#usergroupclaimspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
+| `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift. |  | Optional: \{\} <br /> |
+| `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
+
+
 #### HarborConnection
 
 
@@ -300,6 +318,26 @@ HarborConnection is the Schema for the harborconnections API.
 | `spec` _[HarborConnectionSpec](#harborconnectionspec)_ |  |  |  |
 
 
+#### HarborConnectionBinding
+
+
+
+HarborConnectionBinding records the exact Kubernetes connection object used
+for a Harbor-backed resource.
+
+
+
+_Appears in:_
+- [HarborStatusBase](#harborstatusbase)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _[HarborConnectionReferenceKind](#harborconnectionreferencekind)_ | Kind is either HarborConnection or ClusterHarborConnection. |  |  |
+| `name` _string_ | Name is the name of the connection object. |  |  |
+| `namespace` _string_ | Namespace is set for a namespaced HarborConnection. |  | Optional: \{\} <br /> |
+| `uid` _string_ | UID is the Kubernetes UID of the connection object. |  |  |
+
+
 #### HarborConnectionReference
 
 
@@ -312,6 +350,7 @@ cluster-scoped ClusterHarborConnection.
 _Appears in:_
 - [ConfigurationSpec](#configurationspec)
 - [GCScheduleSpec](#gcschedulespec)
+- [HarborClaimSpecBase](#harborclaimspecbase)
 - [HarborSpecBase](#harborspecbase)
 - [ImmutableTagRuleSpec](#immutabletagrulespec)
 - [LabelSpec](#labelspec)
@@ -325,7 +364,7 @@ _Appears in:_
 - [RobotSpec](#robotspec)
 - [ScanAllScheduleSpec](#scanallschedulespec)
 - [ScannerRegistrationSpec](#scannerregistrationspec)
-- [UserGroupSpec](#usergroupspec)
+- [UserGroupClaimSpec](#usergroupclaimspec)
 - [UserSpec](#userspec)
 - [WebhookPolicySpec](#webhookpolicyspec)
 
@@ -344,6 +383,7 @@ _Underlying type:_ _string_
 
 
 _Appears in:_
+- [HarborConnectionBinding](#harborconnectionbinding)
 - [HarborConnectionReference](#harborconnectionreference)
 
 | Field | Description |
@@ -395,7 +435,6 @@ _Appears in:_
 - [RobotSpec](#robotspec)
 - [ScanAllScheduleSpec](#scanallschedulespec)
 - [ScannerRegistrationSpec](#scannerregistrationspec)
-- [UserGroupSpec](#usergroupspec)
 - [UserSpec](#userspec)
 - [WebhookPolicySpec](#webhookpolicyspec)
 
@@ -547,7 +586,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `groupRef` _[UserGroupReference](#usergroupreference)_ | GroupRef references the UserGroup to grant membership to. |  |  |
+| `groupClaimRef` _[UserGroupClaimReference](#usergroupclaimreference)_ | GroupClaimRef references the external group claim to grant membership to. |  |  |
 
 
 #### MemberSpec
@@ -647,6 +686,7 @@ _Appears in:_
 - [MemberSpec](#memberspec)
 - [QuotaSpec](#quotaspec)
 - [RetentionPolicySpec](#retentionpolicyspec)
+- [RobotPermission](#robotpermission)
 - [WebhookPolicySpec](#webhookpolicyspec)
 
 | Field | Description | Default | Validation |
@@ -1152,7 +1192,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `kind` _string_ | Kind defines the permission scope, such as "project" or "system". |  | MinLength: 1 <br /> |
-| `namespace` _string_ | Namespace is the Harbor project name for project-scoped permissions. |  | Optional: \{\} <br /> |
+| `projectRef` _[ProjectReference](#projectreference)_ | ProjectRef references the Project CR for project-scoped permissions.<br />When omitted for kind=project, Harbor's native all-projects scope is used. |  | Optional: \{\} <br /> |
 | `access` _[RobotAccess](#robotaccess) array_ | Access lists the access rules for this permission. |  | MinItems: 1 <br /> |
 
 
@@ -1386,11 +1426,11 @@ User is the Schema for the users API.
 | `spec` _[UserSpec](#userspec)_ |  |  |  |
 
 
-#### UserGroup
+#### UserGroupClaim
 
 
 
-UserGroup is the Schema for the usergroups API.
+UserGroupClaim is the Schema for the usergroupclaims API.
 
 
 
@@ -1399,16 +1439,16 @@ UserGroup is the Schema for the usergroups API.
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `harbor.harbor-operator.io/v1alpha1` | | |
-| `kind` _string_ | `UserGroup` | | |
+| `kind` _string_ | `UserGroupClaim` | | |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[UserGroupSpec](#usergroupspec)_ |  |  |  |
+| `spec` _[UserGroupClaimSpec](#usergroupclaimspec)_ |  |  |  |
 
 
-#### UserGroupReference
+#### UserGroupClaimReference
 
 
 
-UserGroupReference identifies a UserGroup custom resource.
+UserGroupClaimReference identifies a UserGroupClaim custom resource.
 
 
 
@@ -1417,29 +1457,30 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name of the UserGroup resource. |  | MinLength: 1 <br /> |
-| `namespace` _string_ | Namespace of the UserGroup resource. Defaults to the referencing resource namespace. |  | Optional: \{\} <br /> |
+| `name` _string_ | Name of the UserGroupClaim resource. |  | MinLength: 1 <br /> |
+| `namespace` _string_ | Namespace of the UserGroupClaim resource. Defaults to the referencing resource namespace. |  | Optional: \{\} <br /> |
 
 
-#### UserGroupSpec
+#### UserGroupClaimSpec
 
 
 
-UserGroupSpec defines the desired state of UserGroup.
+UserGroupClaimSpec describes an external identity that must be registered
+in Harbor. The claim is intentionally non-owning: deleting it never deletes
+the global Harbor UserGroup because that would remove memberships belonging
+to other claims.
 
 
 
 _Appears in:_
-- [UserGroup](#usergroup)
+- [UserGroupClaim](#usergroupclaim)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `harborConnectionRef` _[HarborConnectionReference](#harborconnectionreference)_ | HarborConnectionRef references the Harbor connection object to use.<br />When the operator is started with --harbor-connection, this field may be omitted. |  | Optional: \{\} <br /> |
-| `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place.<br />Defaults to Delete. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
-| `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift.<br />When omitted, the operator's default drift detection interval is used.<br />An explicit value of 0 disables periodic drift detection. |  | Optional: \{\} <br /> |
+| `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-| `groupName` _string_ | GroupName is the exact user group name stored in Harbor. For OIDC groups,<br />this is commonly the identity provider's group ID. |  | MinLength: 1 <br /> |
-| `creationPolicy` _[CreationPolicy](#creationpolicy)_ | CreationPolicy controls whether the operator creates or adopts the Harbor user group.<br />When omitted, the operator's default creation policy is used. |  | Enum: [Create Adopt CreateOrAdopt] <br />Optional: \{\} <br /> |
+| `groupName` _string_ | GroupName is the exact external group name stored in Harbor. For OIDC<br />groups, this is commonly the identity provider's group ID. |  | MinLength: 1 <br /> |
 | `groupType` _integer_ | GroupType is the group type (1=LDAP, 2=HTTP, 3=OIDC). |  | Enum: [1 2 3] <br /> |
 | `ldapGroupDN` _string_ | LDAPGroupDN is the DN of the LDAP group when GroupType is LDAP. |  | Optional: \{\} <br /> |
 
