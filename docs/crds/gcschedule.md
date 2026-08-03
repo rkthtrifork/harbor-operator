@@ -24,7 +24,7 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (object, required)
+- **spec.harborConnectionRef** (object, optional when the operator is configured with `--harbor-connection`)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.schedule.type** (string, required)

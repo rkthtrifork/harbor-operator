@@ -43,5 +43,7 @@ spec:
   `spec.harborConnectionRef.name: shared-harbor` and
   `spec.harborConnectionRef.kind: ClusterHarborConnection`.
 - Updating a `ClusterHarborConnection` triggers reconciliation of Harbor-backed CRs that reference it.
+- `spec.baseURL` is immutable. Replace the connection explicitly when moving
+  to another Harbor endpoint; credentials and CA material may be updated.
 - Use namespaced `HarborConnection` for tenant-local credentials and
   `ClusterHarborConnection` for shared platform-managed access.

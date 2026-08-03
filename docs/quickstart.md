@@ -32,6 +32,7 @@ kubectl get projects.harbor.harbor-operator.io
 kubectl get project <name> -o yaml
 ```
 
-Continue with [Concepts](introduction/concepts.md), the [API overview](reference/index.md), and the [resource guides](crds/index.md).
+Continue with [Concepts](introduction/concepts.md), the [Guides](reference/connection-patterns.md),
+the [Reference overview](reference/index.md), and the [resource guides](crds/index.md).
 
 For a local contributor stack that installs Harbor and the operator in Kind, use the [local development guide](contributing/local-development.md).

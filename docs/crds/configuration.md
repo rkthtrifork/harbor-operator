@@ -49,7 +49,7 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (object, required)
+- **spec.harborConnectionRef** (object, optional when the operator is configured with `--harbor-connection`)
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.settings** (map, optional)
@@ -70,7 +70,6 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 - **Create/Update**
   - Sends only the specified keys to Harbor (partial update).
   - Only one `Configuration` may manage a given Harbor instance. If multiple CRs target the same Harbor instance, the oldest CR remains the owner and later CRs report a conflict.
-  - Sends only the specified keys to Harbor (partial update).
   - Skips reconciliation when no settings are provided.
 
 - **Delete**

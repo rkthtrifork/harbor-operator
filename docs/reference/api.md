@@ -318,26 +318,6 @@ HarborConnection is the Schema for the harborconnections API.
 | `spec` _[HarborConnectionSpec](#harborconnectionspec)_ |  |  |  |
 
 
-#### HarborConnectionBinding
-
-
-
-HarborConnectionBinding records the exact Kubernetes connection object used
-for a Harbor-backed resource.
-
-
-
-_Appears in:_
-- [HarborStatusBase](#harborstatusbase)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `kind` _[HarborConnectionReferenceKind](#harborconnectionreferencekind)_ | Kind is either HarborConnection or ClusterHarborConnection. |  |  |
-| `name` _string_ | Name is the name of the connection object. |  |  |
-| `namespace` _string_ | Namespace is set for a namespaced HarborConnection. |  | Optional: \{\} <br /> |
-| `uid` _string_ | UID is the Kubernetes UID of the connection object. |  |  |
-
-
 #### HarborConnectionReference
 
 
@@ -383,7 +363,6 @@ _Underlying type:_ _string_
 
 
 _Appears in:_
-- [HarborConnectionBinding](#harborconnectionbinding)
 - [HarborConnectionReference](#harborconnectionreference)
 
 | Field | Description |
@@ -444,8 +423,6 @@ _Appears in:_
 | `deletionPolicy` _[DeletionPolicy](#deletionpolicy)_ | DeletionPolicy controls what happens when the Kubernetes object is deleted.<br />Delete removes the corresponding Harbor resource before removing the finalizer.<br />Orphan skips Harbor-side deletion and removes the finalizer so the<br />Kubernetes object can be deleted while leaving the Harbor resource in place.<br />Defaults to Delete. | Delete | Enum: [Delete Orphan] <br />Optional: \{\} <br /> |
 | `driftDetectionInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#duration-v1-meta)_ | DriftDetectionInterval is the interval at which the operator checks for drift.<br />When omitted, the operator's default drift detection interval is used.<br />An explicit value of 0 disables periodic drift detection. |  | Optional: \{\} <br /> |
 | `reconcileNonce` _string_ | ReconcileNonce forces an immediate reconcile when updated. |  | Optional: \{\} <br /> |
-
-
 
 
 #### ImmutableSelector

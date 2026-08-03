@@ -2,6 +2,10 @@
 
 These pages describe how each custom resource behaves in the operator.
 
+Use the [Resource Index](../reference/resources.md) to move between a guide
+and the generated API reference for exact field definitions, defaults, and
+validation.
+
 Use them for:
 
 - example manifests

@@ -42,11 +42,9 @@ but not both.
 
 When a `HarborConnection` or `ClusterHarborConnection` changes, dependent Harbor-backed resources are reconciled again. The connection `baseURL` is immutable; credential and CA material may change.
 
-That includes changes such as:
-
-- base URL changes
-- credential secret changes reflected through the connection object
-- CA material changes
+Credential Secret changes reflected through the connection object and CA
+material changes trigger reconciliation. A base URL change requires replacing
+the connection as an explicit migration; it is not an in-place update.
 
 ## Cross-Namespace Sharing
 

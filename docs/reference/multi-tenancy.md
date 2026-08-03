@@ -6,7 +6,7 @@ This page describes the recommended multi-tenant operating model for
 The short version is:
 
 - remember that Kubernetes namespaces do not create namespaces inside Harbor
-- use operator settings for runtime scope
+- use operator settings for connection and reference boundaries
 - use Kubernetes object references between Harbor resources
 - expose only the resource kinds tenants are intended to control
 - use admission policy such as Kyverno for naming, reference, Secret, and scope rules
@@ -96,12 +96,11 @@ Harbor group and blocks claim deletion while active Members still reference it.
 
 For a shared cluster, the cleanest setup is usually:
 
-1. Scope the operator to the namespaces it should manage with `--watch-namespaces`.
-2. Point that operator instance at a single shared Harbor instance with `--harbor-connection`.
-3. Use `metadata.name` as the Harbor-side identity for named resources where it
+1. Point that operator instance at a single shared Harbor instance with `--harbor-connection`.
+2. Use `metadata.name` as the Harbor-side identity for named resources where it
    matches Harbor's model; `UserGroupClaim.spec.groupName` is the notable exception.
-4. Use Kubernetes object references for relationships between Harbor resources.
-5. Enforce tenant-specific naming conventions with admission policy such as Kyverno.
+3. Use Kubernetes object references for relationships between Harbor resources.
+4. Enforce tenant-specific naming conventions with admission policy such as Kyverno.
 
 This keeps the operator focused on reconciliation while leaving tenant naming
 policy to the cluster policy layer.
@@ -110,19 +109,6 @@ policy to the cluster policy layer.
 
 The operator exposes two runtime controls that are useful in multi-tenant
 deployments.
-
-### `--watch-namespaces`
-
-Use `--watch-namespaces=team-a,team-b` to restrict the operator cache and
-reconcilers to a fixed set of namespaces.
-
-Use this when:
-
-- one operator deployment should only manage a subset of the cluster
-- you want to reduce blast radius
-- you want clearer ownership boundaries between operator instances
-
-If omitted, the operator watches all namespaces.
 
 ### `--harbor-connection`
 
@@ -203,11 +189,14 @@ Kyverno or a similar admission policy engine is a good fit because:
 
 The examples below assume:
 
-- tenant identity is stored on the namespace label
-  `capsule.clastix.io/tenant`
-- the tenant prefix is derived by removing the `-tenant` suffix
+- tenant identity is stored on a namespace label named
+  `example.com/tenant` (a placeholder for your platform's label key)
+- the tenant prefix is exactly the value of that label; the policy does not
+  transform or derive it from the namespace name
 
-Adjust the label key and prefix logic to match your own platform conventions.
+Replace `example.com/tenant` with the label key used by your platform. The
+examples intentionally use only the label value as the prefix, so they do not
+depend on a particular namespace controller or tenant naming convention.
 
 ### Enforce Project Name Prefix
 
@@ -230,11 +219,7 @@ spec:
         - name: tenantName
           apiCall:
             urlPath: "/api/v1/namespaces/{{request.object.metadata.namespace}}"
-            jmesPath: 'metadata.labels."capsule.clastix.io/tenant" || `""`'
-        - name: tenantPrefix
-          variable:
-            value: "{{ replace_all('{{tenantName}}', '-tenant', '') }}"
-            jmesPath: "to_string(@)"
+            jmesPath: 'metadata.labels."example.com/tenant" || `""`'
       preconditions:
         all:
           - key: "{{ request.operation }}"
@@ -244,11 +229,11 @@ spec:
             operator: NotEquals
             value: ""
       validate:
-        message: "Harbor Project metadata.name must start with '{{tenantPrefix}}-'"
+        message: "Harbor Project metadata.name must start with '{{tenantName}}-'"
         deny:
           conditions:
             any:
-              - key: "{{ regex_match('^{{tenantPrefix}}-.*', request.object.metadata.name) }}"
+              - key: "{{ regex_match('^{{tenantName}}-.*', request.object.metadata.name) }}"
                 operator: Equals
                 value: false
 ```
@@ -274,11 +259,7 @@ spec:
         - name: tenantName
           apiCall:
             urlPath: "/api/v1/namespaces/{{request.object.metadata.namespace}}"
-            jmesPath: 'metadata.labels."capsule.clastix.io/tenant" || `""`'
-        - name: tenantPrefix
-          variable:
-            value: "{{ replace_all('{{tenantName}}', '-tenant', '') }}"
-            jmesPath: "to_string(@)"
+            jmesPath: 'metadata.labels."example.com/tenant" || `""`'
       preconditions:
         all:
           - key: "{{ request.operation }}"
@@ -288,11 +269,11 @@ spec:
             operator: NotEquals
             value: ""
       validate:
-        message: "Harbor User metadata.name must start with '{{tenantPrefix}}-'"
+        message: "Harbor User metadata.name must start with '{{tenantName}}-'"
         deny:
           conditions:
             any:
-              - key: "{{ regex_match('^{{tenantPrefix}}-.*', request.object.metadata.name) }}"
+              - key: "{{ regex_match('^{{tenantName}}-.*', request.object.metadata.name) }}"
                 operator: Equals
                 value: false
 ```
@@ -318,11 +299,7 @@ spec:
         - name: tenantName
           apiCall:
             urlPath: "/api/v1/namespaces/{{request.object.metadata.namespace}}"
-            jmesPath: 'metadata.labels."capsule.clastix.io/tenant" || `""`'
-        - name: tenantPrefix
-          variable:
-            value: "{{ replace_all('{{tenantName}}', '-tenant', '') }}"
-            jmesPath: "to_string(@)"
+            jmesPath: 'metadata.labels."example.com/tenant" || `""`'
       preconditions:
         all:
           - key: "{{ request.operation }}"
@@ -332,11 +309,11 @@ spec:
             operator: NotEquals
             value: ""
       validate:
-        message: "Harbor Member spec.projectRef.name must start with '{{tenantPrefix}}-'"
+        message: "Harbor Member spec.projectRef.name must start with '{{tenantName}}-'"
         deny:
           conditions:
             any:
-              - key: "{{ regex_match('^{{tenantPrefix}}-.*', request.object.spec.projectRef.name || '') }}"
+              - key: "{{ regex_match('^{{tenantName}}-.*', request.object.spec.projectRef.name || '') }}"
                 operator: Equals
                 value: false
     - name: validate-member-user-ref-prefix
@@ -349,11 +326,7 @@ spec:
         - name: tenantName
           apiCall:
             urlPath: "/api/v1/namespaces/{{request.object.metadata.namespace}}"
-            jmesPath: 'metadata.labels."capsule.clastix.io/tenant" || `""`'
-        - name: tenantPrefix
-          variable:
-            value: "{{ replace_all('{{tenantName}}', '-tenant', '') }}"
-            jmesPath: "to_string(@)"
+            jmesPath: 'metadata.labels."example.com/tenant" || `""`'
       preconditions:
         all:
           - key: "{{ request.operation }}"
@@ -366,11 +339,11 @@ spec:
             operator: NotEquals
             value: ""
       validate:
-        message: "Harbor Member spec.memberUser.userRef.name must start with '{{tenantPrefix}}-'"
+        message: "Harbor Member spec.memberUser.userRef.name must start with '{{tenantName}}-'"
         deny:
           conditions:
             any:
-              - key: "{{ regex_match('^{{tenantPrefix}}-.*', request.object.spec.memberUser.userRef.name || '') }}"
+              - key: "{{ regex_match('^{{tenantName}}-.*', request.object.spec.memberUser.userRef.name || '') }}"
                 operator: Equals
                 value: false
 ```
@@ -387,13 +360,13 @@ tenant boundary: namespace, scope, and allowed-kind checks remain necessary.
 - one operator instance
 - one `ClusterHarborConnection`
 - `--harbor-connection` set
-- `--watch-namespaces` set to the participating tenant namespaces
 - Kyverno enforces naming prefixes
 
 ### Shared Harbor, Per-Tenant Operator Instances
 
 - one operator instance per tenant or tenant group
-- each instance uses `--watch-namespaces`
+- each instance is deployed with an operational namespace scope for its
+  assigned workloads
 - each instance may use the same `--harbor-connection`
 - Kyverno may still enforce name prefixes if Harbor object names are globally shared
 
@@ -406,5 +379,6 @@ tenant boundary: namespace, scope, and allowed-kind checks remain necessary.
 ## Related Reading
 
 - [Common Spec Fields](common-spec-fields.md)
+- [Operator Configuration](operator-configuration.md)
 - [Connection Patterns](connection-patterns.md)
 - [Deletion and Ownership](deletion-and-ownership.md)

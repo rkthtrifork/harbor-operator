@@ -25,4 +25,4 @@ Resources that still need Harbor-side cleanup can remain in `Terminating` when `
 
 ## Where should I look for exact field definitions?
 
-Use the generated [API Reference](../reference/resources.md) for exact schema, defaults, enums, and validation markers. Use the resource guides under [API](../reference/index.md) for behavior and examples.
+Use the generated [API Reference](../reference/api.md) for exact schema, defaults, enums, and validation markers. Use the [Resource Index](../reference/resources.md) to find the relevant guide, and the [Reference overview](../reference/index.md) for the full reference structure.
