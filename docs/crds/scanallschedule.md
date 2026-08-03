@@ -23,8 +23,8 @@ spec:
 
 - **spec.schedule** (object, required)
   Schedule type and cron expression. `Manual` is not supported for
-  `ScanAllSchedule`. For all types except `None`, Harbor expects a cron
-  expression.
+  `ScanAllSchedule`. For all supported types except `None`, Harbor expects a
+  cron expression.
 
 - **spec.parameters** (map, optional)
   Additional scan-all parameters.
@@ -40,3 +40,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 - **Create / Update**
   Only one `ScanAllSchedule` may manage a given Harbor instance. If multiple CRs target the same Harbor instance, the oldest CR remains the owner and later CRs report a conflict.
   Creates or updates the scan-all schedule in Harbor.
+
+- **Delete**
+  Removing the CR does not delete the Harbor schedule. The CR is simply
+  removed.

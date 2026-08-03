@@ -90,7 +90,8 @@ spec:
   PEM-encoded CA certificate. Use `caCertificateRef` instead for secrets.
 
 - **spec.caCertificateRef** (object, optional)
-  Secret reference to a PEM-encoded CA certificate. Overrides `caCertificate`.
+  Secret reference to a PEM-encoded CA certificate. It is mutually exclusive
+  with `caCertificate`.
 
 - **spec.creationPolicy** (string, optional)
   Controls whether the registry is created, adopted, or either. When omitted, uses the operator's default creation policy (`Create` unless configured otherwise).
