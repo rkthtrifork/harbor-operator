@@ -53,11 +53,10 @@ spec:
   Reference to the Harbor connection object to use. Set `name` and optional `kind` (`HarborConnection` by default or `ClusterHarborConnection`).
 
 - **spec.settings** (map, optional)
-  Map of Harbor configuration keys to value sources. Keys must match the
-  `/configurations` schema in `swagger.yaml`. Each entry sets exactly one of a
-  literal `value` or `valueFrom.secretKeyRef`. Literal values may be strings,
-  numbers, booleans, or JSON objects. If the Secret key is omitted, the operator
-  defaults it to `value`.
+  Map of Harbor configuration keys to value sources. Keys must be recognized by
+  Harbor's `/api/v2.0/configurations` endpoint. Each entry sets exactly one of a
+  literal `value` or `valueFrom.secretKeyRef`. Literal values may be any valid
+  JSON value. If the Secret key is omitted, the operator defaults it to `value`.
 
 ## Common Fields
 

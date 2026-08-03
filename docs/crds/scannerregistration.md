@@ -14,7 +14,6 @@ spec:
   harborConnectionRef:
     name: my-harbor
     kind: HarborConnection
-  name: trivy
   url: http://harbor-scanner-trivy:8080
   auth: Bearer
   accessCredential: "token"

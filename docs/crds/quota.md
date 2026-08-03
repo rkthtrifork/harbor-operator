@@ -37,3 +37,7 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 
 - **Update**
   Updates the project's hard quota limits in Harbor.
+
+- **Delete**
+  Removing the CR does not delete the Harbor quota. The quota remains attached
+  to the Harbor project.

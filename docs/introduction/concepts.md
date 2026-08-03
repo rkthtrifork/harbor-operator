@@ -20,7 +20,7 @@ That means:
 - connection changes also trigger reconcile of dependent resources
 - `metadata.name` is the Harbor identity for named resources such as `Project`,
   `Registry`, `User`, `Label`, `Robot`, `ReplicationPolicy`, and
-  `ScannerRegistration`
+  `ScannerRegistration`, and `WebhookPolicy`
 - `UserGroupClaim` uses `metadata.name` as its Kubernetes reference identity and
   `spec.groupName` as the exact group identity stored in Harbor. Claims are
   non-owning and reusable across namespaces.

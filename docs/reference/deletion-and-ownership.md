@@ -39,6 +39,8 @@ Robot credentials are operator-managed output:
 - the operator writes the destination secret
 - the secret is not used as an input password source
 - unrelated pre-existing secrets are not silently adopted
+- deleting a `Robot` removes the Harbor account but does not remove the Secret
+  automatically
 
 ## Singleton Ownership
 

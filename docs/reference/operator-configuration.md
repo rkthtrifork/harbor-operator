@@ -8,7 +8,9 @@ authorization or admission policies.
 
 `harborConnection` configures one operator-wide `ClusterHarborConnection`.
 When it is set, resources may omit `spec.harborConnectionRef` and use this
-connection instead. An explicit resource reference still takes precedence.
+connection instead. If a resource includes `spec.harborConnectionRef`, it must
+reference that same `ClusterHarborConnection`; a different reference is
+rejected.
 
 ## Reconciliation scope
 

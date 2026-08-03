@@ -24,7 +24,7 @@ Common overrides:
 ```sh
 helm upgrade --install harbor-operator oci://ghcr.io/rkthtrifork/charts/harbor-operator \\
   --version <chart-version> \\
-  --set image.tag=v0.3.0 \\
+  --set image.tag=<operator-version> \\
   --set metrics.enabled=true \\
   --set harborConnection=shared-harbor \\
   --set watchNamespaces[0]=team-a

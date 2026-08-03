@@ -40,11 +40,15 @@ but not both.
 
 ## Update Behavior
 
-When a `HarborConnection` or `ClusterHarborConnection` changes, dependent Harbor-backed resources are reconciled again. The connection `baseURL` is immutable; credential and CA material may change.
+When a `HarborConnection` or `ClusterHarborConnection` changes, dependent
+Harbor-backed resources are reconciled again. The connection `baseURL` is
+immutable; credential and CA material may change.
 
-Credential Secret changes reflected through the connection object and CA
-material changes trigger reconciliation. A base URL change requires replacing
-the connection as an explicit migration; it is not an in-place update.
+Credential and CA Secrets are read during reconciliation. Secret changes do
+not themselves change the connection object, so trigger a dependent reconcile
+with `spec.reconcileNonce` or a configured drift interval when the update must
+be picked up immediately. A base URL change requires replacing the connection
+as an explicit migration; it is not an in-place update.
 
 ## Cross-Namespace Sharing
 

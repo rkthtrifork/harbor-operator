@@ -94,6 +94,8 @@ generated [`HarborSpecBase` reference](../reference/api.md#harborspecbase).
 - **Delete**
 
   - Deletes the robot account in Harbor.
+  - Leaves the operator-managed Kubernetes Secret in place; remove that Secret
+    separately when it is no longer needed.
 
 ## Notes
 
