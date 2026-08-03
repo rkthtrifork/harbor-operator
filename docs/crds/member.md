@@ -53,7 +53,7 @@ spec:
 
 ## Key Fields
 
-- **spec.harborConnectionRef** (object, required)
+- **spec.harborConnectionRef** (object, optional when the operator is configured with `--harbor-connection`)
   Reference to the Harbor connection object to use. Set `name` and optional `kind`
   (`HarborConnection` by default or `ClusterHarborConnection`).
 
@@ -68,7 +68,7 @@ spec:
   - `guest` → 3
   - `maintainer` → 4
 
-  (Exactly as implemented in your controller.)
+  The operator maps these names to Harbor role IDs.
 
 - **spec.memberUser** (object, optional)
   References the `User` custom resource to grant membership to.

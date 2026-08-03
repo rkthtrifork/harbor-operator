@@ -71,49 +71,59 @@ markdown_extensions:
 nav:
   - Introduction:
       - Overview: index.md
+      - Quickstart: quickstart.md
       - Installation: introduction/installation.md
-      - Getting Started: quickstart.md
       - Concepts: introduction/concepts.md
       - FAQ: introduction/faq.md
-  - API:
-      - Overview: reference/index.md
-      - Common Spec Fields: reference/common-spec-fields.md
+  - Guides:
       - Connection Patterns: reference/connection-patterns.md
       - Multi-Tenancy: reference/multi-tenancy.md
-      - Deletion and Ownership: reference/deletion-and-ownership.md
+      - Lifecycle and Ownership: reference/deletion-and-ownership.md
+      - Upgrading: guides/upgrading.md
       - Troubleshooting: reference/troubleshooting.md
+      - Examples:
+          - Overview: examples/index.md
+          - Connection and Project: examples/connection-and-project.md
+          - Robot Credentials: examples/robot.md
+          - Singleton APIs: examples/singletons.md
+  - Reference:
+      - Overview: reference/index.md
+      - Resource Index: reference/resources.md
+      - Operator Configuration: reference/operator-configuration.md
+      - Common Spec Fields: reference/common-spec-fields.md
+      - Status and Conditions: reference/status-and-conditions.md
       - Resource Guides:
           - Overview: crds/index.md
-          - HarborConnection: crds/harbor-connection.md
-          - ClusterHarborConnection: crds/cluster-harbor-connection.md
-          - Project: crds/project.md
-          - Registry: crds/registry.md
-          - User: crds/user.md
-          - UserGroupClaim: crds/usergroup.md
-          - Member: crds/member.md
-          - Robot: crds/robot.md
-          - Configuration: crds/configuration.md
-          - ReplicationPolicy: crds/replicationpolicy.md
-          - WebhookPolicy: crds/webhookpolicy.md
-          - ImmutableTagRule: crds/immutabletagrule.md
-          - Label: crds/label.md
-          - ScannerRegistration: crds/scannerregistration.md
-          - ScanAllSchedule: crds/scanallschedule.md
-          - GCSchedule: crds/gcschedule.md
-          - PurgeAuditSchedule: crds/purgeaudit.md
-          - RetentionPolicy: crds/retentionpolicy.md
-          - Quota: crds/quota.md
-      - API Reference:
-          - Resource Index: reference/resources.md
+          - Connections:
+              - HarborConnection: crds/harbor-connection.md
+              - ClusterHarborConnection: crds/cluster-harbor-connection.md
+          - Identity and Access:
+              - User: crds/user.md
+              - UserGroupClaim: crds/usergroup.md
+              - Member: crds/member.md
+              - Robot: crds/robot.md
+          - Projects and Registries:
+              - Project: crds/project.md
+              - Registry: crds/registry.md
+              - ReplicationPolicy: crds/replicationpolicy.md
+          - Project Policies:
+              - Label: crds/label.md
+              - Quota: crds/quota.md
+              - ImmutableTagRule: crds/immutabletagrule.md
+              - WebhookPolicy: crds/webhookpolicy.md
+              - RetentionPolicy: crds/retentionpolicy.md
+          - Instance Administration:
+              - Configuration: crds/configuration.md
+              - ScannerRegistration: crds/scannerregistration.md
+              - ScanAllSchedule: crds/scanallschedule.md
+              - GCSchedule: crds/gcschedule.md
+              - PurgeAuditSchedule: crds/purgeaudit.md
+      - Generated API Reference:
           - Full Reference: reference/api.md
-  - Examples:
-      - Overview: examples/index.md
-      - Connection and Project: examples/connection-and-project.md
-      - Robot Credentials: examples/robot.md
-      - Singleton APIs: examples/singletons.md
-  - Project:
+  - Architecture:
       - Technical Architecture: technical-architecture.md
-      - Decisions: decisions/index.md
+      - Architecture Decision Records: decisions/index.md
+  - Project:
       - Backlog: backlog.md
       - Technical Debt: tech-debt.md
   - Contributing:

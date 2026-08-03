@@ -43,6 +43,9 @@ Useful overrides include:
 
 See the chart documentation in [`charts/harbor-operator/README.md`](https://github.com/rkthtrifork/harbor-operator/blob/main/charts/harbor-operator/README.md) for the install flags that matter most.
 
+For a concise explanation of what these settings mean for reconciliation and
+tenant boundaries, see [Operator Configuration](../reference/operator-configuration.md).
+
 ## After Installation
 
 The operator is only the control plane. You still need to create one of:

@@ -2,7 +2,8 @@
 
 `harbor-operator` manages Harbor resources through Kubernetes custom resources.
 
-This site is split into introduction material, API documentation, worked examples, project knowledge, and contributor guidance.
+This site is split into introduction material, task-oriented guides, reference
+documentation, architecture notes, project knowledge, and contributor guidance.
 
 ## Start Here
 
@@ -16,13 +17,21 @@ This site is split into introduction material, API documentation, worked example
 
     [Get started](quickstart.md)
 
--   :material-book-open-page-variant-outline: __API__
+-   :material-book-open-page-variant-outline: __Reference__
 
     ---
 
-    Read resource guides and generated schema reference in one place.
+    Find resource behavior guides, operator configuration, and the generated schema reference.
 
-    [Open API section](reference/index.md)
+    [Open Reference](reference/index.md)
+
+-   :material-compass: __Guides__
+
+    ---
+
+    Learn connection patterns, multi-tenancy, lifecycle behavior, upgrades, and troubleshooting.
+
+    [Open Guides](reference/connection-patterns.md)
 
 -   :material-test-tube: __Examples__
 
@@ -69,8 +78,9 @@ make docs-build
 
 ## Suggested Reading Order
 
-1. [Getting Started](quickstart.md)
+1. [Quickstart](quickstart.md)
 2. [Installation](introduction/installation.md)
 3. [Concepts](introduction/concepts.md)
-4. [API overview](reference/index.md)
-5. [Examples](examples/index.md)
+4. [Guides](reference/connection-patterns.md)
+5. [Reference overview](reference/index.md)
+6. [Examples](examples/index.md)
